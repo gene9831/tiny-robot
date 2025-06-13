@@ -108,6 +108,9 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
 
 export const useSelection = (elemRef: Ref<HTMLElement | null>) => {
   const selection = new ShadowDomSelection()
+  /**
+   * 当前选中的 range，如果选中的范围不在传入的 elemRef.value 中，则返回 null
+   */
   const range = shallowRef<Range | null>(null)
   let getSelection: () => Selection | ShadowDomSelection | null = () => null
   let cleanup: (() => void) | undefined = undefined
@@ -141,7 +144,8 @@ export const useSelection = (elemRef: Ref<HTMLElement | null>) => {
     const selection = getSelection()
     const r = (selection?.rangeCount || 0) > 0 ? selection!.getRangeAt(0) : null
 
-    if (r?.startContainer && elemRef.value?.contains(r.startContainer)) {
+    // 严格判断 startContainer 和 endContainer 是否都在 elemRef.value 中
+    if (r && elemRef.value && elemRef.value.contains(r.startContainer) && elemRef.value.contains(r.endContainer)) {
       range.value = r
     } else {
       range.value = null
