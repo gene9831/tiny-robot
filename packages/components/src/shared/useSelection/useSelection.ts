@@ -39,7 +39,7 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
 
     const active = getActiveElement()
 
-    if (!active || active !== element) {
+    if (!active || !element.contains(active)) {
       selection.removeAllRanges()
       return
     }
@@ -48,11 +48,15 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
       return
     }
 
-    insertingText = true
-    // 会触发 beforeinput 事件
-    document.execCommand('insertText', false, '\u200B')
-
-    insertingText = false
+    try {
+      insertingText = true
+      // 会立即触发 beforeinput 事件
+      document.execCommand('insertText', false, '\u200B')
+    } catch (error) {
+      console.error(error)
+    } finally {
+      insertingText = false
+    }
   }
 
   const onBeforeInput = (event: InputEvent) => {
