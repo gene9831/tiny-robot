@@ -1,4 +1,4 @@
-import { onBeforeUnmount, Ref, watch } from 'vue'
+import { onBeforeUnmount, Ref, shallowRef, watch } from 'vue'
 import { ShadowDomSelection } from './ShadowDomSelection'
 
 declare global {
@@ -25,8 +25,10 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
   let composition = false
   let insertingText = false
 
+  // 流程1: onSelectStart -> onSelectionChange -> onBeforeInput
+  // 流程2: onCompositionStart -> onCompositionEnd -> onSelectionChange -> onBeforeInput. 输入法编辑器开始新的输入合成时。例如，当用户使用拼音输入法开始输入汉字时，这个事件就会被触发
+
   const onSelectStart = () => {
-    console.log('onSelectStart')
     selection.removeAllRanges()
   }
 
@@ -46,8 +48,6 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
       return
     }
 
-    console.log('insertingText')
-
     insertingText = true
     // 会触发 beforeinput 事件
     document.execCommand('insertText', false, '\u200B')
@@ -59,8 +59,6 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
     if (!insertingText) {
       return
     }
-
-    console.log('onBeforeInput')
 
     const ranges = event.getTargetRanges()
     const range = ranges[0]
@@ -78,17 +76,17 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
   }
 
   const onCompositionStart = () => {
-    console.log('onCompositionStart')
     composition = true
   }
 
   const onCompositionEnd = () => {
-    console.log('onCompositionEnd')
     composition = false
   }
 
+  const shadowRoot = element.getRootNode()
+
   const setup = (elem: HTMLElement) => {
-    window.addEventListener('selectstart', onSelectStart, { capture: true })
+    shadowRoot.addEventListener('selectstart', onSelectStart, { capture: true })
     window.addEventListener('selectionchange', onSelectionChange, { capture: true })
     window.addEventListener('beforeinput', onBeforeInput, { capture: true })
     elem.addEventListener('compositionstart', onCompositionStart, { capture: true })
@@ -96,7 +94,7 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
   }
 
   const cleanup = (elem: HTMLElement) => {
-    window.removeEventListener('selectstart', onSelectStart, { capture: true })
+    shadowRoot.removeEventListener('selectstart', onSelectStart, { capture: true })
     window.removeEventListener('selectionchange', onSelectionChange, { capture: true })
     window.removeEventListener('beforeinput', onBeforeInput, { capture: true })
     elem.removeEventListener('compositionstart', onCompositionStart, { capture: true })
@@ -110,7 +108,8 @@ const initialSafariShadowDomSelection = (selection: ShadowDomSelection, element:
 
 export const useSelection = (elemRef: Ref<HTMLElement | null>) => {
   const selection = new ShadowDomSelection()
-
+  const range = shallowRef<Range | null>(null)
+  let getSelection: () => Selection | ShadowDomSelection | null = () => null
   let cleanup: (() => void) | undefined = undefined
 
   const getSelectionFactory = (element: HTMLElement): (() => Selection | ShadowDomSelection | null) => {
@@ -138,7 +137,16 @@ export const useSelection = (elemRef: Ref<HTMLElement | null>) => {
     return () => window.getSelection()
   }
 
-  let getSelection: () => Selection | ShadowDomSelection | null = () => null
+  const onSelectionChange = () => {
+    const selection = getSelection()
+    const r = (selection?.rangeCount || 0) > 0 ? selection!.getRangeAt(0) : null
+
+    if (r?.startContainer && elemRef.value?.contains(r.startContainer)) {
+      range.value = r
+    } else {
+      range.value = null
+    }
+  }
 
   watch(elemRef, (element, _, onCleanup) => {
     if (!element) {
@@ -160,9 +168,14 @@ export const useSelection = (elemRef: Ref<HTMLElement | null>) => {
       cleanup()
       cleanup = undefined
     }
+
+    document.removeEventListener('selectionchange', onSelectionChange)
   })
 
+  document.addEventListener('selectionchange', onSelectionChange)
+
   return {
+    range,
     getSelection: () => getSelection(),
   }
 }

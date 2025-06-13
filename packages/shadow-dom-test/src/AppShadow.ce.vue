@@ -6,6 +6,6 @@
 import HelloWorld from './components/HelloWorld.vue'
 </script>
 
-<style scoped>
-@import url('../dist-style.css');
+<style>
+@import url('@opentiny/tiny-robot-styles');
 </style>
