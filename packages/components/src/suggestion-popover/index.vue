@@ -3,10 +3,10 @@ import { onClickOutside, useElementBounding, useElementSize, useMediaQuery, useS
 import { computed, CSSProperties, ref, StyleValue, useAttrs, watch } from 'vue'
 import FlowLayoutButtons from '../flow-layout-buttons'
 import { toCssUnit } from '../shared/utils'
+import Tooltip from '../tooltip'
 import Header from './components/Header.vue'
 import Loading from './components/Loading.vue'
 import NoData from './components/NoData.vue'
-import Tooltip from './components/Tooltip.vue'
 import {
   SuggestionGroup,
   SuggestionItem,
@@ -104,11 +104,6 @@ const updateOverflowStates = () => {
   })
 }
 
-const tooltipRef = ref<InstanceType<typeof Tooltip> | null>(null)
-const tooltipTriggerRef = ref<HTMLElement | null>(null)
-const tooltipShow = ref(false)
-const tooltipContent = ref('')
-
 const { width: firstItemWidth } = useElementSize(firstItemRef)
 
 watch(firstItemWidth, () => {
@@ -174,20 +169,6 @@ const handleGroupClick = (id: string) => {
     emit('group-click', group)
   }
 }
-
-const handleItemMouseenter = (item: SuggestionItem, index: number) => {
-  tooltipTriggerRef.value = listItemsRef.value[index]
-  tooltipShow.value = true
-  tooltipContent.value = item.text
-}
-
-const handleItemMouseleave = (event: MouseEvent) => {
-  if ((tooltipRef.value?.$el as HTMLElement).contains(event.relatedTarget as Node)) {
-    return
-  }
-
-  tooltipShow.value = false
-}
 </script>
 
 <template>
@@ -221,29 +202,25 @@ const handleItemMouseleave = (event: MouseEvent) => {
           @item-click="handleGroupClick"
         ></FlowLayoutButtons>
         <ul class="tr-question__list" :class="{ scrolling: isScrolling }" ref="listRef">
-          <li
-            class="tr-question__list-item"
+          <Tooltip
             v-for="(item, index) in dataItems"
             :key="item.id"
-            :ref="(el) => setItemRef(el as HTMLElement, index)"
-            @click="handleItemClick(item)"
-            @mouseenter="isOverflowList[index] && handleItemMouseenter(item, index)"
-            @mouseleave="isOverflowList[index] && handleItemMouseleave($event)"
+            :content="item.text"
+            :disabled="!isOverflowList[index] || isScrolling"
+            :style="{ width: `calc(${toCssUnit(listRef?.clientWidth)} - 24px)` }"
           >
-            <span>{{ index + 1 }}. </span>{{ item.text }}
-          </li>
+            <template #trigger>
+              <li
+                class="tr-question__list-item"
+                :ref="(el) => setItemRef(el as HTMLElement, index)"
+                @click="handleItemClick(item)"
+              >
+                <span>{{ index + 1 }}. </span>{{ item.text }}
+              </li>
+            </template>
+          </Tooltip>
         </ul>
       </template>
-      <Tooltip
-        ref="tooltipRef"
-        v-model:show="tooltipShow"
-        :content="tooltipContent"
-        :trigger="tooltipTriggerRef"
-        :disabled="isScrolling"
-        placement="top"
-        :delay-open="300"
-        :delay-close="300"
-      ></Tooltip>
     </div>
   </Transition>
 </template>
