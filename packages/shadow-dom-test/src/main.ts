@@ -1,20 +1,14 @@
 import { createApp, defineCustomElement } from 'vue'
 import App from './App.vue'
 import AppShadow from './AppShadow.ce.vue'
-import '@opentiny/tiny-robot-styles'
+import '../../components/dist/style.css'
 import './style.css'
+import styles from './style.css?raw'
 
 customElements.define(
   'app-shadow',
   defineCustomElement(AppShadow, {
-    styles: [
-      `*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}`,
-      AppShadow.styles,
-    ],
+    styles: [styles, AppShadow.styles],
   }),
 )
 

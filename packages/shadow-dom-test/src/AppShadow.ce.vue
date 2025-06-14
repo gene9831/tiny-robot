@@ -7,5 +7,5 @@ import HelloWorld from './components/HelloWorld.vue'
 </script>
 
 <style>
-@import url('@opentiny/tiny-robot-styles');
+@import url('../../components/dist/style.css');
 </style>
