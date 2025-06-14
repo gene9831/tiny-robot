@@ -32,6 +32,7 @@ openModel.value = props.defaultOpen
 const openTooltip = ref(openModel.value)
 
 const triggerSlots = slots.trigger?.()
+// TODO 如何合理利用所有的 triggerSlots ，循环渲染场景
 const triggerVNodes = Array.isArray(triggerSlots) ? triggerSlots : [triggerSlots]
 
 const refs = ref<HTMLElement[]>([])
