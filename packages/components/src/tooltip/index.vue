@@ -3,6 +3,7 @@ import { useElementBounding } from '@vueuse/core'
 import { computed, CSSProperties, defineSlots, ref, VNode, watch } from 'vue'
 import { toCssUnit } from '../shared/utils'
 
+// TODO Tooltip 在window滚动时消失，需要测试 shadow dom 场景
 export interface TooltipProps {
   content?: string
   defaultOpen?: boolean
