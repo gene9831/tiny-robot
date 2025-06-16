@@ -32,13 +32,11 @@ import AppNormal from './AppNormal.vue'
   gap: 10px;
   padding: 10px;
 }
-.left-side {
-  padding: 10px;
-}
+
 .left-side,
 .right-side {
   flex: 1;
-  padding: 10px;
+  padding: 100px 10px;
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
 }
 </style>
