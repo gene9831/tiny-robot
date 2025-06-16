@@ -147,16 +147,18 @@ const popoverStyles = computed<CSSProperties>(() => {
   }
 })
 
-if (props.trigger === 'click') {
-  onClickOutside(popoverRef, (ev) => {
+onClickOutside(popoverRef, (ev) => {
+  emit('click-outside', ev)
+
+  if (props.trigger === 'click') {
     // 如果在外部点到了 trigger，则停止冒泡，防止 triger 被点击然后触发菜单再次开启
     if (popoverTriggerRef.value?.contains(ev.target as Node)) {
       ev.stopPropagation()
     }
     show.value = false
     emit('close')
-  })
-}
+  }
+})
 
 watch(show, (value) => {
   if (value) {
@@ -212,7 +214,7 @@ const handleItemMouseleave = (event: MouseEvent) => {
     :class="attrs.class"
     :style="attrsStyle"
     ref="popoverTriggerRef"
-    @click="handleToggleShow"
+    @pointerup="handleToggleShow"
   >
     <slot />
   </div>
@@ -280,6 +282,7 @@ const handleItemMouseleave = (event: MouseEvent) => {
   position: fixed;
   z-index: var(--tr-z-index-popover);
   height: v-bind('toCssUnit(props.popoverHeight)');
+  max-height: 100dvh;
   padding: 20px;
   padding-bottom: 16px;
   border-radius: 24px;
