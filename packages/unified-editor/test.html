@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Editor Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .demo-editor {
+            margin: 10px 0;
+        }
+        .output {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>统一编辑器测试</h1>
+    
+    <div class="test-container">
+        <h3>基础示例</h3>
+        <p>这个编辑器使用单一的 contenteditable 容器，通过数据驱动的方式管理内容。</p>
+        
+        <!-- 这里将通过 Vue 渲染编辑器 -->
+        <div id="app"></div>
+        
+        <div class="output">
+            <strong>使用说明：</strong>
+            <ul>
+                <li><strong>键盘导航：</strong>
+                    <ul>
+                        <li>Tab 键：跳转到下一个可编辑字段</li>
+                        <li>Shift + Tab：跳转到上一个可编辑字段</li>
+                        <li>左右箭头键：在字段边界时自动跳转到相邻字段</li>
+                    </ul>
+                </li>
+                <li>Ctrl/Cmd + Enter：提交内容</li>
+                <li>点击下拉字段会弹出选择器</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp, markRaw } from 'vue'
+
+        // 模拟组件（简化版）
+        const TextBlock = {
+            props: ['block', 'index'],
+            template: '<span class="text-block">{{ block.content }}</span>'
+        }
+
+        const EditableBlock = {
+            props: ['block', 'index'],
+            emits: ['update:content'],
+            template: `
+                <span
+                    :class="['template-field', 'editable-field', { 'empty': isEmpty }]"
+                    :data-placeholder="block.options?.placeholder"
+                    contenteditable="true"
+                    @input="handleInput"
+                >{{ block.content }}</span>
+            `,
+            computed: {
+                isEmpty() {
+                    return !this.block.content || this.block.content.trim() === ''
+                }
+            },
+            methods: {
+                handleInput(event) {
+                    const newContent = event.target.textContent || ''
+                    this.$emit('update:content', newContent)
+                }
+            }
+        }
+
+        const DropdownBlock = {
+            props: ['block', 'index'],
+            emits: ['update:content'],
+            template: `
+                <span
+                    :class="['template-field', 'dropdown-field', { 'empty': isEmpty }]"
+                    :data-placeholder="block.options?.placeholder"
+                    tabindex="0"
+                    @click="handleClick"
+                >{{ block.content }}</span>
+            `,
+            computed: {
+                isEmpty() {
+                    return !this.block.content || this.block.content.trim() === ''
+                },
+                choices() {
+                    return this.block.options?.choices || []
+                }
+            },
+            methods: {
+                handleClick() {
+                    if (this.choices.length === 0) return
+
+                    const optionsList = this.choices.map((opt, i) => `${i + 1}. ${opt}`).join('\\n')
+                    const result = prompt(`请选择:\\n${optionsList}`, this.block.content)
+
+                    if (result !== null && this.choices.includes(result)) {
+                        this.$emit('update:content', result)
+                    }
+                }
+            }
+        }
+
+        // 测试应用
+        const TestApp = {
+            components: {
+                TextBlock: markRaw(TextBlock),
+                EditableBlock: markRaw(EditableBlock),
+                DropdownBlock: markRaw(DropdownBlock)
+            },
+            template: `
+                <div>
+                    <h4>混合架构测试：</h4>
+                    <div
+                        class="demo-editor"
+                        contenteditable="true"
+                        style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; min-height: 40px;"
+                        @keydown="handleKeyDown"
+                    >
+                        <component
+                            v-for="(block, index) in renderBlocks"
+                            :key="block.id"
+                            :is="block.component"
+                            :block="block"
+                            :index="index"
+                            @update:content="(content) => handleBlockUpdate(index, content)"
+                        />
+                    </div>
+
+                    <div class="output">
+                        <strong>当前数据：</strong>
+                        <pre>{{ JSON.stringify(blocks, null, 2) }}</pre>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    blocks: [
+                        { type: 'text', content: '你好' },
+                        { type: 'editable', content: '张三', options: { placeholder: '请输入姓名' } },
+                        { type: 'text', content: '，欢迎使用' },
+                        { type: 'dropdown', content: 'TinyRobot', options: {
+                            choices: ['TinyRobot', 'ChatGPT', 'Claude'],
+                            placeholder: '请选择产品'
+                        }},
+                        { type: 'text', content: '！' }
+                    ]
+                }
+            },
+            computed: {
+                renderBlocks() {
+                    return this.blocks.map((block, index) => ({
+                        id: `block-${index}`,
+                        type: block.type,
+                        content: block.content,
+                        options: block.options || {},
+                        component: this.getComponentForType(block.type)
+                    }))
+                }
+            },
+            methods: {
+                getComponentForType(type) {
+                    const componentMap = {
+                        text: this.$options.components.TextBlock,
+                        editable: this.$options.components.EditableBlock,
+                        dropdown: this.$options.components.DropdownBlock
+                    }
+                    return componentMap[type] || this.$options.components.TextBlock
+                },
+                handleBlockUpdate(index, newContent) {
+                    this.blocks[index].content = newContent
+                },
+                handleKeyDown(event) {
+                    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                        event.preventDefault()
+                        const content = this.blocks.map(b => b.content).join('')
+                        alert(`提交内容: ${content}`)
+                    }
+                }
+            }
+        }
+
+        createApp(TestApp).mount('#app')
+    </script>
+    
+    <style>
+        /* 继承原有的 template-field 样式 */
+        .template-field {
+            display: inline;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 3px 8px;
+            margin: 0 2px;
+            border-radius: 4px;
+            cursor: text;
+            transition: background-color 0.2s ease;
+            min-width: 60px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            word-wrap: break-word;
+            box-sizing: border-box;
+            overflow-wrap: break-word;
+            vertical-align: baseline;
+        }
+
+        .template-field:hover {
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .template-field.empty:before {
+            content: attr(data-placeholder);
+            color: rgba(0, 0, 0, 0.4);
+            font-style: italic;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .dropdown-field {
+            position: relative;
+        }
+
+        .dropdown-field:after {
+            content: '▼';
+            font-size: 10px;
+            margin-left: 4px;
+            opacity: 0.6;
+        }
+    </style>
+</body>
+</html>
