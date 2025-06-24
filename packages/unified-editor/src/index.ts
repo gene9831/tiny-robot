@@ -13,7 +13,6 @@ export type {
   UnifiedEditorProps,
   UnifiedEditorEmits,
   SelectionState,
-  DropdownOption,
   ParsedContent,
   EditorEventHandlers,
   RenderBlock,
@@ -28,9 +27,6 @@ export { useContentEditableEvents } from './composables/useContentEditableEvents
 export {
   createTextBlock,
   createEditableBlock,
-  createDropdownBlock,
-  createDateBlock,
-  createNumberBlock,
   parseTemplate,
   blocksToText,
   blocksToTemplate,

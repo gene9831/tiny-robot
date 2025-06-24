@@ -2,35 +2,18 @@
 import { ref, inject, computed, nextTick, watch, onMounted } from 'vue'
 import type { BlockComponentProps, BlockComponentEmits, EditorContext } from '../../types'
 import { cleanZeroWidthSpaces, ensureZeroWidthAroundField } from '../../utils/zeroWidthUtils'
+import { calculatePlaceholderWidth } from '../../utils/contentHelpers'
 
 const props = defineProps<BlockComponentProps>()
 const emit = defineEmits<BlockComponentEmits>()
 
 const spanRef = ref<HTMLSpanElement | null>(null)
 const editorContext = inject<EditorContext | null>('editorContext', null)
-const isEmptyState = ref(true) // 显式跟踪空状态
 
-// 计算是否为空内容
-const isEmpty = computed(() => isEmptyState.value)
-
-// 检查并更新空状态
-const updateEmptyState = () => {
-  if (!spanRef.value) {
-    isEmptyState.value = !props.block.content || props.block.content.trim() === ''
-    return
-  }
-
-  const content = spanRef.value.textContent || ''
-  const cleanContent = cleanZeroWidthSpaces(content)
-  isEmptyState.value = !cleanContent || cleanContent.trim() === ''
-
-  // 手动添加/移除empty类，确保CSS选择器正确匹配
-  if (isEmptyState.value) {
-    spanRef.value.classList.add('empty')
-  } else {
-    spanRef.value.classList.remove('empty')
-  }
-}
+// 获取 placeholder 文本
+const placeholderText = computed(() => props.block.options?.placeholder || '请输入内容')
+// 计算 placeholder 宽度
+const placeholderWidth = computed(() => calculatePlaceholderWidth(placeholderText.value))
 
 // 处理内容编辑
 const handleInput = (event: Event) => {
@@ -40,9 +23,6 @@ const handleInput = (event: Event) => {
   // 清理零宽字符后再提交更新
   newContent = cleanZeroWidthSpaces(newContent)
   emit('update:content', newContent)
-
-  // 更新空状态
-  updateEmptyState()
 
   // 确保更新传递给父组件
   nextTick(() => {
@@ -57,61 +37,15 @@ const handleInput = (event: Event) => {
   })
 }
 
-// 处理键盘事件
-const handleKeyDown = (event: KeyboardEvent) => {
-  // Tab 键和箭头键导航由父组件统一处理，这里不阻止事件冒泡
-  // 让事件继续传播到父组件的 handleKeyDown
-
-  // Enter 键处理
-  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault()
-    // 触发提交事件
-    const submitEvent = new CustomEvent('submit', {
-      detail: props.block.content,
-      bubbles: true,
-    })
-    spanRef.value?.dispatchEvent(submitEvent)
-    return
-  }
-
-  // 如果按下了退格键或删除键，并且内容为空，则更新空状态
-  if ((event.key === 'Backspace' || event.key === 'Delete') && spanRef.value) {
-    nextTick(() => {
-      updateEmptyState()
-    })
-  }
-}
-
-// 聚焦到指定元素
-const focusElement = (element: HTMLElement) => {
-  const range = document.createRange()
-  const selection = window.getSelection()
-
-  range.selectNodeContents(element)
-  range.collapse(false) // 光标移到末尾
-
-  selection?.removeAllRanges()
-  selection?.addRange(range)
-}
-
-// 处理点击事件
-const handleClick = () => {
-  if (isEmpty.value && spanRef.value) {
-    focusElement(spanRef.value)
-  }
-}
-
 // 确保组件内容与 props 同步
 const updateContent = () => {
-  if (spanRef.value && spanRef.value.textContent !== props.block.content) {
+  // 添加安全检查，防止在组件销毁时操作 DOM
+  if (spanRef.value && spanRef.value.isConnected && spanRef.value.textContent !== props.block.content) {
     spanRef.value.textContent = props.block.content
-
-    // 更新空状态
-    updateEmptyState()
 
     // 确保字段周围有零宽字符
     nextTick(() => {
-      if (spanRef.value) {
+      if (spanRef.value && spanRef.value.isConnected) {
         ensureZeroWidthAroundField(spanRef.value)
       }
     })
@@ -127,16 +61,10 @@ watch(
   { immediate: true },
 )
 
-// 处理失焦事件
-const handleBlur = () => {
-  updateEmptyState()
-}
-
 // 组件挂载后确保零宽字符并更新状态
 onMounted(() => {
   if (spanRef.value) {
     ensureZeroWidthAroundField(spanRef.value)
-    updateEmptyState()
   }
 })
 </script>
@@ -144,15 +72,18 @@ onMounted(() => {
 <template>
   <span
     ref="spanRef"
-    :class="['template-field', 'editable-field', { empty: isEmpty }]"
-    :data-placeholder="block.options?.placeholder || '请输入内容'"
+    class="template-field"
+    :data-placeholder="placeholderText"
     :contenteditable="!editorContext?.readonly"
     :data-block-type="block.type"
     :data-block-id="block.id"
+    :style="{
+      '--placeholder-min-width': placeholderWidth.minWidth,
+      '--placeholder-max-width': placeholderWidth.maxWidth,
+      '--placeholder-white-space': placeholderWidth.useMaxWidth ? 'normal' : 'nowrap',
+      '--placeholder-word-break': placeholderWidth.useMaxWidth ? 'break-word' : 'normal',
+    }"
     @input="handleInput"
-    @keydown="handleKeyDown"
-    @click="handleClick"
-    @blur="handleBlur"
     >{{ block.content }}</span
   >
 </template>
@@ -160,49 +91,77 @@ onMounted(() => {
 <style lang="less">
 .template-field {
   display: inline;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 3px 8px;
-  margin: 0 2px;
+  caret-color: #191919;
+  color: #1476ff;
+  min-width: 2em;
+  max-width: none;
+  background: rgba(20, 118, 255, 0.1);
+  padding: 2px 8px;
+  margin: 0 4px;
   border-radius: 4px;
   cursor: text;
-  transition: background-color 0.2s ease;
-  min-width: 60px;
+  transition: background-color 0.2s;
+  /* 允许字段内容换行，与容器保持一致 */
   white-space: pre-wrap;
+  /* 强制换行设置 - 允许在任意字符处断行 */
   word-break: break-all;
   word-wrap: break-word;
   box-sizing: border-box;
   overflow-wrap: break-word;
-  vertical-align: baseline;
-  outline: none;
-  position: relative; // 确保相对定位
-  min-height: 28px; // 确保有最小高度
+  line-height: 26px;
+  position: relative;
+  /* 启用连字符，帮助长英文词的折行 */
+  hyphens: auto;
+  /* 修改为中线对齐，确保与文本一致 */
+  vertical-align: middle;
 
+  /** 换行保持样式 */
   box-decoration-break: clone;
-  line-height: 28px;
+
   &:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: rgba(20, 118, 255, 0.15);
   }
 
-  &:focus {
-    background-color: rgba(0, 123, 255, 0.1);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  &:empty {
+    /* 确保空字段有足够高度 */
+    min-height: 26px;
+    /* 空字段使用inline确保有区域，但不改变display类型 */
+    display: inline-block;
+    /* 与文本保持一致的垂直对齐 */
+    vertical-align: middle;
+    line-height: 26px;
+    /* 使用计算的宽度变量 */
+    min-width: var(--placeholder-min-width, 2em);
+    max-width: var(--placeholder-max-width, 20em);
+    white-space: var(--placeholder-white-space, nowrap);
+    word-break: var(--placeholder-word-break, normal);
   }
 
-  &.empty:before {
+  &:empty::before {
     content: attr(data-placeholder);
-    color: rgba(0, 0, 0, 0.4);
-    font-style: italic;
+    color: #a6cafd;
     pointer-events: none;
     position: absolute;
+    /* 修改为垂直居中，不使用transform */
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
     left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+    right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: var(--placeholder-white-space, nowrap);
+    word-break: var(--placeholder-word-break, normal);
   }
 
-  &[contenteditable='false'] {
-    background-color: rgba(0, 0, 0, 0.02);
-    color: rgba(0, 0, 0, 0.4);
-    cursor: not-allowed;
+  &:empty::after {
+    content: '\200b';
+    display: inline;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
   }
 }
 </style>

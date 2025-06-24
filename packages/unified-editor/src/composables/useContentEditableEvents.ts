@@ -7,9 +7,7 @@ import { cleanZeroWidthSpaces, cleanupZeroWidthNodes } from '../utils/zeroWidthU
  */
 export function useContentEditableEvents(
   editorRef: Ref<HTMLElement | null>,
-  blocks: Ref<ContentBlock[]>,
   onUpdate: (blocks: ContentBlock[]) => void,
-  onSubmit?: (value: string) => void,
 ): EditorEventHandlers {
   /**
    * 处理 contenteditable 的 input 事件
@@ -23,28 +21,6 @@ export function useContentEditableEvents(
     // 从 DOM 解析回数据结构
     const newBlocks = parseContentFromDOM(editorRef.value)
     onUpdate(newBlocks)
-  }
-
-  /**
-   * 处理特殊键盘事件
-   */
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const { key, ctrlKey, metaKey, shiftKey } = event
-
-    // Tab 键：跳转到下一个可编辑字段
-    if (key === 'Tab') {
-      event.preventDefault()
-      navigateToNextField(shiftKey)
-      return
-    }
-
-    // Enter 键：提交或换行
-    if (key === 'Enter' && (ctrlKey || metaKey)) {
-      event.preventDefault()
-      const content = blocks.value.map((b) => b.content).join('')
-      onSubmit?.(content)
-      return
-    }
   }
 
   /**
@@ -101,48 +77,8 @@ export function useContentEditableEvents(
     return blocks
   }
 
-  /**
-   * 导航到下一个可编辑字段
-   */
-  const navigateToNextField = (reverse: boolean = false) => {
-    if (!editorRef.value) return
-
-    const editableFields = editorRef.value.querySelectorAll('[data-block-type="editable"]')
-    if (editableFields.length === 0) return
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return
-
-    const currentElement = selection.getRangeAt(0).startContainer.parentElement?.closest('[data-block-type]')
-    if (!currentElement) return
-
-    const currentIndex = Array.from(editableFields).indexOf(currentElement as Element)
-    let nextIndex = reverse ? currentIndex - 1 : currentIndex + 1
-
-    if (nextIndex < 0) nextIndex = editableFields.length - 1
-    if (nextIndex >= editableFields.length) nextIndex = 0
-
-    const nextField = editableFields[nextIndex] as HTMLElement
-    focusElement(nextField)
-  }
-
-  /**
-   * 聚焦到指定元素
-   */
-  const focusElement = (element: HTMLElement) => {
-    const range = document.createRange()
-    const selection = window.getSelection()
-
-    range.selectNodeContents(element)
-    range.collapse(false) // 光标移到末尾
-
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-  }
-
   return {
     handleInput,
-    handleKeyDown,
     handleClick,
     handleFocus,
     handleBlur,

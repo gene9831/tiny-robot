@@ -44,8 +44,8 @@ export interface UnifiedEditorEmits {
   'update:modelValue': [value: ContentBlock[]]
   focus: [event: FocusEvent]
   blur: [event: FocusEvent]
-  submit: [value: string]
   click: [event: MouseEvent]
+  submit: [value: string]
 }
 
 /**
@@ -91,7 +91,6 @@ export interface RenderBlock {
  */
 export interface EditorEventHandlers {
   handleInput: () => void
-  handleKeyDown: (event: KeyboardEvent) => void
   handleClick: (event: MouseEvent) => void
   handleFocus: (event: FocusEvent) => void
   handleBlur: (event: FocusEvent) => void
@@ -111,6 +110,8 @@ export interface BlockComponentProps {
  */
 export interface BlockComponentEmits {
   'update:content': [content: string]
+  'delete-block': []
+  'merge-with-previous': [blockIndex: number]
 }
 
 /**

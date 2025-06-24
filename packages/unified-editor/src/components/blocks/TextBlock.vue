@@ -2,7 +2,7 @@
 import { inject, computed, nextTick } from 'vue'
 import type { BlockComponentProps, EditorContext } from '../../types'
 
-const props = defineProps<BlockComponentProps>()
+defineProps<BlockComponentProps>()
 
 const emit = defineEmits<{
   (e: 'update:content', content: string): void
@@ -29,24 +29,6 @@ const handleInput = (event: Event) => {
     target.dispatchEvent(inputEvent)
   })
 }
-
-// 处理键盘事件
-const handleKeyDown = (event: KeyboardEvent) => {
-  // Tab 键和箭头键导航由父组件统一处理，这里不阻止事件冒泡
-  // 让事件继续传播到父组件的 handleKeyDown
-
-  // Enter 键处理
-  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault()
-    // 触发提交事件
-    const submitEvent = new CustomEvent('submit', {
-      detail: props.block.content,
-      bubbles: true,
-    })
-    event.target?.dispatchEvent(submitEvent)
-    return
-  }
-}
 </script>
 
 <template>
@@ -56,7 +38,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
     :data-block-id="block.id"
     :contenteditable="isEditable"
     @input="handleInput"
-    @keydown="handleKeyDown"
     >{{ block.content }}</span
   >
 </template>

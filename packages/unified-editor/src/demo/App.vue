@@ -79,8 +79,6 @@ const getTextContent = () => {
 
 <template>
   <div class="demo-app">
-    <h1>统一内容编辑器演示</h1>
-
     <!-- 示例选择 -->
     <div class="example-selector">
       <h3>选择示例：</h3>
@@ -146,27 +144,6 @@ const getTextContent = () => {
   cursor: pointer;
 }
 
-.controls {
-  margin: 20px 0;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-
-.controls label,
-.controls button {
-  margin-right: 15px;
-}
-
-.template-parser {
-  margin: 20px 0;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-
 .editor-container {
   margin: 20px 0;
   padding: 15px;
@@ -178,7 +155,7 @@ const getTextContent = () => {
 .demo-editor {
   width: 100%;
   min-height: 100px;
-  margin-top: 10px;
+  padding: 10px 2px;
   background: white;
 }
 
@@ -191,6 +168,7 @@ const getTextContent = () => {
 }
 
 .text-output {
+  width: 100%;
   margin-top: 10px;
   padding: 10px;
   border: 1px solid #ddd;
@@ -215,21 +193,5 @@ const getTextContent = () => {
   background: white;
   overflow: auto;
   max-height: 300px;
-}
-
-.instructions {
-  margin: 20px 0;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-
-.instructions ul {
-  padding-left: 20px;
-}
-
-.instructions li {
-  margin-bottom: 8px;
 }
 </style>
