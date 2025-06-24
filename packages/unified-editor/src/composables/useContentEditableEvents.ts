@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import type { ContentBlock, EditorEventHandlers } from '../types'
+import { cleanZeroWidthSpaces, cleanupZeroWidthNodes } from '../utils/zeroWidthUtils'
 
 /**
  * ContentEditable 事件处理
@@ -15,6 +16,9 @@ export function useContentEditableEvents(
    */
   const handleInput = () => {
     if (!editorRef.value) return
+
+    // 清理多余的零宽字符节点
+    cleanupZeroWidthNodes(editorRef.value)
 
     // 从 DOM 解析回数据结构
     const newBlocks = parseContentFromDOM(editorRef.value)
@@ -73,10 +77,15 @@ export function useContentEditableEvents(
 
     blockElements.forEach((element) => {
       const blockType = element.getAttribute('data-block-type') as ContentBlock['type']
-      const content = element.textContent || ''
+      const blockId = element.getAttribute('data-block-id') || ''
+
+      // 获取内容并清理零宽字符
+      let content = element.textContent || ''
+      content = cleanZeroWidthSpaces(content)
 
       const block: ContentBlock = {
-        type: blockType,
+        id: blockId,
+        type: blockType || 'text',
         content,
         options: {},
       }

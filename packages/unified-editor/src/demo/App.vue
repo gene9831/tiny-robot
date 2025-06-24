@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import UnifiedEditor from '../components/UnifiedEditor.vue'
 import type { ContentBlock } from '../types'
-import { createTextBlock, createEditableBlock, parseTemplate, blocksToText } from '../utils/contentHelpers'
+import { createTextBlock, createEditableBlock, blocksToText } from '../utils/contentHelpers'
 import { migrateFromTemplate } from '../migration/templateMigration'
 
 // 基础示例数据
@@ -75,29 +75,6 @@ const handleSubmit = (value: string) => {
 const getTextContent = () => {
   return blocksToText(currentContent.value)
 }
-
-// 聚焦编辑器
-const focusEditor = () => {
-  editorRef.value?.focus()
-}
-
-// 添加新的可编辑块
-const addEditableBlock = () => {
-  currentContent.value.push(createEditableBlock('', '新字段'))
-}
-
-// 清空内容
-const clearContent = () => {
-  currentContent.value = []
-}
-
-// 从模板解析
-const templateInput = ref('[姓名]，您好！欢迎使用[产品名称]。')
-const parseFromTemplate = () => {
-  const parsed = parseTemplate(templateInput.value)
-  currentContent.value = parsed
-  currentExample.value = 'basic'
-}
 </script>
 
 <template>
@@ -115,28 +92,6 @@ const parseFromTemplate = () => {
         <input type="radio" v-model="currentExample" value="template" />
         模板迁移示例
       </label>
-    </div>
-
-    <!-- 控制面板 -->
-    <div class="controls">
-      <label>
-        <input type="checkbox" v-model="readonly" />
-        只读模式
-      </label>
-      <button @click="focusEditor">聚焦编辑器</button>
-      <button @click="addEditableBlock">添加可编辑块</button>
-      <button @click="clearContent">清空内容</button>
-    </div>
-
-    <!-- 模板解析工具 -->
-    <div class="template-parser">
-      <h3>从模板解析：</h3>
-      <input
-        v-model="templateInput"
-        placeholder="输入模板，如：[姓名]，您好！"
-        style="width: 300px; margin-right: 10px"
-      />
-      <button @click="parseFromTemplate">解析模板</button>
     </div>
 
     <!-- 编辑器 -->
@@ -163,19 +118,6 @@ const parseFromTemplate = () => {
     <div class="data-structure">
       <h3>数据结构：</h3>
       <pre>{{ JSON.stringify(currentContent, null, 2) }}</pre>
-    </div>
-
-    <!-- 使用说明 -->
-    <div class="instructions">
-      <h3>使用说明：</h3>
-      <ul>
-        <li><strong>Tab 键</strong>：切换到下一个可编辑区域</li>
-        <li><strong>Shift + Tab</strong>：切换到上一个可编辑区域</li>
-        <li><strong>方向键</strong>：在编辑区域之间导航</li>
-        <li><strong>Ctrl/Cmd + Enter</strong>：提交内容</li>
-        <li><strong>Enter</strong>：跳转到下一个可编辑区域</li>
-        <li><strong>Escape</strong>：失活编辑器</li>
-      </ul>
     </div>
   </div>
 </template>

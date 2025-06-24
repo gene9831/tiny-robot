@@ -109,15 +109,6 @@ const handleDeleteBlock = (blockIndex: number) => {
     const newBlocks = [...internalBlocks.value]
     newBlocks.splice(blockIndex, 1)
 
-    // 如果删除后数组为空，添加一个空的文本块
-    if (newBlocks.length === 0) {
-      newBlocks.push({
-        type: 'text',
-        content: '',
-        options: {},
-      })
-    }
-
     internalBlocks.value = newBlocks
     emit('update:modelValue', [...newBlocks])
 

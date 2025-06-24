@@ -1,5 +1,3 @@
-// 移除未使用的 Component 导入
-
 import type { Component } from 'vue'
 
 /**
@@ -8,9 +6,11 @@ import type { Component } from 'vue'
 export type ContentType = 'text' | 'editable'
 
 /**
- * 用户传入的内容块 - 极简设计
+ * 用户传入的内容块
  */
 export interface ContentBlock {
+  /** 唯一标识符 */
+  id: string
   /** 内容类型 */
   type: ContentType
   /** 显示内容/初始值 */
@@ -65,14 +65,24 @@ export interface ParsedContent {
 }
 
 /**
- * 内部渲染块数据
+ * 渲染块 - 用于组件渲染
  */
 export interface RenderBlock {
+  /** 块ID */
   id: string
+  /** 块类型 */
   type: ContentType
+  /** 内容 */
   content: string
-  options: ContentBlock['options']
+  /** 是否可编辑 */
   isEditable: boolean
+  /** 选项 */
+  options: {
+    placeholder?: string
+    style?: Record<string, unknown>
+    disabled?: boolean
+  }
+  /** 组件 */
   component: Component
 }
 

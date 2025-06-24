@@ -1,9 +1,17 @@
 import type { ContentBlock } from '../types'
 
 /**
+ * 生成唯一ID
+ */
+export const generateUniqueId = (): string => {
+  return `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+/**
  * 创建文本块
  */
 export const createTextBlock = (content: string): ContentBlock => ({
+  id: generateUniqueId(),
   type: 'text',
   content,
 })
@@ -12,6 +20,7 @@ export const createTextBlock = (content: string): ContentBlock => ({
  * 创建可编辑块
  */
 export const createEditableBlock = (content: string = '', placeholder?: string): ContentBlock => ({
+  id: generateUniqueId(),
   type: 'editable',
   content,
   options: { placeholder },

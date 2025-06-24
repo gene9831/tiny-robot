@@ -1,6 +1,12 @@
 import { ref } from 'vue'
 import type { ContentBlock } from '../types'
-import { parseTemplate, blocksToText, createTextBlock, createEditableBlock } from '../utils/contentHelpers'
+import {
+  parseTemplate,
+  blocksToText,
+  createTextBlock,
+  createEditableBlock,
+  generateUniqueId,
+} from '../utils/contentHelpers'
 
 /**
  * 模板参数接口（兼容现有 TemplateEditor）
@@ -143,6 +149,11 @@ export const parseTemplateValue = (
   let valueIndex = 0
 
   blocks.forEach((block) => {
+    // 确保每个块都有唯一ID
+    if (!block.id) {
+      block.id = generateUniqueId()
+    }
+
     if (block.type === 'text') {
       // 跳过文本块的长度
       valueIndex += block.content.length
