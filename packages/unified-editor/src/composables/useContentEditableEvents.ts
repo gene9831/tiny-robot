@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import type { EditorEventHandlers } from '../types'
+import { isZWS } from '../utils/contentHelpers'
 import { useBlockDataSync } from './useBlockDataSync'
 
 /**
@@ -22,7 +23,10 @@ export function useContentEditableEvents(
       const blockIndexStr = element.dataset.blockIndex
       if (blockIndexStr) {
         const blockIndex = parseInt(blockIndexStr, 10)
-        const content = element.innerText || ''
+        let content = element.innerText || ''
+        if (isZWS(content)) {
+          content = ''
+        }
         domBlockMap.set(blockIndex, { content, element })
       }
     })

@@ -181,3 +181,17 @@ export const calculatePlaceholderWidth = (placeholderText: string) => {
     maxWidth: `${maxWidthEm}em`,
   }
 }
+
+/**
+ * 零宽空格
+ */
+export const ZWS = '\u200B'
+
+/**
+ * 检查字符串是否只包含零宽空格
+ * @param str 要检查的字符串
+ * @returns 如果字符串只包含零宽空格，则返回 true，否则返回 false
+ */
+export function isZWS(str: string): boolean {
+  return str === ZWS
+}
