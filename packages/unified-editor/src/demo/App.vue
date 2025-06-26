@@ -61,8 +61,6 @@ const editorRef = ref()
 
 // 处理内容更新
 const handleUpdate = (newContent: ContentBlock[]) => {
-  console.log('editorRef.value', editorRef.value.getBlocks())
-  console.log('内容更新:', newContent)
   currentContent.value = newContent
 }
 

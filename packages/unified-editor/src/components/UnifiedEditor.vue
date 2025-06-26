@@ -4,7 +4,7 @@ import type { UnifiedEditorProps, UnifiedEditorEmits, ContentBlock, RenderBlock 
 
 // 导入组件
 import TextBlock from './blocks/TextBlock.vue'
-import EditableBlock from './blocks/EditableBlock.vue'
+import TemplateBlock from './blocks/TemplateBlock.vue'
 
 // 导入 composables
 import { useContentEditableEvents } from '../composables/useContentEditableEvents'
@@ -28,7 +28,7 @@ const dataSync = useBlockDataSync(
   },
 )
 
-const { handleInput } = useContentEditableEvents(editorRef, dataSync)
+const { handleInput, handlePaste, handleKeyDown: handleBlockKeyDown } = useContentEditableEvents(editorRef, dataSync)
 
 // 将用户数据转换为渲染块
 const renderBlocks = computed<RenderBlock[]>(() => {
@@ -37,7 +37,7 @@ const renderBlocks = computed<RenderBlock[]>(() => {
     type: block.type,
     content: block.content,
     options: block.options || {},
-    isEditable: block.type === 'editable',
+    isEditable: block.type === 'template',
     component: getComponentForType(block.type),
   }))
 })
@@ -46,13 +46,21 @@ const renderBlocks = computed<RenderBlock[]>(() => {
 const getComponentForType = (type: ContentBlock['type']) => {
   const componentMap = {
     text: markRaw(TextBlock),
-    editable: markRaw(EditableBlock),
+    template: markRaw(TemplateBlock),
   }
   return componentMap[type] || markRaw(TextBlock)
 }
 
 // 键盘处理 - 只保留基本的提交功能
 const handleKeyDown = (event: KeyboardEvent) => {
+  // 优先处理块级别的键盘事件（例如，防止删除空的模板块）
+  handleBlockKeyDown(event)
+
+  // 如果事件已经被块处理器阻止，则不执行后续逻辑
+  if (event.defaultPrevented) {
+    return
+  }
+
   if (props.readonly) return
 
   // 处理 Ctrl+Enter 或 Cmd+Enter 提交
@@ -88,6 +96,7 @@ defineExpose({
     :class="['unified-editor', editorClass, { 'is-readonly': readonly }]"
     contenteditable="true"
     @keydown="handleKeyDown"
+    @paste="handlePaste"
     @input="handleInput"
   >
     <component

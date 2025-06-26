@@ -13,8 +13,12 @@ defineProps<BlockComponentProps>()
 <style scoped>
 .text-block {
   display: inline;
+
+  /* 允许字段内容换行，与容器保持一致 */
   white-space: pre-wrap;
-  word-break: break-word;
+  /* 强制换行设置 - 允许在任意字符处断行 */
+  word-break: break-all;
+  word-wrap: break-word;
 }
 
 .text-block[contenteditable='true'] {

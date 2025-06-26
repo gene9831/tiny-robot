@@ -3,7 +3,7 @@ import type { Component } from 'vue'
 /**
  * 内容类型枚举
  */
-export type ContentType = 'text' | 'editable'
+export type ContentType = 'text' | 'template'
 
 /**
  * 用户传入的内容块
@@ -86,6 +86,8 @@ export interface RenderBlock {
  */
 export interface EditorEventHandlers {
   handleInput: () => void
+  handlePaste: (e: ClipboardEvent) => void
+  cleanupDOM: () => void
 }
 
 /**

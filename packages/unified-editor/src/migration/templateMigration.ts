@@ -76,7 +76,7 @@ export const migrateToTemplate = (blocks: ContentBlock[]): SetTemplateParams => 
 
   const template = blocks
     .map((block) => {
-      if (block.type === 'editable' && block.options?.placeholder) {
+      if (block.type === 'template' && block.options?.placeholder) {
         const placeholder = block.options.placeholder
         if (block.content) {
           initialValues[placeholder] = block.content
@@ -113,7 +113,7 @@ export const createCompatibleEditor = () => {
 
   const resetFields = () => {
     blocks.value.forEach((block) => {
-      if (block.type === 'editable') {
+      if (block.type === 'template') {
         block.content = ''
       }
     })
@@ -157,7 +157,7 @@ export const parseTemplateValue = (
     if (block.type === 'text') {
       // 跳过文本块的长度
       valueIndex += block.content.length
-    } else if (block.type === 'editable') {
+    } else if (block.type === 'template') {
       // 尝试提取可编辑块的内容
       const placeholder = block.options?.placeholder
       if (placeholder && initialValues?.[placeholder]) {
@@ -211,10 +211,10 @@ export const validateMigration = (
   // 检查初始值是否保持一致
   if (original.initialValues) {
     Object.entries(original.initialValues).forEach(([key, value]) => {
-      const migratedBlock = migrated.find((block) => block.type === 'editable' && block.options?.placeholder === key)
+      const migratedBlock = migrated.find((block) => block.type === 'template' && block.options?.placeholder === key)
 
       if (!migratedBlock) {
-        errors.push(`Missing editable block for placeholder: ${key}`)
+        errors.push(`Missing template block for placeholder: ${key}`)
       } else if (migratedBlock.content !== value) {
         errors.push(`Content mismatch for placeholder ${key}: expected "${value}", got "${migratedBlock.content}"`)
       }

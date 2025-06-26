@@ -21,7 +21,7 @@ export const createTextBlock = (content: string): ContentBlock => ({
  */
 export const createEditableBlock = (content: string = '', placeholder?: string): ContentBlock => ({
   id: generateUniqueId(),
-  type: 'editable',
+  type: 'template',
   content,
   options: { placeholder },
 })
@@ -75,7 +75,7 @@ export const blocksToText = (blocks: ContentBlock[]): string => {
 export const blocksToTemplate = (blocks: ContentBlock[]): string => {
   return blocks
     .map((block) => {
-      if (block.type === 'editable' && block.options?.placeholder) {
+      if (block.type === 'template' && block.options?.placeholder) {
         return `[${block.options.placeholder}]`
       }
       return block.content
