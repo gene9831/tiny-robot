@@ -1,86 +1,70 @@
 import type { Ref } from 'vue'
-import type { ContentBlock, EditorEventHandlers } from '../types'
-import { cleanZeroWidthSpaces, cleanupZeroWidthNodes } from '../utils/zeroWidthUtils'
+import type { EditorEventHandlers } from '../types'
+import { useBlockDataSync } from './useBlockDataSync'
 
 /**
  * ContentEditable 事件处理
  */
 export function useContentEditableEvents(
   editorRef: Ref<HTMLElement | null>,
-  onUpdate: (blocks: ContentBlock[]) => void,
+  dataSync: ReturnType<typeof useBlockDataSync>,
 ): EditorEventHandlers {
   /**
-   * 处理 contenteditable 的 input 事件
+   * 处理编辑器级别的 input 事件
+   * 这里不处理具体的数据更新，只做一些全局的清理工作
    */
   const handleInput = () => {
     if (!editorRef.value) return
 
-    // 清理多余的零宽字符节点
-    cleanupZeroWidthNodes(editorRef.value)
+    const selection = window.getSelection()
+    if (!selection?.anchorNode) return
 
-    // 从 DOM 解析回数据结构
-    const newBlocks = parseContentFromDOM(editorRef.value)
-    onUpdate(newBlocks)
-  }
+    let targetNode = selection.anchorNode
+    if (targetNode.nodeType === Node.TEXT_NODE) {
+      targetNode = targetNode.parentElement!
+    }
 
-  /**
-   * 处理点击事件 - 特殊字段交互
-   */
-  const handleClick = (_event: MouseEvent) => {
-    // 编辑器点击事件处理
-  }
+    const blockElement = (targetNode as HTMLElement).closest<HTMLElement>('[data-block-index]')
 
-  /**
-   * 处理聚焦事件
-   */
-  const handleFocus = (_event: FocusEvent) => {
-    // 编辑器获得焦点时的处理
-  }
+    if (blockElement) {
+      const blockIndexStr = blockElement.dataset.blockIndex
+      if (blockIndexStr) {
+        const blockIndex = parseInt(blockIndexStr, 10)
+        const newContent = blockElement.textContent || ''
+        const oldContent = dataSync.getBlockContent(blockIndex)
 
-  /**
-   * 处理失焦事件
-   */
-  const handleBlur = (_event: FocusEvent) => {
-    // 编辑器失去焦点时的处理
-  }
-
-  /**
-   * 从 DOM 解析内容回数据结构（数据驱动的核心）
-   */
-  const parseContentFromDOM = (container: HTMLElement): ContentBlock[] => {
-    const blocks: ContentBlock[] = []
-    const blockElements = container.querySelectorAll('[data-block-id]')
-
-    blockElements.forEach((element) => {
-      const blockType = element.getAttribute('data-block-type') as ContentBlock['type']
-      const blockId = element.getAttribute('data-block-id') || ''
-
-      // 获取内容并清理零宽字符
-      let content = element.textContent || ''
-      content = cleanZeroWidthSpaces(content)
-
-      const block: ContentBlock = {
-        id: blockId,
-        type: blockType || 'text',
-        content,
-        options: {},
+        if (oldContent !== newContent) {
+          dataSync.updateBlockContent(blockIndex, newContent)
+        }
       }
+    }
 
-      // 恢复选项配置
-      if (blockType === 'editable') {
-        block.options!.placeholder = element.getAttribute('data-placeholder') || ''
+    // 清理浏览器自动插入的多余标签
+    cleanupDOM()
+  }
+
+  /**
+   * 清理浏览器自动插入的多余标签
+   * 这是唯一允许的 DOM 操作，用于维护 DOM 结构的整洁
+   */
+  const cleanupDOM = () => {
+    if (!editorRef.value) return
+
+    // 清理浏览器自动插入的空 <br> 标签
+    const emptyBrs = editorRef.value.querySelectorAll('br:only-child')
+    emptyBrs.forEach((br) => {
+      if (br.parentElement && br.parentElement.textContent?.trim() === '') {
+        br.remove()
       }
-
-      blocks.push(block)
     })
 
-    return blocks
+    // 清理空的 <div> 或 <p> 标签
+    const emptyDivs = editorRef.value.querySelectorAll('div:empty, p:empty')
+    emptyDivs.forEach((div) => div.remove())
   }
 
   return {
     handleInput,
-    handleClick,
-    handleFocus,
-    handleBlur,
+    cleanupDOM, // 暴露清理方法供外部调用
   }
 }

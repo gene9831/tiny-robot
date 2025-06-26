@@ -61,6 +61,7 @@ const editorRef = ref()
 
 // 处理内容更新
 const handleUpdate = (newContent: ContentBlock[]) => {
+  console.log('editorRef.value', editorRef.value.getBlocks())
   console.log('内容更新:', newContent)
   currentContent.value = newContent
 }
@@ -155,8 +156,8 @@ const getTextContent = () => {
 .demo-editor {
   width: 100%;
   min-height: 100px;
-  padding: 10px 2px;
-  background: white;
+  padding: 10px;
+  background: #ffffff;
 }
 
 .output {

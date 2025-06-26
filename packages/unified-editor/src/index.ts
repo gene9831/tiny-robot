@@ -4,7 +4,6 @@ export { default as UnifiedEditor } from './components/UnifiedEditor.vue'
 // 块组件
 export { default as TextBlock } from './components/blocks/TextBlock.vue'
 export { default as EditableBlock } from './components/blocks/EditableBlock.vue'
-export { default as DropdownBlock } from './components/blocks/DropdownBlock.vue'
 
 // 类型定义
 export type {
@@ -17,7 +16,6 @@ export type {
   EditorEventHandlers,
   RenderBlock,
   BlockComponentProps,
-  BlockComponentEmits,
 } from './types'
 
 // Composables

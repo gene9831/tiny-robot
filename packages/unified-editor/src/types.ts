@@ -33,8 +33,6 @@ export interface UnifiedEditorProps {
   editorClass?: string
   /** 是否只读 */
   readonly?: boolean
-  /** 占位符文本 */
-  placeholder?: string
 }
 
 /**
@@ -42,9 +40,6 @@ export interface UnifiedEditorProps {
  */
 export interface UnifiedEditorEmits {
   'update:modelValue': [value: ContentBlock[]]
-  focus: [event: FocusEvent]
-  blur: [event: FocusEvent]
-  click: [event: MouseEvent]
   submit: [value: string]
 }
 
@@ -91,9 +86,6 @@ export interface RenderBlock {
  */
 export interface EditorEventHandlers {
   handleInput: () => void
-  handleClick: (event: MouseEvent) => void
-  handleFocus: (event: FocusEvent) => void
-  handleBlur: (event: FocusEvent) => void
 }
 
 /**
@@ -106,33 +98,12 @@ export interface BlockComponentProps {
 }
 
 /**
- * 块组件事件
- */
-export interface BlockComponentEmits {
-  'update:content': [content: string]
-  'delete-block': []
-  'merge-with-previous': [blockIndex: number]
-}
-
-/**
  * 选区状态
  */
 export interface Selection {
   isActive: boolean
   blockIndex: number
   offset: number // 光标在块内的位置
-}
-
-/**
- * 编辑器上下文，用于 provide/inject
- */
-export interface EditorContext {
-  readonly: boolean
-  onBlockUpdate: (blockIndex: number, newContent: string) => void
-  navigateField: (reverse?: boolean) => void
-  focusField: (index: number) => void
-  getAllEditableFields: () => HTMLElement[]
-  getCurrentFieldIndex: () => number
 }
 
 /**
