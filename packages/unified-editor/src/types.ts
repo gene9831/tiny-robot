@@ -88,6 +88,7 @@ export interface EditorEventHandlers {
   handleInput: () => void
   handlePaste: (e: ClipboardEvent) => void
   cleanupDOM: () => void
+  handleKeyDown: (e: KeyboardEvent) => void
 }
 
 /**

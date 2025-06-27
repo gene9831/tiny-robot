@@ -151,38 +151,6 @@ export const cloneBlocks = (blocks: ContentBlock[]): ContentBlock[] => {
 }
 
 /**
- * 计算 placeholder 宽度
- */
-export const calculatePlaceholderWidth = (placeholderText: string) => {
-  const text = placeholderText
-
-  // 基本字符宽度估算 (em单位)
-  const defaultMinWidthEm = 2
-
-  // 根据字符数估算宽度 (中文字符约为1em，英文字符约为0.6em)
-  const chineseCharCount = (text.match(/[\u4e00-\u9fa5]/g) || []).length
-  const otherCharCount = text.length - chineseCharCount
-
-  // 计算估计宽度 (中文1em/字，其他0.6em/字)
-  const estimatedWidth = chineseCharCount + otherCharCount * 0.6
-
-  // 添加一些额外空间用于内边距
-  const paddingEm = 1
-
-  // 计算最终宽度，确保至少有最小宽度
-  const minWidthEm = Math.max(defaultMinWidthEm, Math.ceil(estimatedWidth) + paddingEm)
-
-  // 设置最大宽度限制
-  const maxWidthEm = 20
-
-  return {
-    minWidth: `${minWidthEm}em`,
-    useMaxWidth: minWidthEm > maxWidthEm,
-    maxWidth: `${maxWidthEm}em`,
-  }
-}
-
-/**
  * 零宽空格
  */
 export const ZWS = '\u200B'

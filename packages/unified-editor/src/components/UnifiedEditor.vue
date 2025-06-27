@@ -84,8 +84,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
 defineExpose({
   focus: () => editorRef.value?.focus(),
   getContent: () => dataSync.getAllContent(),
-  getBlocks: () => dataSync.internalBlocks.value,
-  updateBlock: (index: number, content: string) => dataSync.updateBlockContent(index, content),
   reset: () => dataSync.reset(),
 })
 </script>

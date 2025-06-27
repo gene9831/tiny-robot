@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed, watchEffect, type Ref } from 'vue'
 import type { ContentBlock } from '../types'
 
 export type BlockDataSyncEmit = (event: 'update:modelValue', value: ContentBlock[]) => void
@@ -10,6 +10,13 @@ export type BlockDataSyncEmit = (event: 'update:modelValue', value: ContentBlock
 export function useBlockDataSync(modelValue: Ref<ContentBlock[]>, emit: BlockDataSyncEmit) {
   // 内部数据状态
   const internalBlocks = ref<ContentBlock[]>([...modelValue.value])
+
+  // 监听外部 modelValue 的变化
+  watchEffect(() => {
+    if (JSON.stringify(modelValue.value) !== JSON.stringify(internalBlocks.value)) {
+      internalBlocks.value = [...modelValue.value]
+    }
+  })
 
   /**
    * 处理单个块的内容更新

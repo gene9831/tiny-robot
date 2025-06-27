@@ -26,6 +26,7 @@
     "vue": "^3.4.0"
   },
   "devDependencies": {
+    "@opentiny/tiny-robot": "workspace:*",
     "@types/node": "^20.0.0",
     "@vitejs/plugin-vue": "^5.2.3",
     "less": "^4.2.2",

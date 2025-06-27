@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { useSelection } from '@opentiny/tiny-robot'
 import type { EditorEventHandlers } from '../types'
 import { isZWS } from '../utils/contentHelpers'
 import { useBlockDataSync } from './useBlockDataSync'
@@ -57,16 +58,16 @@ export function useContentEditableEvents(
       return
     }
 
-    const selection = window.getSelection()
+    const selection = useSelection(editorRef).getSelection() as Selection | null
     if (!selection?.anchorNode || selection.rangeCount === 0) {
       return
     }
 
     const range = selection.getRangeAt(0)
     const container = range.commonAncestorContainer
-    const blockElement = (
-      container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement
-    )?.closest<HTMLElement>('[data-block-index]')
+    const blockElement = (container instanceof Element ? container : container.parentElement)?.closest<HTMLElement>(
+      '[data-block-index]',
+    )
 
     if (!blockElement || blockElement.dataset.blockType !== 'template') {
       return
