@@ -53,12 +53,14 @@ export function useContentEditableEvents(
     cleanupDOM()
   }
 
+  const editorSelection = useSelection(editorRef)
+
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key !== 'Backspace' && event.key !== 'Delete') {
       return
     }
 
-    const selection = useSelection(editorRef).getSelection() as Selection | null
+    const selection = editorSelection.getSelection() as Selection | null
     if (!selection?.anchorNode || selection.rangeCount === 0) {
       return
     }
@@ -107,8 +109,118 @@ export function useContentEditableEvents(
 
   const handlePaste = (event: ClipboardEvent) => {
     event.preventDefault()
-    const text = event.clipboardData?.getData('text/plain') || ''
-    document.execCommand('insertText', false, text)
+    const pastedText = event.clipboardData?.getData('text/plain') || ''
+    if (!pastedText) {
+      return
+    }
+
+    const selection = editorSelection.getSelection()
+    if (!selection || selection.rangeCount === 0) {
+      return
+    }
+
+    // 1. 定位光标所在的块
+    const range = selection.getRangeAt(0)
+    const container = range.commonAncestorContainer
+    const blockElement = (container instanceof Element ? container : container.parentElement)?.closest<HTMLElement>(
+      '[data-block-index]',
+    )
+
+    if (!blockElement) {
+      // 如果不在任何块内，则不执行任何操作
+      return
+    }
+
+    // 2. 记录粘贴位置信息，用于光标定位
+    const blockIndexStr = blockElement.dataset.blockIndex
+    if (!blockIndexStr) {
+      return
+    }
+
+    const blockIndex = parseInt(blockIndexStr, 10)
+    const startOffset = range.startOffset
+
+    // 计算粘贴后光标应该在的位置
+    let cursorPosition = startOffset
+    if (range.startContainer.nodeType === Node.TEXT_NODE) {
+      // 如果在文本节点中，需要计算相对于块元素的偏移
+      const textNode = range.startContainer as Text
+      const textBeforeCursor = textNode.textContent?.substring(0, startOffset) || ''
+      cursorPosition = getTextOffsetInBlock(blockElement, textNode, textBeforeCursor.length)
+    }
+
+    // 3. 直接操作 DOM 插入文本
+    range.deleteContents() // 清空选区内容
+    const textNode = document.createTextNode(pastedText)
+    range.insertNode(textNode)
+
+    // 4. 对块中的 content 进行修改和增加
+    const newContent = blockElement.innerText
+    dataSync.updateBlockContent(blockIndex, newContent)
+
+    // 5. 延迟设置光标位置
+    // 使用 setTimeout 确保在下一个事件循环中执行，避免DOM更新冲突
+    setTimeout(() => {
+      setCursorPositionInBlock(blockElement, cursorPosition + pastedText.length)
+    }, 0)
+  }
+
+  /**
+   * 获取文本节点在块元素中的偏移位置
+   */
+  const getTextOffsetInBlock = (blockElement: HTMLElement, targetTextNode: Text, offsetInTextNode: number): number => {
+    let totalOffset = 0
+    const walker = document.createTreeWalker(blockElement, NodeFilter.SHOW_TEXT, null)
+
+    let currentNode = walker.nextNode()
+    while (currentNode) {
+      if (currentNode === targetTextNode) {
+        return totalOffset + offsetInTextNode
+      }
+      totalOffset += currentNode.textContent?.length || 0
+      currentNode = walker.nextNode()
+    }
+
+    return totalOffset
+  }
+
+  /**
+   * 在块元素中设置光标到指定位置
+   */
+  const setCursorPositionInBlock = (blockElement: HTMLElement, position: number) => {
+    const selection = editorSelection.getSelection()
+    if (!selection) return
+
+    const walker = document.createTreeWalker(blockElement, NodeFilter.SHOW_TEXT, null)
+
+    let currentOffset = 0
+    let currentNode = walker.nextNode()
+
+    while (currentNode) {
+      const nodeLength = currentNode.textContent?.length || 0
+
+      if (currentOffset + nodeLength >= position) {
+        // 找到目标位置所在的文本节点
+        const offsetInNode = position - currentOffset
+        const range = document.createRange()
+        range.setStart(currentNode, Math.min(offsetInNode, nodeLength))
+        range.collapse(true)
+
+        selection.removeAllRanges()
+        selection.addRange(range)
+        return
+      }
+
+      currentOffset += nodeLength
+      currentNode = walker.nextNode()
+    }
+
+    // 如果没有找到合适的位置，将光标设置到块的末尾
+    const range = document.createRange()
+    range.selectNodeContents(blockElement)
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
   }
 
   /**

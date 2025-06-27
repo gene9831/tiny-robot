@@ -22,7 +22,7 @@ defineProps<BlockComponentProps>()
   color: #1476ff;
   max-width: none;
   background: rgba(20, 118, 255, 0.1);
-  padding: 3.5px 8px;
+  padding: 3.3px 8px;
   margin: 0 4px;
   border-radius: 4px;
   cursor: text;
@@ -34,12 +34,9 @@ defineProps<BlockComponentProps>()
   word-wrap: break-word;
   box-sizing: border-box;
   overflow-wrap: break-word;
-  line-height: 26px;
   position: relative;
   /* 启用连字符，帮助长英文词的折行 */
   hyphens: auto;
-  /* 修改为中线对齐，确保与文本一致 */
-  vertical-align: middle;
 
   /** 换行保持样式 */
   box-decoration-break: clone;
@@ -52,7 +49,7 @@ defineProps<BlockComponentProps>()
     display: inline-block;
     width: 32px;
     height: 28px;
-    line-height: 20px;
+    line-height: 21.4px;
   }
 }
 </style>
