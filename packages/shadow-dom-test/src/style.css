@@ -12,3 +12,18 @@ ul {
   padding: 0;
   margin: 0;
 }
+
+[contenteditable]:focus {
+  outline: none;
+  border: none;
+}
+
+[data-type='text'] {
+  white-space: pre-wrap;
+}
+
+[data-type='text']:empty::before {
+  content: attr(data-placeholder);
+  display: inline;
+  color: gray;
+}
