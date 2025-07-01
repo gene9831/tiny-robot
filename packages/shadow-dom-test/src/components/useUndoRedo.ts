@@ -1,29 +1,42 @@
-import { ref } from 'vue'
-
 export function useUndoRedo<T>(initial: T) {
-  const undoStack = ref<T[]>([])
-  const redoStack = ref<T[]>([])
-  const state = ref(initial)
+  let undoStack: T[] = []
+  let redoStack: T[] = []
+  let currentValue: T = initial
 
   const commit = (newValue: T) => {
-    undoStack.value.push(state.value)
-    state.value = newValue
-    redoStack.value = []
+    undoStack.push(currentValue)
+    currentValue = newValue
+    redoStack = []
   }
 
   const undo = () => {
-    if (undoStack.value.length) {
-      redoStack.value.push(state.value)
-      state.value = undoStack.value.pop()!
+    if (undoStack.length) {
+      redoStack.push(currentValue)
+      currentValue = undoStack.pop() as T
+
+      return currentValue
     }
+
+    return null
   }
 
   const redo = () => {
-    if (redoStack.value.length) {
-      undoStack.value.push(state.value)
-      state.value = redoStack.value.pop()!
+    if (redoStack.length) {
+      undoStack.push(currentValue)
+      currentValue = redoStack.pop() as T
+
+      return currentValue
     }
+
+    return null
   }
 
-  return { state, commit, undo, redo }
+  const clear = () => {
+    undoStack = []
+    redoStack = []
+  }
+
+  const get = () => currentValue
+
+  return { commit, undo, redo, clear, get }
 }

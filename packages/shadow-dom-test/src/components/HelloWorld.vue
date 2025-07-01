@@ -8,6 +8,7 @@
       @beforeinput="handleBeforeInput"
       @compositionstart="handleCompositionStart"
       @compositionend="handleCompositionEnd"
+      @keydown="handleKeyDown"
     >
       <Block v-for="item in structuredData" :key="`${item.id}-${item.type}`" v-bind="item" />
     </div>
@@ -21,6 +22,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import Block from './Block.vue'
+import { useUndoRedo } from './useUndoRedo'
 
 declare global {
   interface Selection {
@@ -153,7 +155,9 @@ const structuredData = computed<StructuredDataItem[]>(() => {
 
 const editorRef = ref<HTMLDivElement | null>(null)
 
-// const history = useUndoRedo([])
+// TODO 有待优化。可以清除无效的 rangeMap
+const rangeMap = new Map<string, EditorRange>()
+const history = useUndoRedo<string>(JSON.stringify(originalData.value))
 
 // 查找祖先节点中有 data-id 的元素
 const findAncestorWithDataId = (node: Node, topElement: HTMLElement = document.body): HTMLElement | null => {
@@ -204,17 +208,10 @@ const getSelectionRange = (el: Element) => {
   return range
 }
 
-const setCaretPosition = (el: Element, offset: number) => {
-  const selection = window.getSelection()
-
-  if (!selection) {
-    return
-  }
-
+const getNodeAndOffset = (el: Element, offset: number) => {
   if (!el.firstChild || el.firstChild.nodeType !== Node.TEXT_NODE) {
     console.warn('el.firstChild is not a text node. set anchor and focus to the element with offset 0', el)
-    selection.setBaseAndExtent(el, 0, el, 0)
-    return
+    return { node: el, offset: 0 }
   }
 
   const contentLength = el.firstChild.textContent?.length ?? 0
@@ -223,14 +220,28 @@ const setCaretPosition = (el: Element, offset: number) => {
     console.warn('offset is too large', { offset, el })
   }
 
+  return { node: el.firstChild, offset: Math.min(offset, contentLength) }
+}
+
+const setCaretPosition = (startEl: Element, startOffset: number, endEl?: Element | null, endOffset?: number) => {
+  const selection = window.getSelection()
+  if (!selection) {
+    return
+  }
+
+  const { node: startNode, offset: startNodeOffset } = getNodeAndOffset(startEl, startOffset)
+
   // TODO firefox 设置光标位置可能报错
   // 英文文档中描述了此方法可以穿透 shadow dom，中文文档没有这些描述。https://developer.mozilla.org/en-US/docs/Web/API/Selection/setBaseAndExtent
-  selection.setBaseAndExtent(
-    el.firstChild,
-    Math.min(offset, contentLength),
-    el.firstChild,
-    Math.min(offset, contentLength),
-  )
+
+  if (!endEl) {
+    selection.setBaseAndExtent(startNode, startNodeOffset, startNode, startNodeOffset)
+    return
+  }
+
+  const { node: endNode, offset: endNodeOffset } = getNodeAndOffset(endEl, endOffset ?? 0)
+
+  selection.setBaseAndExtent(startNode, startNodeOffset, endNode, endNodeOffset)
 }
 
 const insertNewTextAndSetCaretPosition = (content: string, insertAfter?: string) => {
@@ -277,7 +288,7 @@ const handleBeforeInput = (e: Event) => {
   // https://w3c.github.io/input-events/#overview
   // 1. isnert. 有 data 或者 dataTransfer 的 inputType
   // - ✅ insertText 插入文本。TODO 两个分隔符中间插入文本
-  // - ⏳ insertCompositionText 无法 preventDefault 拦截
+  // - ✅ insertCompositionText 无法 preventDefault 拦截
   // - ✅ insertFromPaste
   // - ❌ insertFromPasteAsQuotation 粘贴为引用，很少见的功能。不处理
   // - ❌ insertFromDrop 不处理
@@ -293,7 +304,7 @@ const handleBeforeInput = (e: Event) => {
   // - ✅ deleteSoftLineForward
   // - ✅ deleteByCut
 
-  // 3. ⏳ history 使用快捷键处理
+  // 3. ✅ history 使用 keydown 快捷键处理
   // - historyUndo
   // - historyRedo
 
@@ -314,17 +325,30 @@ const handleBeforeInput = (e: Event) => {
     'deleteSoftLineForward',
     'deleteByCut',
   ]
+  // 在没有选中文本的情况下，delete 也可能有 range（collapsed 为 false），
+  // 但是我撤销这次 delete 后，不想因为这个 range 而导致有文本被选中。所以使用 getSelectionRange
+  const selectionRange = getSelectionRange(editorRef.value!)
 
   if (inputTypes.includes(inputType)) {
     if (inputData && isEditor(range.startContainer) && isEditor(range.endContainer)) {
       // 输入框为空，直接插入
       insertNewTextAndSetCaretPosition(inputData)
+
+      if (selectionRange) {
+        rangeMap.set(history.get(), transformRange(selectionRange))
+      }
+      history.commit(JSON.stringify(originalData.value))
       return
     }
 
     const transformedRange = transformRange(range)
     if (transformedRange.startId && transformedRange.endId) {
       processInput(transformedRange, inputType, inputData)
+
+      if (selectionRange) {
+        rangeMap.set(history.get(), transformRange(selectionRange))
+      }
+      history.commit(JSON.stringify(originalData.value))
     } else {
       console.warn('range is not valid, range:', transformedRange)
     }
@@ -675,8 +699,14 @@ const handleCompositionEnd = (e: CompositionEvent) => {
     if (e.data && isEditor(range.startContainer) && isEditor(range.endContainer)) {
       // 输入框为空，直接插入
       insertNewTextAndSetCaretPosition(e.data)
+
+      rangeMap.set(history.get(), transformRange(range))
+      history.commit(JSON.stringify(originalData.value))
     } else if (range.startId && range.endId) {
       processInput(range, 'insertCompositionText', e.data)
+
+      rangeMap.set(history.get(), transformRange(range))
+      history.commit(JSON.stringify(originalData.value))
     } else {
       console.warn('range is not valid, range:', range)
     }
@@ -688,6 +718,61 @@ const handleCompositionEnd = (e: CompositionEvent) => {
   }
 
   compositionContext.value = { hasStarted: false, range: null }
+}
+
+const checkIsAppleDevice = () => {
+  const ua = navigator.userAgent.toLowerCase()
+  return /macintosh|mac os x|iphone|ipad|ipod/.test(ua)
+}
+
+const isAppleDevice = checkIsAppleDevice()
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  const isUndo =
+    (isAppleDevice && e.metaKey && !e.shiftKey && e.key.toLowerCase() === 'z') || // Cmd+Z
+    (!isAppleDevice && e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') // Ctrl+Z
+
+  const isRedo =
+    (isAppleDevice && e.metaKey && e.shiftKey && e.key.toLowerCase() === 'z') || // Cmd+Shift+z
+    (!isAppleDevice && e.ctrlKey && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) // Ctrl+y or Ctrl+Shift+z
+
+  if (isUndo) {
+    e.preventDefault()
+
+    // 记录当前光标位置，用于恢复时设置光标位置
+    const selectionRange = getSelectionRange(editorRef.value!)
+
+    if (selectionRange) {
+      rangeMap.set(history.get(), transformRange(selectionRange))
+    }
+
+    const historyItem = history.undo()
+    if (historyItem) {
+      restoreDataAndCaretPosition(historyItem)
+    }
+  }
+
+  if (isRedo) {
+    e.preventDefault()
+    const historyItem = history.redo()
+    if (historyItem) {
+      restoreDataAndCaretPosition(historyItem)
+    }
+  }
+}
+
+const restoreDataAndCaretPosition = (historyItem: string) => {
+  originalData.value = JSON.parse(historyItem)
+  if (rangeMap.has(historyItem)) {
+    const range = rangeMap.get(historyItem)!
+    nextTick(() => {
+      const startEl = editorRef.value!.querySelector(`[data-id="${range.startId}"][data-type="${range.startType}"]`)
+      const endEl = editorRef.value!.querySelector(`[data-id="${range.endId}"][data-type="${range.endType}"]`)
+      if (startEl) {
+        setCaretPosition(startEl, range.startOffset, endEl, range.endOffset)
+      }
+    })
+  }
 }
 
 const showSelection = () => {
