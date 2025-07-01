@@ -3,10 +3,11 @@
     <div
       contenteditable="true"
       ref="editorRef"
+      :key="forceRerender"
       class="editor"
       @beforeinput="handleBeforeInput"
+      @compositionstart="handleCompositionStart"
       @compositionend="handleCompositionEnd"
-      @paste="handlePaste"
     >
       <Block v-for="item in structuredData" :key="`${item.id}-${item.type}`" v-bind="item" />
     </div>
@@ -73,6 +74,8 @@ interface StructuredDataItem {
   style?: string
   asChild?: boolean
 }
+
+const forceRerender = ref(0)
 
 const originalData = ref<(TextItem | TemplateItem)[]>(
   (
@@ -165,7 +168,7 @@ const findAncestorWithDataId = (node: Node, topElement: HTMLElement = document.b
 }
 
 const isEditor = (node: Node) => {
-  return node === editorRef.value || node.parentElement === editorRef.value
+  return node === editorRef.value
 }
 
 const getSelectionRange = (el: Element) => {
@@ -256,14 +259,18 @@ const insertNewTextAndSetCaretPosition = (content: string, insertAfter?: string)
   })
 }
 
+const compositionContext = ref<{ hasStarted: boolean; range: EditorRange | null }>({
+  hasStarted: false,
+  range: null,
+})
+
 const handleBeforeInput = (e: Event) => {
   const ev = e as InputEvent
   e.preventDefault()
 
   const { inputType } = ev
   // inputData 过滤掉分隔符
-  const inputData = ev.data || ev.dataTransfer?.getData('text/plain') || ''
-  console.log({ inputType, inputData })
+  const inputData = (ev.data || ev.dataTransfer?.getData('text/plain') || '').replace(PREFIX, '').replace(SUFFIX, '')
 
   const range = ev.getTargetRanges()[0] as StaticRange | undefined
 
@@ -295,12 +302,6 @@ const handleBeforeInput = (e: Event) => {
     return
   }
 
-  if (inputData && isEditor(range.startContainer) && isEditor(range.endContainer)) {
-    // 输入框为空，直接插入
-    insertNewTextAndSetCaretPosition(inputData)
-    return
-  }
-
   const inputTypes = [
     'insertText',
     'insertFromPaste',
@@ -315,79 +316,116 @@ const handleBeforeInput = (e: Event) => {
   ]
 
   if (inputTypes.includes(inputType)) {
-    const selected = getSelected(range)
-    if (Array.isArray(selected) && selected.length > 0) {
-      const selectedOrCreateItems = transformSelected(selected, range, inputType, inputData)
-      console.log(selectedOrCreateItems)
+    if (inputData && isEditor(range.startContainer) && isEditor(range.endContainer)) {
+      // 输入框为空，直接插入
+      insertNewTextAndSetCaretPosition(inputData)
+      return
+    }
 
-      if (selectedOrCreateItems.some((item) => (item as CreateItem).tag === 'new')) {
-        const { afterId, content } = selectedOrCreateItems[0] as CreateItem
-        insertNewTextAndSetCaretPosition(content, afterId)
-        return
-      }
+    const transformedRange = transformRange(range)
+    if (transformedRange.startId && transformedRange.endId) {
+      processInput(transformedRange, inputType, inputData)
+    } else {
+      console.warn('range is not valid, range:', transformedRange)
+    }
+  } else if (inputType === 'insertCompositionText' && compositionContext.value.hasStarted) {
+    // 合成输入已启动
+    compositionContext.value = { hasStarted: false, range: transformRange(range) }
+  }
+}
 
-      const selectedItems = selectedOrCreateItems as SelectedItem[]
+const transformRange = (range: StaticRange): EditorRange => {
+  const startEl = findAncestorWithDataId(range.startContainer, editorRef.value!)
+  const endEl = findAncestorWithDataId(range.endContainer, editorRef.value!)
 
-      const insertToText = (text: string, insertedText: string, startOffset: number, endOffset: number) => {
-        return text.slice(0, startOffset) + insertedText + text.slice(endOffset)
-      }
+  return {
+    collapsed: range.collapsed,
+    endContainer: range.endContainer,
+    endId: endEl?.dataset.id,
+    endOffset: range.endOffset,
+    endType: endEl?.dataset.type,
+    startContainer: range.startContainer,
+    startId: startEl?.dataset.id,
+    startOffset: range.startOffset,
+    startType: startEl?.dataset.type,
+  }
+}
 
-      const toDeleted: string[] = []
+const insertToText = (text: string, insertedText: string, startOffset: number, endOffset: number) => {
+  return text.slice(0, startOffset) + insertedText + text.slice(endOffset)
+}
 
-      for (const [index, item] of selectedItems.entries()) {
-        const dataItem = originalData.value.find((i) => i.id === item.id)
+const processInput = (range: EditorRange, inputType: string, inputData: string) => {
+  const selected = getSelected(range)
 
-        const insertedText = index === 0 ? inputData : ''
+  if (!Array.isArray(selected) || selected.length === 0) {
+    return
+  }
 
-        if (dataItem) {
-          if (dataItem.type === 'text') {
-            dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
-          } else if (dataItem.type === 'template') {
-            if (item.type === 'prefix' || item.type === 'suffix') {
-              if (item.startOffset === 0 && item.endOffset === 1 && insertedText.length === 0) {
-                dataItem[item.type] = ''
-              } else {
-                console.warn(`${item.type} can not be inserted text. it only can be deleted`, item)
-              }
-            } else {
-              if (item.startOffset < 0 || item.endOffset > dataItem.content.length) {
-                toDeleted.push(dataItem.id)
-              } else {
-                dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
-              }
-            }
+  const selectedOrCreateItems = transformSelected(selected, range, inputType, inputData)
+
+  if (selectedOrCreateItems.some((item) => (item as CreateItem).tag === 'new')) {
+    const { afterId, content } = selectedOrCreateItems[0] as CreateItem
+    insertNewTextAndSetCaretPosition(content, afterId)
+    return
+  }
+
+  const selectedItems = selectedOrCreateItems as SelectedItem[]
+
+  const toDeleted: string[] = []
+
+  for (const [index, item] of selectedItems.entries()) {
+    const dataItem = originalData.value.find((i) => i.id === item.id)
+
+    const insertedText = index === 0 ? inputData : ''
+
+    if (dataItem) {
+      if (dataItem.type === 'text') {
+        dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
+      } else if (dataItem.type === 'template') {
+        if (item.type === 'prefix' || item.type === 'suffix') {
+          if (item.startOffset === 0 && item.endOffset === 1 && insertedText.length === 0) {
+            dataItem[item.type] = ''
           } else {
-            console.warn('dataItem.type is not text or template', dataItem)
+            console.warn(`${item.type} can not be inserted text. it only can be deleted`, item)
           }
         } else {
-          console.warn('can not find dataItem', item)
+          if (item.startOffset < 0 || item.endOffset > dataItem.content.length) {
+            toDeleted.push(dataItem.id)
+          } else {
+            dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
+          }
         }
+      } else {
+        console.warn('dataItem.type is not text or template', dataItem)
       }
-
-      // 删除空数据
-      originalData.value = originalData.value.filter((item) => !toDeleted.includes(item.id))
-      originalData.value = originalData.value.filter((item) => {
-        if (item.type === 'text') {
-          return item.content.length > 0
-        }
-        return [item.prefix, item.suffix, item.content].join('').length > 0
-      })
-
-      // 恢复分隔符
-      for (const dataItem of originalData.value.filter((item) => item.type === 'template')) {
-        if (dataItem.prefix.length === 0) {
-          dataItem.prefix = PREFIX
-        }
-        if (dataItem.suffix.length === 0) {
-          dataItem.suffix = SUFFIX
-        }
-      }
-
-      if (selectedItems.length > 0) {
-        // 光标定位
-        setCaretPositionBySelected(selectedItems, inputData)
-      }
+    } else {
+      console.warn('can not find dataItem', item)
     }
+  }
+
+  // 删除空数据
+  originalData.value = originalData.value.filter((item) => !toDeleted.includes(item.id))
+  originalData.value = originalData.value.filter((item) => {
+    if (item.type === 'text') {
+      return item.content.length > 0
+    }
+    return [item.prefix, item.suffix, item.content].join('').length > 0
+  })
+
+  // 恢复分隔符
+  for (const dataItem of originalData.value.filter((item) => item.type === 'template')) {
+    if (dataItem.prefix.length === 0) {
+      dataItem.prefix = PREFIX
+    }
+    if (dataItem.suffix.length === 0) {
+      dataItem.suffix = SUFFIX
+    }
+  }
+
+  if (selectedItems.length > 0) {
+    // 光标定位
+    setCaretPositionBySelected(selectedItems, inputData)
   }
 }
 
@@ -415,6 +453,13 @@ const setCaretPositionBySelected = (selectedItems: SelectedItem[], inputData: st
   })
 }
 
+interface EditorRange extends StaticRange {
+  readonly endId?: string
+  readonly endType?: string
+  readonly startId?: string
+  readonly startType?: string
+}
+
 interface SelectedItem {
   id: string
   type: ExtendedTextItem['type']
@@ -429,24 +474,12 @@ interface CreateItem {
   content: string
 }
 
-const getSelected = (range: StaticRange): SelectedItem[] | null => {
-  const startEl = findAncestorWithDataId(range.startContainer, editorRef.value!)
-  const endEl = findAncestorWithDataId(range.endContainer, editorRef.value!)
-
-  if (!(startEl && endEl)) {
-    console.warn('startEl or endEl is null, range:', range)
-    return null
-  }
-
-  const startIndex = flattenedData.value.findIndex(
-    (item) => item.id === startEl.dataset.id && item.type === startEl.dataset.type,
-  )
-  const endIndex = flattenedData.value.findIndex(
-    (item) => item.id === endEl.dataset.id && item.type === endEl.dataset.type,
-  )
+const getSelected = (range: EditorRange): SelectedItem[] | null => {
+  const startIndex = flattenedData.value.findIndex((item) => item.id === range.startId && item.type === range.startType)
+  const endIndex = flattenedData.value.findIndex((item) => item.id === range.endId && item.type === range.endType)
 
   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-    console.warn('startIndex or endIndex is -1, or startIndex > endIndex. ', { startEl, endEl })
+    console.warn('startIndex or endIndex is -1, or startIndex > endIndex. ', { range })
     return null
   }
 
@@ -495,7 +528,7 @@ const getSelected = (range: StaticRange): SelectedItem[] | null => {
 
 const transformSelected = (
   selectedItems: SelectedItem[],
-  range: StaticRange,
+  range: EditorRange,
   inputType: string,
   inputData: string,
 ): (SelectedItem | CreateItem)[] => {
@@ -632,12 +665,30 @@ const moveToNext = (
   return selectedItem
 }
 
-const handleCompositionEnd = (e: Event) => {
-  const ev = e as CompositionEvent
-  console.log(ev)
+const handleCompositionStart = () => {
+  compositionContext.value = { hasStarted: true, range: null }
 }
 
-const handlePaste = (_e: ClipboardEvent) => {}
+const handleCompositionEnd = (e: CompositionEvent) => {
+  const range = compositionContext.value.range
+  if (range) {
+    if (e.data && isEditor(range.startContainer) && isEditor(range.endContainer)) {
+      // 输入框为空，直接插入
+      insertNewTextAndSetCaretPosition(e.data)
+    } else if (range.startId && range.endId) {
+      processInput(range, 'insertCompositionText', e.data)
+    } else {
+      console.warn('range is not valid, range:', range)
+    }
+
+    // 由于 composition 事件导致 dom 结构变化，Vue 无法控制，需要强制重新渲染
+    forceRerender.value++
+  } else {
+    console.warn('range is null, compositionEnd:', e)
+  }
+
+  compositionContext.value = { hasStarted: false, range: null }
+}
 
 const showSelection = () => {
   const range = getSelectionRange(editorRef.value!)
