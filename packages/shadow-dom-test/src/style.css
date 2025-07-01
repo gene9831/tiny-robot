@@ -18,12 +18,22 @@ ul {
   border: none;
 }
 
-[data-type='text'] {
+[contenteditable] {
+  font-size: 16px;
+  line-height: 26px;
   white-space: pre-wrap;
 }
 
-[data-type='text']:empty::before {
+[data-type='template']:empty::before {
   content: attr(data-placeholder);
   display: inline;
-  color: gray;
+  color: rgba(20, 118, 255, 0.5);
+}
+
+[data-type='block'] {
+  color: #1476ff;
+  margin: 0 4px;
+  padding: 2px 8px;
+  background-color: rgba(20, 118, 255, 0.1);
+  border-radius: 6px;
 }

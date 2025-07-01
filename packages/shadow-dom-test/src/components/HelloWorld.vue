@@ -8,19 +8,18 @@
       @compositionend="handleCompositionEnd"
       @paste="handlePaste"
     >
-      <component v-for="(node, index) in data" :key="index" :is="node.component" v-bind="node" :id="node.id" />
+      <Block v-for="item in structuredData" :key="`${item.id}-${item.type}`" v-bind="item" />
     </div>
     <div style="margin-block: 10px">
       <button @click="showSelection">显示selection</button>
     </div>
-    <textarea style="width: 100%; height: 400px" readonly v-model="str"></textarea>
+    <textarea style="width: 100%; height: 400px" readonly :value="JSON.stringify(flattenedData, null, 2)"></textarea>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, nextTick, type Ref, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import Block from './Block.vue'
-import Text from './Text.vue'
 
 declare global {
   interface Selection {
@@ -42,82 +41,112 @@ function isSafari() {
 
 const isSafariBrowser = isSafari()
 
-interface DataBlock {
+const randomId = () => Math.random().toString(36).substring(2, 15)
+
+const PREFIX = '\u200B'
+const SUFFIX = '\u200B'
+// const PREFIX = 'P'
+// const SUFFIX = 'S'
+
+interface TextItem {
   id: string
-  type: 'block' | 'text'
-  component: typeof Block | typeof Text
+  type: 'text'
   content: string
 }
 
-const getComponent = (type: 'block' | 'text') => {
-  if (type === 'block') {
-    return markRaw(Block)
-  }
-  return markRaw(Text)
+interface TemplateItem extends Omit<TextItem, 'type'> {
+  type: 'template'
+  prefix: typeof PREFIX | ''
+  suffix: typeof SUFFIX | ''
 }
 
-const randomId = () => Math.random().toString(36).substring(2, 15)
+interface ExtendedTextItem {
+  id: string
+  type: 'text' | 'template' | 'prefix' | 'suffix'
+  content: string
+}
 
-const dataList: Pick<DataBlock, 'type' | 'content'>[] = (
-  [
-    {
-      type: 'block',
-      content: '',
-    },
-    {
-      type: 'text',
-      content: 'Welcome to Vue!',
-    },
-    {
-      type: 'block',
-      content: '普通文本右侧、模板左侧',
-    },
-    {
-      type: 'block',
-      content: '模板右侧',
-    },
-    {
-      type: 'text',
-      content: 'Hello world!',
-    },
-    {
-      type: 'block',
-      content: '模板中间',
-    },
-    {
-      type: 'text',
-      content: 'Hello world!',
-    },
-    {
-      type: 'block',
-      content: '',
-    },
-  ] as const
-).map((item) => ({
-  ...item,
-  ...(item.type === 'block'
-    ? {
-        prefix: isSafariBrowser ? { outside: true } : true,
-        suffix: isSafariBrowser ? true : { outside: true },
+interface StructuredDataItem {
+  id: string
+  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
+  content: string | StructuredDataItem[]
+  style?: string
+  asChild?: boolean
+}
+
+const originalData = ref<(TextItem | TemplateItem)[]>(
+  (
+    [
+      { type: 'template', content: '', prefix: PREFIX, suffix: SUFFIX },
+      { type: 'text', content: 'Welcome to Vue' },
+      { type: 'template', content: '普通文本右侧、模板左侧', prefix: PREFIX, suffix: SUFFIX },
+      { type: 'template', content: '模板右侧', prefix: PREFIX, suffix: SUFFIX },
+      { type: 'text', content: 'Hello world!' },
+      { type: 'template', content: '模板中间', prefix: PREFIX, suffix: SUFFIX },
+      { type: 'text', content: 'I prefer to use Vue.' },
+      { type: 'template', content: '', prefix: PREFIX, suffix: SUFFIX },
+    ] satisfies (Omit<TextItem, 'id'> | Omit<TemplateItem, 'id'>)[]
+  ).map((item, index) => ({ id: `id-${index}`, ...item })),
+)
+
+const flattenedData = computed<ExtendedTextItem[]>(() => {
+  return originalData.value
+    .map((item) => {
+      if (item.type === 'template') {
+        return [
+          { id: item.id, type: 'prefix', content: item.prefix },
+          { id: item.id, type: 'template', content: item.content },
+          { id: item.id, type: 'suffix', content: item.suffix },
+        ] satisfies ExtendedTextItem[]
       }
-    : {}),
-}))
+      return [item]
+    })
+    .flat()
+})
 
-const data: Ref<DataBlock[]> = ref(
-  dataList.map((item) => ({
-    ...item,
-    id: randomId(),
-    component: getComponent(item.type),
-  })),
-)
+const structuredData = computed<StructuredDataItem[]>(() => {
+  return originalData.value.map((item) => {
+    if (item.type === 'text') {
+      return item
+    }
 
-const str = computed(() =>
-  JSON.stringify(
-    data.value.map(({ component: _, ...rest }) => rest),
-    null,
-    2,
-  ),
-)
+    if (isSafariBrowser) {
+      return {
+        id: item.id,
+        type: 'block',
+        asChild: true,
+        content: [
+          { id: item.id, type: 'prefix', content: item.prefix, style: 'border: 1px solid orange' },
+          {
+            id: item.id,
+            type: 'block',
+            content: [
+              { id: item.id, type: 'template', content: item.content },
+              { id: item.id, type: 'suffix', content: item.suffix, style: 'border: 1px solid orange' },
+            ],
+          },
+        ],
+      }
+    }
+
+    return {
+      id: item.id,
+      type: 'block',
+      asChild: true,
+      content: [
+        {
+          id: item.id,
+          type: 'block',
+          content: [
+            { id: item.id, type: 'prefix', content: item.prefix, style: 'border: 1px solid orange' },
+            { id: item.id, type: 'template', content: item.content },
+          ],
+        },
+        { id: item.id, type: 'suffix', content: item.suffix, style: 'border: 1px solid orange' },
+      ],
+    }
+  })
+})
 
 const editorRef = ref<HTMLDivElement | null>(null)
 
@@ -135,28 +164,8 @@ const findAncestorWithDataId = (node: Node, topElement: HTMLElement = document.b
   return node.parentElement ? findAncestorWithDataId(node.parentElement, topElement) : null
 }
 
-const isText = (el: HTMLElement) => el.dataset.type === 'text'
-const isDelimiter = (el: HTMLElement) => el.dataset.type === 'template-prefix' || el.dataset.type === 'template-suffix'
-
-const findElementFrom = (
-  anchor: Node,
-  condition: (el: HTMLElement) => boolean,
-  topEl: HTMLElement = document.body,
-  direction: 'next' | 'previous',
-): HTMLElement | null => {
-  const walker = document.createTreeWalker(topEl, NodeFilter.SHOW_ELEMENT, {
-    acceptNode(node) {
-      return node instanceof HTMLElement && condition(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
-    },
-  })
-
-  walker.currentNode = anchor
-
-  if (direction === 'next') {
-    return walker.nextNode() as HTMLElement | null
-  } else {
-    return walker.previousNode() as HTMLElement | null
-  }
+const isEditor = (node: Node) => {
+  return node === editorRef.value || node.parentElement === editorRef.value
 }
 
 const getSelectionRange = (el: Element) => {
@@ -192,117 +201,70 @@ const getSelectionRange = (el: Element) => {
   return range
 }
 
-// document.addEventListener('selectionchange', () => {
-//   console.log(getSelectionRange(editorRef.value!))
-// })
-
 const setCaretPosition = (el: Element, offset: number) => {
+  const selection = window.getSelection()
+
+  if (!selection) {
+    return
+  }
+
   if (!el.firstChild || el.firstChild.nodeType !== Node.TEXT_NODE) {
     console.warn('el.firstChild is not a text node. set anchor and focus to the element with offset 0', el)
-    window.getSelection()?.setBaseAndExtent(el, 0, el, 0)
+    selection.setBaseAndExtent(el, 0, el, 0)
     console.log(getSelectionRange(editorRef.value!))
     return
   }
 
+  const contentLength = el.firstChild.textContent?.length ?? 0
+
+  if (offset > contentLength) {
+    console.warn('offset is too large', { offset, el })
+  }
+
   // TODO firefox 设置光标位置可能报错
   // 英文文档中描述了此方法可以穿透 shadow dom，中文文档没有这些描述。https://developer.mozilla.org/en-US/docs/Web/API/Selection/setBaseAndExtent
-  window.getSelection()?.setBaseAndExtent(el.firstChild, offset, el.firstChild, offset)
+  selection.setBaseAndExtent(
+    el.firstChild,
+    Math.min(offset, contentLength),
+    el.firstChild,
+    Math.min(offset, contentLength),
+  )
   console.log(getSelectionRange(editorRef.value!))
 }
 
-const insertTextAroundDelimiter = (delimiterEl: HTMLElement, direction: 'previous' | 'next', inputData: string) => {
-  const isPrevious = direction === 'previous'
-  const textEl = findElementFrom(delimiterEl, isText, editorRef.value!, direction)
+const insertNewTextAndSetCaretPosition = (content: string, insertAfter?: string) => {
+  const id = randomId()
+  const textItem: TextItem = { id, type: 'text', content }
 
-  if (textEl) {
-    // 目标元素存在时的处理
-    const block = data.value.find((item) => item.id === textEl.dataset.id)
-    if (block) {
-      // 根据方向决定插入位置
-      block.content = isPrevious ? block.content + inputData : inputData + block.content
-    }
-
-    nextTick(() => {
-      // 根据方向计算光标位置
-      const offset = isPrevious ? textEl.textContent!.length + inputData.length : inputData.length
-      setCaretPosition(textEl, offset)
-    })
-  } else {
-    // 目标元素不存在时创建新元素
-    const id = randomId()
-    const newBlock: DataBlock = {
-      type: 'text',
-      content: inputData,
-      id,
-      component: markRaw(Text),
-    }
-
-    // 根据方向决定插入位置
-    if (isPrevious) {
-      data.value.unshift(newBlock)
+  if (insertAfter) {
+    const index = originalData.value.findIndex((item) => item.id === insertAfter)
+    if (index !== -1) {
+      originalData.value = originalData.value
+        .slice(0, index + 1)
+        .concat(textItem)
+        .concat(originalData.value.slice(index + 1))
     } else {
-      data.value.push(newBlock)
+      console.warn(`can not find item with id: ${insertAfter}`)
     }
-
-    nextTick(() => {
-      const newTextEl = editorRef.value!.querySelector(`[data-id="${id}"]`)
-      if (newTextEl) {
-        setCaretPosition(newTextEl, inputData.length)
-      }
-    })
-  }
-}
-
-const insertTextBetweenTexts = (
-  startEl: HTMLElement,
-  endEl: HTMLElement,
-  inputData: string,
-  startOffset: number,
-  endOffset: number,
-) => {
-  const startBlockIndex = data.value.findIndex((item) => item.id === startEl.dataset.id)
-  const endBlockIndex = data.value.findIndex((item) => item.id === endEl.dataset.id)
-
-  if (startBlockIndex === -1 || endBlockIndex === -1 || startBlockIndex > endBlockIndex) {
-    console.warn('something wrong', { startEl, endEl, startBlockIndex, endBlockIndex })
-    return
-  }
-
-  const startBlock = data.value[startBlockIndex]
-  const endBlock = data.value[endBlockIndex]
-
-  if (startBlockIndex === endBlockIndex) {
-    startBlock.content = startBlock.content.slice(0, startOffset) + inputData + startBlock.content.slice(endOffset)
   } else {
-    startBlock.content = startBlock.content.slice(0, startOffset) + inputData
-    endBlock.content = endBlock.content.slice(endOffset)
-    // 删除中间的 block
-    data.value = data.value.slice(0, startBlockIndex + 1).concat(data.value.slice(endBlockIndex))
+    originalData.value.unshift(textItem)
   }
-  // 去掉空 text block
-  data.value = data.value.filter((item) => !(item.type === 'text' && item.content.length === 0))
 
   nextTick(() => {
-    setCaretPosition(startEl, startOffset + inputData.length)
+    const el = editorRef.value?.querySelector(`[data-id="${id}"][data-type="text"]`)
+    if (el) {
+      setCaretPosition(el, content.length)
+    }
   })
-}
-
-type NewRange = {
-  startEl: HTMLElement
-  endEl: HTMLElement
-  startOffset: number
-  endOffset: number
-  collapsed: boolean
 }
 
 const handleBeforeInput = (e: Event) => {
   const ev = e as InputEvent
   e.preventDefault()
 
-  showSelection()
-
   const { inputType } = ev
-  const inputData = ev.data || ev.dataTransfer?.getData('text/plain')
+  // inputData 过滤掉分隔符
+  const inputData = ev.data || ev.dataTransfer?.getData('text/plain') || ''
   console.log({ inputType, inputData })
 
   const range = ev.getTargetRanges()[0] as StaticRange | undefined
@@ -321,13 +283,13 @@ const handleBeforeInput = (e: Event) => {
 
   // https://w3c.github.io/input-events/#overview
   // 1. isnert. 有 data 或者 dataTransfer 的 inputType
-  // - 🚧 insertText 插入文本。TODO 两个分隔符中间插入文本
+  // - ✅ insertText 插入文本。TODO 两个分隔符中间插入文本
   // - ⏳ insertCompositionText 无法 preventDefault 拦截
   // - ✅ insertFromPaste
   // - ❌ insertFromPasteAsQuotation 粘贴为引用，很少见的功能。不处理
   // - ❌ insertFromDrop 不处理
   // - ✅ insertReplacementText 通常出现在：自动更正、输入建议（autocomplete）、拼写纠错、操作系统层面的文字替换
-  // - ✅ insertFromYank 剪贴板中粘贴最近剪切的内容，很少见。视为 insertFromPaste 处理
+  // - ❌ insertFromYank 剪贴板中粘贴最近剪切的内容，很少见。不处理
 
   // 2. delete
   // - ✅ deleteContentBackward
@@ -347,177 +309,304 @@ const handleBeforeInput = (e: Event) => {
     return
   }
 
-  if (isEditor(range.startContainer) && isEditor(range.endContainer) && inputData) {
+  if (inputData && isEditor(range.startContainer) && isEditor(range.endContainer)) {
     // 输入框为空，直接插入
-    const id = randomId()
-    data.value.push({
-      type: 'text',
-      content: inputData,
-      id,
-      component: markRaw(Text),
-    })
-
-    nextTick(() => {
-      const newTextEl = editorRef.value!.querySelector(`[data-id="${id}"]`)
-      if (newTextEl) {
-        setCaretPosition(newTextEl, inputData.length)
-      }
-    })
+    insertNewTextAndSetCaretPosition(inputData)
     return
   }
 
+  const inputTypes = [
+    'insertText',
+    'insertFromPaste',
+    'insertReplacementText',
+    'deleteContentBackward',
+    'deleteContentForward',
+    'deleteWordBackward',
+    'deleteWordForward',
+    'deleteSoftLineBackward',
+    'deleteSoftLineForward',
+    'deleteByCut',
+  ]
+
+  if (inputTypes.includes(inputType)) {
+    const selected = getSelected(range)
+    if (Array.isArray(selected) && selected.length > 0) {
+      const selectedOrCreateItems = transformSelected(selected, range, inputType, inputData)
+      console.log(selectedOrCreateItems)
+
+      if (selectedOrCreateItems.some((item) => (item as CreateItem).tag === 'new')) {
+        const { afterId, content } = selectedOrCreateItems[0] as CreateItem
+        insertNewTextAndSetCaretPosition(content, afterId)
+        return
+      }
+
+      const selectedItems = selectedOrCreateItems as SelectedItem[]
+
+      const insertToText = (text: string, insertedText: string, startOffset: number, endOffset: number) => {
+        return text.slice(0, startOffset) + insertedText + text.slice(endOffset)
+      }
+
+      const toDeleted: string[] = []
+
+      for (const [index, item] of selectedItems.entries()) {
+        const dataItem = originalData.value.find((i) => i.id === item.id)
+
+        const insertedText = index === 0 ? inputData : ''
+
+        if (dataItem) {
+          if (dataItem.type === 'text') {
+            dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
+          } else if (dataItem.type === 'template') {
+            if (item.type === 'prefix' || item.type === 'suffix') {
+              if (item.startOffset === 0 && item.endOffset === 1 && insertedText.length === 0) {
+                dataItem[item.type] = ''
+              } else {
+                console.warn(`${item.type} can not be inserted text. it only can be deleted`, item)
+              }
+            } else {
+              if (item.startOffset < 0 || item.endOffset > dataItem.content.length) {
+                toDeleted.push(dataItem.id)
+              } else {
+                dataItem.content = insertToText(dataItem.content, insertedText, item.startOffset, item.endOffset)
+              }
+            }
+          } else {
+            console.warn('dataItem.type is not text or template', dataItem)
+          }
+        } else {
+          console.warn('can not find dataItem', item)
+        }
+      }
+
+      // 删除空数据
+      originalData.value = originalData.value.filter((item) => !toDeleted.includes(item.id))
+      originalData.value = originalData.value.filter((item) => {
+        if (item.type === 'text') {
+          return item.content.length > 0
+        }
+        return [item.prefix, item.suffix, item.content].join('').length > 0
+      })
+
+      // 恢复分隔符
+      for (const dataItem of originalData.value.filter((item) => item.type === 'template')) {
+        if (dataItem.prefix.length === 0) {
+          dataItem.prefix = PREFIX
+        }
+        if (dataItem.suffix.length === 0) {
+          dataItem.suffix = SUFFIX
+        }
+      }
+
+      // 光标定位
+      const firstItem = selectedItems[0]
+      const firstSelector = `[data-id="${firstItem.id}"][data-type="${firstItem.type}"]`
+      const restSelectors = selectedItems.slice(1).map((item) => `[data-id="${item.id}"][data-type="${item.type}"]`)
+      nextTick(() => {
+        const el = editorRef.value?.querySelector(firstSelector)
+        if (el) {
+          // 如果 firstItem 没有完全被删除
+          setCaretPosition(el, firstItem.startOffset + inputData.length)
+        } else if (inputData.length === 0) {
+          for (const selector of restSelectors) {
+            const el = editorRef.value?.querySelector(selector)
+            if (el) {
+              setCaretPosition(el, 0)
+              break
+            }
+          }
+        } else {
+          console.warn(`can not find el with selector: ${firstSelector}`)
+        }
+      })
+    }
+  }
+}
+
+interface SelectedItem {
+  id: string
+  type: ExtendedTextItem['type']
+  startOffset: number
+  endOffset: number
+}
+
+interface CreateItem {
+  tag: 'new'
+  afterId?: string
+  type: 'text'
+  content: string
+}
+
+const getSelected = (range: StaticRange): SelectedItem[] | null => {
   const startEl = findAncestorWithDataId(range.startContainer, editorRef.value!)
   const endEl = findAncestorWithDataId(range.endContainer, editorRef.value!)
 
   if (!(startEl && endEl)) {
-    console.warn('range.startEl or range.endEl is null', { range, startEl, endEl })
-    return
+    console.warn('startEl or endEl is null, range:', range)
+    return null
   }
 
-  const newRange: NewRange = {
-    startEl,
-    endEl,
-    startOffset: range.startOffset,
+  const startIndex = flattenedData.value.findIndex(
+    (item) => item.id === startEl.dataset.id && item.type === startEl.dataset.type,
+  )
+  const endIndex = flattenedData.value.findIndex(
+    (item) => item.id === endEl.dataset.id && item.type === endEl.dataset.type,
+  )
+
+  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+    console.warn('startIndex or endIndex is -1, or startIndex > endIndex. ', { startEl, endEl })
+    return null
+  }
+
+  const startItem = flattenedData.value[startIndex]
+  const endItem = flattenedData.value[endIndex]
+
+  if (startIndex === endIndex) {
+    return [
+      {
+        id: startItem.id,
+        type: startItem.type,
+        startOffset: range.startOffset,
+        endOffset: range.endOffset,
+      },
+    ]
+  }
+
+  const selected = [
+    {
+      id: startItem.id,
+      type: startItem.type,
+      startOffset: range.startOffset,
+      endOffset: startItem.content.length,
+    },
+  ]
+
+  for (let i = startIndex + 1; i < endIndex; i++) {
+    const item = flattenedData.value[i]
+    selected.push({
+      id: item.id,
+      type: item.type,
+      startOffset: 0,
+      endOffset: item.content.length,
+    })
+  }
+
+  selected.push({
+    id: endItem.id,
+    type: endItem.type,
+    startOffset: 0,
     endOffset: range.endOffset,
-    collapsed: range.collapsed,
-  }
+  })
 
-  if (
-    inputData &&
-    (inputType === 'insertText' ||
-      inputType === 'insertFromPaste' ||
-      inputType === 'insertFromYank' ||
-      inputType === 'insertReplacementText')
-  ) {
-    handleInsertText(newRange, inputData)
-  } else if (
-    inputType === 'deleteContentBackward' ||
-    inputType === 'deleteContentForward' ||
-    inputType === 'deleteWordBackward' ||
-    inputType === 'deleteWordForward' ||
-    inputType === 'deleteSoftLineBackward' ||
-    inputType === 'deleteSoftLineForward' ||
-    inputType === 'deleteByCut'
-  ) {
-    handleDeleteContent(newRange, inputType)
-  }
+  return selected
 }
 
-const isEditor = (node: Node) => {
-  return node === editorRef.value || node.parentElement === editorRef.value
-}
+const transformSelected = (
+  selectedItems: SelectedItem[],
+  range: StaticRange,
+  inputType: string,
+  inputData: string,
+): (SelectedItem | CreateItem)[] => {
+  const first = selectedItems[0]
 
-const handleInsertText = (range: NewRange, inputData: string) => {
-  if (range.collapsed) {
-    // 没有选中文本
-    if (isText(range.startEl)) {
-      // 光标定位在文本元素中
-      insertTextBetweenTexts(range.startEl, range.startEl, inputData, range.startOffset, range.startOffset)
-    } else if (isDelimiter(range.startEl)) {
-      // 光标定位在分隔符左右两侧
-      const direction = range.startOffset === 0 ? 'previous' : 'next'
-      insertTextAroundDelimiter(range.startEl, direction, inputData)
-    } else {
-      console.warn('range.startEl is not a text or delimiter', range.startEl)
-    }
-  } else {
-    // 选中了文本
-
-    // 如果 start 是分隔符，取 start 的后一个文本元素；如果 end 是分隔符，取 end 的前一个文本元素
-    const startTextEl = isText(range.startEl)
-      ? range.startEl
-      : isDelimiter(range.startEl)
-        ? findElementFrom(range.startEl, isText, editorRef.value!, 'next')
-        : null
-    const startOffset = isText(range.startEl) ? range.startOffset : 0
-
-    const endTextEl = isText(range.endEl)
-      ? range.endEl
-      : isDelimiter(range.endEl)
-        ? findElementFrom(range.endEl, isText, editorRef.value!, 'previous')
-        : null
-    const endOffset = isText(range.endEl) ? range.endOffset : (endTextEl?.textContent?.length ?? 0)
-
-    if (startTextEl && endTextEl) {
-      insertTextBetweenTexts(startTextEl, endTextEl, inputData, startOffset, endOffset)
-    } else {
-      console.warn('startTextEl or endTextEl is null', { startTextEl, endTextEl })
-    }
-  }
-}
-
-const handleDeleteContent = (range: NewRange, inputType: string) => {
-  if (range.collapsed) {
-    // 一般情况删除时 collapsed 都为 false。少数特殊情况不处理，比如，文本开头按下 backspace；macos 下 ctrl + backspace
-    console.warn('range is collapsed', range)
-    return
+  if (first.type !== 'prefix' && first.type !== 'suffix') {
+    return selectedItems
   }
 
-  const startIsDelimiter = isDelimiter(range.startEl)
-  const endIsDelimiter = isDelimiter(range.endEl)
+  // 下面处理第一个是分隔符的情况
 
-  const startTextEl = isText(range.startEl)
-    ? range.startEl
-    : startIsDelimiter
-      ? findElementFrom(range.startEl, isText, editorRef.value!, 'next')
-      : null
-  const startOffset = isText(range.startEl) ? range.startOffset : 0
+  if (selectedItems.length === 1) {
+    // 特例1：如果未选择文本，并且光标在分隔符左侧或右侧，则将光标移动到分隔符前或后
+    if (range.collapsed) {
+      // 判断分隔符前后位置
 
-  const endTextEl = isText(range.endEl)
-    ? range.endEl
-    : endIsDelimiter
-      ? findElementFrom(range.endEl, isText, editorRef.value!, 'previous')
-      : null
-  const endOffset = isText(range.endEl) ? range.endOffset : (endTextEl?.textContent?.length ?? 0)
-
-  if (startIsDelimiter && range.startEl === range.endEl) {
-    // 首尾都是同一个分隔符
-    if (inputType.includes('Backward')) {
-      const previousTextEl = findElementFrom(range.startEl, isText, editorRef.value!, 'previous')
-      if (previousTextEl) {
-        const contentLength = previousTextEl.textContent?.length ?? 0
-        if (!contentLength) {
-          const toDeleteIndex = data.value.findIndex((item) => item.id === previousTextEl.dataset.id)
-          // 删除空 block
-          data.value = data.value.slice(0, toDeleteIndex).concat(data.value.slice(toDeleteIndex + 1))
-          // Backward 需要改变光标位置，移动至被删除的 block 的左侧节点的最右侧
-          // Forward 不需要改变光标位置，无需额外处理
-          const previousBlock = data.value[toDeleteIndex - 1]
-          if (previousBlock) {
-            const selector =
-              previousBlock.type === 'text'
-                ? `[data-id="${previousBlock.id}"][data-type="text"]`
-                : `[data-id="${previousBlock.id}"][data-type="template-suffix"]`
-            const targetEl = editorRef.value!.querySelector(selector)
-            if (targetEl) {
-              setCaretPosition(targetEl, targetEl.textContent?.length ?? 0)
-            }
-          } else {
-            setCaretPosition(editorRef.value!, 0)
-          }
-        } else {
-          insertTextBetweenTexts(previousTextEl, previousTextEl, '', contentLength - 1, contentLength)
-        }
+      if (range.startOffset === 0) {
+        // 往前移，将光标放在前一个文本的末尾
+        return [moveToPrevious(first, inputData)]
+      } else {
+        // 往后移，将光标放在后一个文本的开头
+        return [moveToNext(first, inputData)]
       }
-    } else if (inputType.includes('Forward')) {
-      const nextTextEl = findElementFrom(range.startEl, isText, editorRef.value!, 'next')
-      if (nextTextEl) {
-        const contentLength = nextTextEl.textContent?.length ?? 0
-        if (!contentLength) {
-          // 删除空 block
-          data.value = data.value.filter((item) => item.id !== nextTextEl.dataset.id)
-        } else {
-          insertTextBetweenTexts(nextTextEl, nextTextEl, '', 0, 1)
-        }
+    }
+
+    // 特例2：如果选中文本，并且长度为1且是分隔符。分以下情况：
+    // 2.1. inputType 为 input。根据浏览器平台来决定光标往前移还是往后移
+    if (inputType.startsWith('insert')) {
+      if (isSafariBrowser) {
+        return [moveToPrevious(first, inputData)]
+      } else {
+        return [moveToNext(first, inputData)]
+      }
+    }
+    // 2.2. inputType 为 delete。如果是 backward，则将光标移动到分隔符前。如果是 forward，则将光标移动到分隔符后
+    if (inputType.startsWith('delete')) {
+      if (inputType.includes('Backward')) {
+        return [moveToPrevious(first, inputData, 1)]
+      } else if (inputType.includes('Forward')) {
+        return [moveToNext(first, inputData, 1)]
+      } else {
+        // 其他情况不处理。目前有 deleteByCut
+      }
+    }
+  }
+
+  // 特例3：如果第一个是分隔符，并且 inputData 不为空，则将光标后移
+  if (inputData.length > 0) {
+    return selectedItems.slice(1)
+  }
+
+  return selectedItems
+}
+
+const moveToPrevious = (selectedItem: SelectedItem, inputData: string, deleteCount = 0): SelectedItem | CreateItem => {
+  const index = flattenedData.value.findIndex((item) => item.id === selectedItem.id && item.type === selectedItem.type)
+  if (index > 0) {
+    const previous = flattenedData.value[index - 1]
+    const { id, type, content } = previous
+    if (type === 'text' || type === 'template') {
+      return {
+        id,
+        type,
+        startOffset: content.length - deleteCount,
+        endOffset: content.length,
       }
     } else {
-      console.warn('something wrong', { range, inputType })
+      // 光标在两个分隔符中间，需要新建文本
+      return { tag: 'new', afterId: id, type: 'text', content: inputData } satisfies CreateItem
     }
-  } else if (startTextEl && endTextEl) {
-    insertTextBetweenTexts(startTextEl, endTextEl, '', startOffset, endOffset)
+  } else if (inputData.length > 0) {
+    // 移动到了最前端，需要新建文本
+    return { tag: 'new', type: 'text', content: inputData } satisfies CreateItem
   } else {
-    console.warn('startTextEl or endTextEl is null', { startTextEl, endTextEl })
+    console.warn('the previous item of current is not found', { current: selectedItem })
   }
+
+  return selectedItem
+}
+
+const moveToNext = (selectedItem: SelectedItem, inputData: string, deleteCount = 0): SelectedItem | CreateItem => {
+  const index = flattenedData.value.findIndex((item) => item.id === selectedItem.id && item.type === selectedItem.type)
+  if (index < flattenedData.value.length - 1) {
+    const next = flattenedData.value[index + 1]
+    const { id, type } = next
+    if (type === 'text' || type === 'template') {
+      return {
+        id,
+        type,
+        startOffset: 0,
+        endOffset: 0 + deleteCount,
+      }
+    } else {
+      // 光标在两个分隔符中间，需要新建文本
+      return { tag: 'new', afterId: selectedItem.id, type: 'text', content: inputData } satisfies CreateItem
+    }
+  } else if (inputData.length > 0) {
+    // 移动到了最末端，需要新建文本
+    return { tag: 'new', afterId: selectedItem.id, type: 'text', content: inputData } satisfies CreateItem
+  } else {
+    console.warn('the next item of current is not found', { current: selectedItem })
+  }
+
+  return selectedItem
 }
 
 const handleCompositionEnd = (e: Event) => {

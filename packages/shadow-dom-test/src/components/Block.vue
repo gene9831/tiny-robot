@@ -1,56 +1,38 @@
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
+import { useAttrs } from 'vue'
 
-const props = defineProps<{
+type DataItem = {
   id: string
-  content: string
-  prefix?: boolean | { outside?: boolean }
-  suffix?: boolean | { outside?: boolean }
-}>()
+  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
+  content: string | DataItem[]
+  readonly?: boolean
+  asChild?: boolean
+}
 
 defineOptions({
   inheritAttrs: false,
 })
 
+const props = defineProps<DataItem>()
 const attrs = useAttrs()
-
-// 过滤掉某些属性，例如 id 和 style
-const filteredAttrs = computed(() => {
-  const { type: _type, component: _component, ...rest } = attrs
-  return rest
-})
-
-const prefixOutside = computed(() => {
-  return typeof props.prefix === 'object' && Boolean(props.prefix.outside)
-})
-
-const prefixInside = computed(() => {
-  return Boolean(props.prefix) && !prefixOutside.value
-})
-
-const suffixOutside = computed(() => {
-  return typeof props.suffix === 'object' && Boolean(props.suffix.outside)
-})
-
-const suffixInside = computed(() => {
-  return Boolean(props.suffix) && !suffixOutside.value
-})
-
-const prefixChar = '^'
-const suffixChar = '$'
 </script>
 <!-- 设置 contenteditable="false" 是为了不会将文本插入到非text元素。但是可能导致光标不显示 -->
 <template>
-  <span v-if="prefixOutside" :data-id="id" data-type="template-prefix">{{ prefixChar }}</span>
   <span
-    style="color: red; margin: 0 4px; padding: 4px 4px; background-color: yellow"
-    v-bind="filteredAttrs"
-    :data-id="id"
-    data-type="template-block"
+    v-if="props.type !== 'block'"
+    :data-id="props.id"
+    :data-type="props.type"
+    v-bind="attrs"
+    :data-placeholder="props.id"
   >
-    <span v-if="prefixInside" :data-id="id" data-type="template-prefix">{{ prefixChar }}</span>
-    <span :data-id="id" data-type="text" :data-placeholder="props.id.slice(0, 4)">{{ content }}</span>
-    <span v-if="suffixInside" :data-id="id" data-type="template-suffix">{{ suffixChar }}</span>
+    {{ props.content }}
   </span>
-  <span v-if="suffixOutside" :data-id="id" data-type="template-suffix">{{ suffixChar }}</span>
+  <template v-else>
+    <template v-if="props.asChild">
+      <Block v-for="item in props.content as DataItem[]" :key="`${item.id}-${item.type}`" v-bind="item" />
+    </template>
+    <span v-else :data-id="props.id" :data-type="props.type" v-bind="attrs">
+      <Block v-for="item in props.content as DataItem[]" :key="`${item.id}-${item.type}`" v-bind="item" />
+    </span>
+  </template>
 </template>
