@@ -18,13 +18,7 @@ const attrs = useAttrs()
 </script>
 <!-- 设置 contenteditable="false" 是为了不会将文本插入到非text元素。但是可能导致光标不显示 -->
 <template>
-  <span
-    v-if="props.type !== 'block'"
-    :data-id="props.id"
-    :data-type="props.type"
-    v-bind="attrs"
-    :data-placeholder="props.id"
-  >
+  <span v-if="props.type !== 'block'" :data-id="props.id" :data-type="props.type" v-bind="attrs">
     {{ props.content }}
   </span>
   <template v-else>

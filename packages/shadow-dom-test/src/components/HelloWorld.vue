@@ -121,13 +121,13 @@ const structuredData = computed<StructuredDataItem[]>(() => {
         type: 'block',
         asChild: true,
         content: [
-          { id: item.id, type: 'prefix', content: item.prefix, style: 'border: 1px solid orange' },
+          { id: item.id, type: 'prefix', content: item.prefix },
           {
             id: item.id,
             type: 'block',
             content: [
               { id: item.id, type: 'template', content: item.content },
-              { id: item.id, type: 'suffix', content: item.suffix, style: 'border: 1px solid orange' },
+              { id: item.id, type: 'suffix', content: item.suffix },
             ],
           },
         ],
@@ -143,11 +143,11 @@ const structuredData = computed<StructuredDataItem[]>(() => {
           id: item.id,
           type: 'block',
           content: [
-            { id: item.id, type: 'prefix', content: item.prefix, style: 'border: 1px solid orange' },
+            { id: item.id, type: 'prefix', content: item.prefix },
             { id: item.id, type: 'template', content: item.content },
           ],
         },
-        { id: item.id, type: 'suffix', content: item.suffix, style: 'border: 1px solid orange' },
+        { id: item.id, type: 'suffix', content: item.suffix },
       ],
     }
   })
