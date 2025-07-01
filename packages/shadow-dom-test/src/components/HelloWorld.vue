@@ -211,7 +211,6 @@ const setCaretPosition = (el: Element, offset: number) => {
   if (!el.firstChild || el.firstChild.nodeType !== Node.TEXT_NODE) {
     console.warn('el.firstChild is not a text node. set anchor and focus to the element with offset 0', el)
     selection.setBaseAndExtent(el, 0, el, 0)
-    console.log(getSelectionRange(editorRef.value!))
     return
   }
 
@@ -229,7 +228,6 @@ const setCaretPosition = (el: Element, offset: number) => {
     el.firstChild,
     Math.min(offset, contentLength),
   )
-  console.log(getSelectionRange(editorRef.value!))
 }
 
 const insertNewTextAndSetCaretPosition = (content: string, insertAfter?: string) => {
@@ -268,18 +266,6 @@ const handleBeforeInput = (e: Event) => {
   console.log({ inputType, inputData })
 
   const range = ev.getTargetRanges()[0] as StaticRange | undefined
-  console.log(
-    'range startContainer',
-    range?.startContainer.parentElement,
-    `"${range?.startContainer.textContent}"`,
-    range?.startOffset,
-  )
-  console.log(
-    'range endContainer',
-    range?.endContainer.parentElement,
-    `"${range?.endContainer.textContent}"`,
-    range?.endOffset,
-  )
 
   // https://w3c.github.io/input-events/#overview
   // 1. isnert. 有 data 或者 dataTransfer 的 inputType
@@ -397,29 +383,36 @@ const handleBeforeInput = (e: Event) => {
         }
       }
 
-      // 光标定位
-      const firstItem = selectedItems[0]
-      const firstSelector = `[data-id="${firstItem.id}"][data-type="${firstItem.type}"]`
-      const restSelectors = selectedItems.slice(1).map((item) => `[data-id="${item.id}"][data-type="${item.type}"]`)
-      nextTick(() => {
-        const el = editorRef.value?.querySelector(firstSelector)
-        if (el) {
-          // 如果 firstItem 没有完全被删除
-          setCaretPosition(el, firstItem.startOffset + inputData.length)
-        } else if (inputData.length === 0) {
-          for (const selector of restSelectors) {
-            const el = editorRef.value?.querySelector(selector)
-            if (el) {
-              setCaretPosition(el, 0)
-              break
-            }
-          }
-        } else {
-          console.warn(`can not find el with selector: ${firstSelector}`)
-        }
-      })
+      if (selectedItems.length > 0) {
+        // 光标定位
+        setCaretPositionBySelected(selectedItems, inputData)
+      }
     }
   }
+}
+
+// 光标定位
+const setCaretPositionBySelected = (selectedItems: SelectedItem[], inputData: string) => {
+  const firstItem = selectedItems[0]
+  const firstSelector = `[data-id="${firstItem.id}"][data-type="${firstItem.type}"]`
+  const restSelectors = selectedItems.slice(1).map((item) => `[data-id="${item.id}"][data-type="${item.type}"]`)
+  nextTick(() => {
+    const el = editorRef.value?.querySelector(firstSelector)
+    if (el) {
+      // 如果 firstItem 没有完全被删除
+      setCaretPosition(el, firstItem.startOffset + inputData.length)
+    } else if (inputData.length === 0) {
+      for (const selector of restSelectors) {
+        const el = editorRef.value?.querySelector(selector)
+        if (el) {
+          setCaretPosition(el, 0)
+          break
+        }
+      }
+    } else {
+      console.warn(`can not find el with selector: ${firstSelector}`)
+    }
+  })
 }
 
 interface SelectedItem {
@@ -521,10 +514,12 @@ const transformSelected = (
 
       if (range.startOffset === 0) {
         // 往前移，将光标放在前一个文本的末尾
-        return [moveToPrevious(first, inputData)]
+        const previous = moveToPrevious(first, inputData)
+        return previous ? [previous] : []
       } else {
         // 往后移，将光标放在后一个文本的开头
-        return [moveToNext(first, inputData)]
+        const next = moveToNext(first, inputData)
+        return next ? [next] : []
       }
     }
 
@@ -532,17 +527,21 @@ const transformSelected = (
     // 2.1. inputType 为 input。根据浏览器平台来决定光标往前移还是往后移
     if (inputType.startsWith('insert')) {
       if (isSafariBrowser) {
-        return [moveToPrevious(first, inputData)]
+        const previous = moveToPrevious(first, inputData)
+        return previous ? [previous] : []
       } else {
-        return [moveToNext(first, inputData)]
+        const next = moveToNext(first, inputData)
+        return next ? [next] : []
       }
     }
     // 2.2. inputType 为 delete。如果是 backward，则将光标移动到分隔符前。如果是 forward，则将光标移动到分隔符后
     if (inputType.startsWith('delete')) {
       if (inputType.includes('Backward')) {
-        return [moveToPrevious(first, inputData, 1)]
+        const previous = moveToPrevious(first, inputData, 1)
+        return previous ? [previous] : []
       } else if (inputType.includes('Forward')) {
-        return [moveToNext(first, inputData, 1)]
+        const next = moveToNext(first, inputData, 1)
+        return next ? [next] : []
       } else {
         // 其他情况不处理。目前有 deleteByCut
       }
@@ -557,7 +556,11 @@ const transformSelected = (
   return selectedItems
 }
 
-const moveToPrevious = (selectedItem: SelectedItem, inputData: string, deleteCount = 0): SelectedItem | CreateItem => {
+const moveToPrevious = (
+  selectedItem: SelectedItem,
+  inputData: string,
+  deleteCount = 0,
+): SelectedItem | CreateItem | null => {
   const index = flattenedData.value.findIndex((item) => item.id === selectedItem.id && item.type === selectedItem.type)
   if (index > 0) {
     const previous = flattenedData.value[index - 1]
@@ -569,21 +572,33 @@ const moveToPrevious = (selectedItem: SelectedItem, inputData: string, deleteCou
         startOffset: content.length - deleteCount,
         endOffset: content.length,
       }
-    } else {
+    } else if (inputData.length > 0) {
       // 光标在两个分隔符中间，需要新建文本
       return { tag: 'new', afterId: id, type: 'text', content: inputData } satisfies CreateItem
+    } else {
+      console.warn('the previous item is not text or template', { current: selectedItem, previous })
+      if (deleteCount === 1) {
+        // 光标移动到分隔符左侧
+        return { ...selectedItem, endOffset: selectedItem.startOffset }
+      }
     }
   } else if (inputData.length > 0) {
     // 移动到了最前端，需要新建文本
     return { tag: 'new', type: 'text', content: inputData } satisfies CreateItem
   } else {
+    // 移动到了最前端，没有文本需要删除
     console.warn('the previous item of current is not found', { current: selectedItem })
+    return null
   }
 
   return selectedItem
 }
 
-const moveToNext = (selectedItem: SelectedItem, inputData: string, deleteCount = 0): SelectedItem | CreateItem => {
+const moveToNext = (
+  selectedItem: SelectedItem,
+  inputData: string,
+  deleteCount = 0,
+): SelectedItem | CreateItem | null => {
   const index = flattenedData.value.findIndex((item) => item.id === selectedItem.id && item.type === selectedItem.type)
   if (index < flattenedData.value.length - 1) {
     const next = flattenedData.value[index + 1]
@@ -595,15 +610,23 @@ const moveToNext = (selectedItem: SelectedItem, inputData: string, deleteCount =
         startOffset: 0,
         endOffset: 0 + deleteCount,
       }
-    } else {
+    } else if (inputData.length > 0) {
       // 光标在两个分隔符中间，需要新建文本
       return { tag: 'new', afterId: selectedItem.id, type: 'text', content: inputData } satisfies CreateItem
+    } else {
+      console.warn('the next item is not text or template', { current: selectedItem, next })
+      if (deleteCount === 1) {
+        // 光标移动到分隔符右侧
+        return { ...selectedItem, startOffset: selectedItem.endOffset }
+      }
     }
   } else if (inputData.length > 0) {
     // 移动到了最末端，需要新建文本
     return { tag: 'new', afterId: selectedItem.id, type: 'text', content: inputData } satisfies CreateItem
   } else {
+    // 移动到了最末端，没有文本需要删除
     console.warn('the next item of current is not found', { current: selectedItem })
+    return null
   }
 
   return selectedItem
