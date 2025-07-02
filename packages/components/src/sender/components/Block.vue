@@ -23,3 +23,36 @@ const attrs = useAttrs()
     </span>
   </template>
 </template>
+
+<style lang="less" scoped>
+[data-type='text'] {
+  display: inline;
+  white-space: pre-wrap;
+  word-break: break-all;
+  word-wrap: break-word;
+}
+
+[data-type='block'] {
+  color: #1476ff;
+  max-width: none;
+  background: rgba(20, 118, 255, 0.1);
+  padding: 5.5px 8px;
+  margin: 0 4px;
+  border-radius: 6px;
+  cursor: text;
+  caret-color: #191919;
+  white-space: pre-wrap;
+  word-break: break-all;
+  word-wrap: break-word;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  hyphens: auto;
+
+  box-decoration-break: clone;
+}
+
+[data-type='template']:empty {
+  display: inline-block;
+  min-width: 16px;
+}
+</style>
