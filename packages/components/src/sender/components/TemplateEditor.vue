@@ -2,16 +2,16 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import Block from './Block.vue'
 import { useUndoRedo } from '../composables/useUndoRedo'
+import type { UserItem } from '../index.type'
 import type {
   CreateItem,
   EditorRange,
   ExtendedTextItem,
   SelectedItem,
-  SenderStructuredDataItem,
+  StructuredDataItem,
   TemplateItem,
   TextItem,
-  UserItem,
-} from '../index.type'
+} from '../types/editor.type'
 
 declare global {
   interface Selection {
@@ -46,14 +46,21 @@ const emit = defineEmits<{
 
 const forceRerender = ref(0)
 
-const originalData = ref<(TextItem | TemplateItem)[]>(
-  (model.value || []).map((item, index) => {
+/**
+ * 将用户数据结构转换为内部数据结构
+ * @param items 用户数据结构
+ * @returns 内部数据结构
+ */
+const transformUserToInternal = (items: UserItem[]): (TextItem | TemplateItem)[] => {
+  return items.map((item, index) => {
     return {
       id: `id-${index}`,
       ...(item.type === 'template' ? { ...item, prefix: PREFIX, suffix: SUFFIX } : item),
     } as TextItem | TemplateItem
-  }),
-)
+  })
+}
+
+const originalData = ref<(TextItem | TemplateItem)[]>(transformUserToInternal(model.value || []))
 
 const flattenedData = computed<ExtendedTextItem[]>(() => {
   return originalData.value
@@ -70,7 +77,7 @@ const flattenedData = computed<ExtendedTextItem[]>(() => {
     .flat()
 })
 
-const structuredData = computed<SenderStructuredDataItem[]>(() => {
+const structuredData = computed<StructuredDataItem[]>(() => {
   return originalData.value.map((item) => {
     if (item.type === 'text') {
       return item
@@ -131,15 +138,6 @@ const parseSerializedData = (serialized: string) => {
   }
 }
 
-const fromInternalToUser = (items: (TextItem | TemplateItem)[]): UserItem[] => {
-  return items.map((item) => {
-    if (item.type === 'template') {
-      return { type: 'template', content: item.content }
-    }
-    return { type: 'text', content: item.content }
-  })
-}
-
 const rangeMap = new Map<string, EditorRange>()
 const history = useUndoRedo<string>(serializeWithTimestamp(originalData.value), {
   onRemoveHistory: (list) => {
@@ -149,29 +147,33 @@ const history = useUndoRedo<string>(serializeWithTimestamp(originalData.value), 
   },
 })
 
-watch(
-  originalData,
-  (newValue) => {
-    model.value = fromInternalToUser(newValue)
-  },
-  { deep: true },
-)
+/**
+ * 将内部数据结构转换为用户数据结构
+ * @param items 内部数据结构
+ * @returns 用户数据结构
+ */
+const transformInternalToUser = (items: (TextItem | TemplateItem)[]): UserItem[] => {
+  return items.map((item) => {
+    if (item.type === 'template') {
+      return { type: 'template', content: item.content }
+    }
+    return { type: 'text', content: item.content }
+  })
+}
 
 watch(
   () => model.value,
   (newModel) => {
-    const currentModelValue = fromInternalToUser(originalData.value)
-    if (JSON.stringify(newModel) !== JSON.stringify(currentModelValue)) {
-      originalData.value = (newModel || []).map((item, index) => {
-        return {
-          id: `id-${index}`,
-          ...(item.type === 'template' ? { ...item, prefix: PREFIX, suffix: SUFFIX } : item),
-        } as TextItem | TemplateItem
-      })
-      history.clear()
-      rangeMap.clear()
-      history.commit(serializeWithTimestamp(originalData.value))
+    // 比较新旧值，避免因组件内部修改 model.value 而触发的无限循环
+    const internalStateAsUserItem = transformInternalToUser(originalData.value)
+    if (JSON.stringify(newModel) === JSON.stringify(internalStateAsUserItem)) {
+      return
     }
+
+    // 当 props 变化时，更新内部状态
+    originalData.value = transformUserToInternal(newModel || [])
+
+    history.commit(serializeWithTimestamp(originalData.value))
   },
   { deep: true },
 )
@@ -798,8 +800,13 @@ const activateFirstField = () => {
   }
 }
 
+const handleClearHistory = () => {
+  history.clear()
+  rangeMap.clear()
+}
+
 defineExpose({
-  clearHistory: history.clear,
+  clearHistory: handleClearHistory,
   activateFirstField,
 })
 </script>
@@ -822,54 +829,56 @@ defineExpose({
 </template>
 
 <style>
-[contenteditable] {
-  display: block;
-  width: 100%;
-  min-height: 26px;
-  font-size: 16px;
-  line-height: 2.5;
-  border-radius: 4px;
-  word-break: break-word;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  box-sizing: border-box;
-  overflow-wrap: break-word;
-  text-align: left;
-}
+.editor-container {
+  [contenteditable] {
+    display: block;
+    width: 100%;
+    min-height: 26px;
+    font-size: 16px;
+    line-height: 2.5;
+    border-radius: 4px;
+    word-break: break-word;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    text-align: left;
+  }
 
-[contenteditable]:focus {
-  outline: none;
-  border: none;
-}
+  [contenteditable]:focus {
+    outline: none;
+    border: none;
+  }
 
-[data-type='text'] {
-  display: inline;
-  white-space: pre-wrap;
-  word-break: break-all;
-  word-wrap: break-word;
-}
+  [data-type='text'] {
+    display: inline;
+    white-space: pre-wrap;
+    word-break: break-all;
+    word-wrap: break-word;
+  }
 
-[data-type='block'] {
-  color: #1476ff;
-  max-width: none;
-  background: rgba(20, 118, 255, 0.1);
-  padding: 5.5px 8px;
-  margin: 0 4px;
-  border-radius: 6px;
-  cursor: text;
-  caret-color: #191919;
-  white-space: pre-wrap;
-  word-break: break-all;
-  word-wrap: break-word;
-  box-sizing: border-box;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  [data-type='block'] {
+    color: #1476ff;
+    max-width: none;
+    background: rgba(20, 118, 255, 0.1);
+    padding: 5.5px 8px;
+    margin: 0 4px;
+    border-radius: 6px;
+    cursor: text;
+    caret-color: #191919;
+    white-space: pre-wrap;
+    word-break: break-all;
+    word-wrap: break-word;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    hyphens: auto;
 
-  box-decoration-break: clone;
-}
+    box-decoration-break: clone;
+  }
 
-[data-type='template']:empty {
-  display: inline-block;
-  min-width: 16px;
+  [data-type='template']:empty {
+    display: inline-block;
+    min-width: 16px;
+  }
 }
 </style>

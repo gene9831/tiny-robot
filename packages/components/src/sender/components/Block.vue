@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAttrs } from 'vue'
-import type { DataItem } from '../index.type'
+import type { DataItem } from '../types/editor.type'
 
 defineOptions({
   inheritAttrs: false,

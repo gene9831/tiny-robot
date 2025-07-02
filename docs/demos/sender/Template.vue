@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { TrSender, type UserItem } from '@opentiny/tiny-robot'
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const inputText = ref('')
 const senderRef = ref(null)
@@ -124,9 +124,7 @@ const templates = [
 const selectTemplate = (template) => {
   activeTemplateName.value = template.name
   templateData.value = template.data
-  nextTick(() => {
-    senderRef.value?.activateTemplateFirstField()
-  })
+  senderRef.value?.activateTemplateFirstField()
 }
 
 // 提交处理

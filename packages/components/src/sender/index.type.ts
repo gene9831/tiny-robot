@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import type { TemplateItem, TextItem } from './types/editor.type'
 
 /**
  * 组件核心类型定义
@@ -118,69 +119,8 @@ export interface SpeechHandler {
   stop: () => void
 }
 
-export interface UserTextItem {
-  type: 'text'
-  content: string
-}
+export type UserTextItem = Omit<TextItem, 'id'>
 
-export interface UserTemplateItem {
-  type: 'template'
-  content: string
-}
+export type UserTemplateItem = Pick<TemplateItem, 'type' | 'content'>
 
 export type UserItem = UserTextItem | UserTemplateItem
-
-export interface TextItem {
-  id: string
-  type: 'text'
-  content: string
-}
-
-export interface TemplateItem extends Omit<TextItem, 'type'> {
-  type: 'template'
-  prefix: string
-  suffix: string
-}
-
-export interface ExtendedTextItem {
-  id: string
-  type: 'text' | 'template' | 'prefix' | 'suffix'
-  content: string
-}
-
-export interface SenderStructuredDataItem {
-  id: string
-  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
-  content: string | SenderStructuredDataItem[]
-  asChild?: boolean
-  readonly?: boolean
-}
-
-export interface EditorRange extends StaticRange {
-  readonly endId?: string
-  readonly endType?: string
-  readonly startId?: string
-  readonly startType?: string
-}
-
-export interface SelectedItem {
-  id: string
-  type: ExtendedTextItem['type']
-  startOffset: number
-  endOffset: number
-}
-
-export interface CreateItem {
-  tag: 'new'
-  afterId?: string
-  type: 'text'
-  content: string
-}
-
-export interface DataItem {
-  id: string
-  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
-  content: string | DataItem[]
-  readonly?: boolean
-  asChild?: boolean
-}
