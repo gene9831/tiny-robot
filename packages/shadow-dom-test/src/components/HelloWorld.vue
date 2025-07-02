@@ -155,9 +155,29 @@ const structuredData = computed<StructuredDataItem[]>(() => {
 
 const editorRef = ref<HTMLDivElement | null>(null)
 
-// TODO 有待优化。可以清除无效的 rangeMap
+const serializeWithTimestamp = (obj: unknown) => {
+  const timestamp = Date.now()
+  const data = JSON.stringify(obj)
+  return `${timestamp}:${data}`
+}
+
+const parseSerializedData = (serialized: string) => {
+  const timestamp = parseInt(serialized.slice(0, 13))
+  const data = JSON.parse(serialized.slice(14))
+  return {
+    timestamp,
+    data,
+  }
+}
+
 const rangeMap = new Map<string, EditorRange>()
-const history = useUndoRedo<string>(JSON.stringify(originalData.value))
+const history = useUndoRedo<string>(serializeWithTimestamp(originalData.value), {
+  onRemoveHistory: (list) => {
+    for (const item of list) {
+      rangeMap.delete(item)
+    }
+  },
+})
 
 // 查找祖先节点中有 data-id 的元素
 const findAncestorWithDataId = (node: Node, topElement: HTMLElement = document.body): HTMLElement | null => {
@@ -337,7 +357,7 @@ const handleBeforeInput = (e: Event) => {
       if (selectionRange) {
         rangeMap.set(history.get(), transformRange(selectionRange))
       }
-      history.commit(JSON.stringify(originalData.value))
+      history.commit(serializeWithTimestamp(originalData.value))
       return
     }
 
@@ -348,7 +368,7 @@ const handleBeforeInput = (e: Event) => {
       if (selectionRange) {
         rangeMap.set(history.get(), transformRange(selectionRange))
       }
-      history.commit(JSON.stringify(originalData.value))
+      history.commit(serializeWithTimestamp(originalData.value))
     } else {
       console.warn('range is not valid, range:', transformedRange)
     }
@@ -701,12 +721,12 @@ const handleCompositionEnd = (e: CompositionEvent) => {
       insertNewTextAndSetCaretPosition(e.data)
 
       rangeMap.set(history.get(), transformRange(range))
-      history.commit(JSON.stringify(originalData.value))
+      history.commit(serializeWithTimestamp(originalData.value))
     } else if (range.startId && range.endId) {
       processInput(range, 'insertCompositionText', e.data)
 
       rangeMap.set(history.get(), transformRange(range))
-      history.commit(JSON.stringify(originalData.value))
+      history.commit(serializeWithTimestamp(originalData.value))
     } else {
       console.warn('range is not valid, range:', range)
     }
@@ -762,7 +782,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
 }
 
 const restoreDataAndCaretPosition = (historyItem: string) => {
-  originalData.value = JSON.parse(historyItem)
+  const { data } = parseSerializedData(historyItem)
+  originalData.value = data
   if (rangeMap.has(historyItem)) {
     const range = rangeMap.get(historyItem)!
     nextTick(() => {

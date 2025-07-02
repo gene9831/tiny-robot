@@ -1,4 +1,8 @@
-export function useUndoRedo<T>(initial: T) {
+export interface UseUndoRedoOptions<T> {
+  onRemoveHistory?: (list: T[]) => void
+}
+
+export function useUndoRedo<T>(initial: T, options: UseUndoRedoOptions<T> = {}) {
   let undoStack: T[] = []
   let redoStack: T[] = []
   let currentValue: T = initial
@@ -6,6 +10,9 @@ export function useUndoRedo<T>(initial: T) {
   const commit = (newValue: T) => {
     undoStack.push(currentValue)
     currentValue = newValue
+    if (redoStack.length) {
+      options.onRemoveHistory?.(redoStack)
+    }
     redoStack = []
   }
 
@@ -32,6 +39,12 @@ export function useUndoRedo<T>(initial: T) {
   }
 
   const clear = () => {
+    if (undoStack.length) {
+      options.onRemoveHistory?.(undoStack)
+    }
+    if (redoStack.length) {
+      options.onRemoveHistory?.(redoStack)
+    }
     undoStack = []
     redoStack = []
   }
