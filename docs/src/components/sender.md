@@ -129,16 +129,18 @@ Sender 组件支持在多行模式下灵活定制底部区域。通过 `footer-l
 
 #### 模版填充
 
-通过调用组件实例的 `setTemplate` 方法动态设置模板。
+通过 `templateData` prop 实现模板的动态设置与双向绑定。推荐使用 `v-model:templateData` 的语法糖。
 
-这种方式适合需要动态切换模板的场景，如模板选择器。
+该功能加载后，光标会自动聚焦在第一个可编辑的模板字段上，方便用户直接开始编辑。
 
 **模板示例**
 
 <demo vue="../../demos/sender/Template.vue" title="模板填充示例" description="Sender 组件支持模板填充，展示动态模板切换功能。" />
 
-
-**备注** `initialValues` 中对应字段赋值为 `''`, 则会显示 `placeholder`; 赋值不为 `''` , 则会显示对应字段的初始值
+**备注**
+`templateData` prop 接收一个 `UserItem[]` 类型的数组。
+`UserItem` 的结构为 `{ type: 'text', content: string }` 或 `{ type: 'template', content: string }`。
+当 `type` 为 `'template'` 时，对应的 `content` 会渲染为一个可编辑的模板字段。
 
 #### 输入联想
 
@@ -253,6 +255,7 @@ Sender 组件支持紧凑模式，适用于空间受限的场景。通过添加 
 | theme                | 主题样式                 | `'light' \| 'dark'`                                     | `'light'`         |
 | suggestions          | 输入建议列表             | `string[]`                                              | `[]`              |
 | suggestionPopupWidth | 输入建议弹窗宽度         | `'number' \| 'string'`                                                 | `400px`             |
+| templateData         | 模板数据，用于初始化或 v-model 更新 | `UserItem[]`                                            | `[]`              |
 
 
 ### Events
@@ -283,7 +286,6 @@ Sender 组件支持紧凑模式，适用于空间受限的场景。通过添加 
 | submit                     | 手动触发提交事件         | -    | `void`          |
 | startSpeech                | 开始语音识别             | -    | `Promise<void>` |
 | stopSpeech                 | 停止语音识别             | -    | `void`          |
-| setTemplate                | 动态设置模板内容         | `(template: string, initialValues?: Record<string, string>)` | `void` |
 | activateTemplateFirstField | 激活模板的第一个输入字段 | -    | `void`          |
 
 ### Slots

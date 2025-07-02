@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, useSlots } from 'vue'
 import TinyInput from '@opentiny/vue-input'
-import type { SenderProps, SenderEmits, InputHandler, KeyboardHandler } from './index.type'
+import type { SenderProps, SenderEmits, InputHandler, KeyboardHandler, UserItem } from './index.type'
 import { useInputHandler } from './composables/useInputHandler'
 import { useKeyboardHandler } from './composables/useKeyboardHandler'
 import { useSpeechHandler } from './composables/useSpeechHandler'
@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<SenderProps>(), {
   theme: 'light',
   hasContent: undefined,
   template: '',
-  templateInitialValues: () => ({}),
+  templateData: () => [],
   suggestions: () => [],
   suggestionPopupWidth: 400,
 })
@@ -44,7 +44,7 @@ const inputWrapperRef = ref<HTMLElement | null>(null)
 const buttonsContainerRef = ref<HTMLElement | null>(null)
 
 // 是否显示模板编辑器
-const showTemplateEditor = ref(false)
+const showTemplateEditor = computed(() => props.templateData && props.templateData.length > 0)
 
 // 输入控制
 const { inputValue, isComposing, clearInput: originalClearInput }: InputHandler = useInputHandler(props, emit)
@@ -208,9 +208,18 @@ const focusInput = () => {
   }
 }
 
+const blurInput = () => {
+  if (inputRef.value) {
+    inputRef.value.blur()
+  } else {
+    const input = document.querySelector('.tiny-input__inner') as HTMLInputElement
+    input?.blur()
+  }
+}
+
 const exitTemplateMode = () => {
-  showTemplateEditor.value = false
-  emit('reset-template')
+  emit('update:templateData', [])
+  templateEditorRef.value?.clearHistory()
   nextTick(() => {
     if (inputValue.value === '') {
       currentMode.value = props.mode || 'single'
@@ -221,6 +230,7 @@ const exitTemplateMode = () => {
       focusInput()
     }, 50)
   })
+  closeSuggestionsPopup()
 }
 
 // 清空功能增强：同时处理模板和普通输入，并退出模板编辑模式
@@ -244,29 +254,17 @@ const clearInput = () => {
   closeSuggestionsPopup()
 }
 
-// 模板相关处理
-const handleTemplateInput = (value: string) => {
-  emit('update:modelValue', value)
+const handleTemplateUpdate = (data: UserItem[]) => {
+  emit('update:templateData', data)
 }
 
-// 激活第一个模板字段
-const activateTemplateFirstField = () => {
-  if (templateEditorRef.value) {
-    templateEditorRef.value.activateFirstField()
-  }
-}
-
-// 设置模板方法
-const setTemplate = (template: string, initialValues?: Record<string, string>) => {
-  // 设置模板后显示模板编辑器
-  showTemplateEditor.value = true
-
-  nextTick(() => {
-    if (templateEditorRef.value) {
-      templateEditorRef.value.setTemplate({ template, initialValues })
-    }
-  })
-}
+watch(
+  () => props.templateData,
+  () => {
+    inputValue.value = props.templateData.map((item) => item.content).join('')
+  },
+  { deep: true },
+)
 
 // 语音识别
 const speechOptions = computed(() => {
@@ -333,6 +331,8 @@ const { handleKeyPress, triggerSubmit }: KeyboardHandler = useKeyboardHandler(
   isOverLimit,
   currentMode,
   setMultipleMode,
+  showTemplateEditor,
+  exitTemplateMode,
 )
 
 // 处理焦点事件
@@ -437,23 +437,22 @@ watch(
   },
 )
 
+// 激活第一个模板字段
+const activateTemplateFirstField = () => {
+  if (templateEditorRef.value) {
+    templateEditorRef.value.activateFirstField()
+  }
+}
+
 // 暴露方法
 defineExpose({
   focus: focusInput,
-  blur: () => {
-    if (inputRef.value) {
-      inputRef.value.blur()
-    } else {
-      const input = document.querySelector('.tiny-input__inner') as HTMLInputElement
-      input?.blur()
-    }
-  },
+  blur: blurInput,
   clear: clearInput,
   submit: triggerSubmit,
   startSpeech,
   stopSpeech,
   activateTemplateFirstField,
-  setTemplate,
 })
 </script>
 
@@ -491,9 +490,9 @@ defineExpose({
             <template v-if="showTemplateEditor">
               <TemplateEditor
                 ref="templateEditorRef"
-                v-model:value="inputValue"
-                @input="handleTemplateInput"
-                @empty-content="exitTemplateMode"
+                :model-value="props.templateData"
+                @update:model-value="handleTemplateUpdate"
+                @submit="triggerSubmit"
               />
             </template>
             <!-- 普通输入框 -->

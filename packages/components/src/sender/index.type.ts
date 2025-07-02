@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+
 /**
  * 组件核心类型定义
  */
@@ -44,7 +45,7 @@ export interface SenderProps {
   theme?: ThemeType // 主题
   template?: string // 模板字符串，格式如 "你好 [称呼]，感谢您的 [事项]"
   hasContent?: boolean // 手动指定是否有内容，用于模板模式
-  templateInitialValues?: Record<string, string> // 模板字段的初始值，键为字段占位符文本，值为初始内容
+  templateData?: UserItem[] // 模板数据
 }
 
 export interface ActionButtonsProps {
@@ -66,6 +67,7 @@ export interface ActionButtonsProps {
 // 组件事件定义
 export type SenderEmits = {
   (e: 'update:modelValue', value: string): void
+  (e: 'update:templateData', value: UserItem[]): void
   (e: 'submit', value: string): void
   (e: 'clear'): void
   (e: 'speech-start'): void
@@ -116,70 +118,69 @@ export interface SpeechHandler {
   stop: () => void
 }
 
-/**
- * 模板部分定义
- */
-export interface TemplatePart {
-  /** 内容文本 */
+export interface UserTextItem {
+  type: 'text'
   content: string
-  /** 是否为可编辑字段 */
-  isField: boolean
-  /** 占位符文本 (当字段为空时显示) */
-  placeholder?: string
-  /** 字段索引 (用于标识可编辑字段) */
-  fieldIndex?: number
 }
 
-/**
- * 模板编辑器属性
- */
-export interface TemplateEditorProps {
-  /** 当前值 */
-  value?: string
-  /** 是否自动聚焦 */
-  autofocus?: boolean
+export interface UserTemplateItem {
+  type: 'template'
+  content: string
 }
 
-/**
- * 设置模板的参数接口
- */
-export interface SetTemplateParams {
-  /** 模板字符串，格式为普通文本与 [占位符] 的组合 */
-  template: string
-  /** 字段初始值，键为占位符文本，值为初始内容 */
-  initialValues?: Record<string, string>
+export type UserItem = UserTextItem | UserTemplateItem
+
+export interface TextItem {
+  id: string
+  type: 'text'
+  content: string
 }
 
-/**
- * 模板编辑器事件
- */
-export interface TemplateEditorEmits {
-  /** 输入事件 */
-  (e: 'input', value: string): void
-  /** 内容变更状态 - 通知父组件是否有内容 */
-  (e: 'content-status', hasContent: boolean): void
-  /** 提交事件 */
-  (e: 'submit', value: string): void
-  /** 聚焦事件 */
-  (e: 'focus', event: FocusEvent): void
-  /** 失焦事件 */
-  (e: 'blur', event: FocusEvent): void
-  /** 模板内容为空时触发，通知父组件可以退出模板编辑模式 */
-  (e: 'empty-content'): void
+export interface TemplateItem extends Omit<TextItem, 'type'> {
+  type: 'template'
+  prefix: string
+  suffix: string
 }
 
-/**
- * 模板编辑器暴露的方法
- */
-export interface TemplateEditorExpose {
-  /** 聚焦到编辑器 */
-  focus: () => void
-  /** 重置所有字段 */
-  resetFields: () => void
-  /** 激活第一个字段 */
-  activateFirstField: () => void
-  /** 获取当前DOM中的值 */
-  getValueFromDOM: () => string
-  /** 设置模板和初始值 */
-  setTemplate: (params: SetTemplateParams) => void
+export interface ExtendedTextItem {
+  id: string
+  type: 'text' | 'template' | 'prefix' | 'suffix'
+  content: string
+}
+
+export interface SenderStructuredDataItem {
+  id: string
+  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
+  content: string | SenderStructuredDataItem[]
+  asChild?: boolean
+  readonly?: boolean
+}
+
+export interface EditorRange extends StaticRange {
+  readonly endId?: string
+  readonly endType?: string
+  readonly startId?: string
+  readonly startType?: string
+}
+
+export interface SelectedItem {
+  id: string
+  type: ExtendedTextItem['type']
+  startOffset: number
+  endOffset: number
+}
+
+export interface CreateItem {
+  tag: 'new'
+  afterId?: string
+  type: 'text'
+  content: string
+}
+
+export interface DataItem {
+  id: string
+  type: 'block' | 'text' | 'template' | 'prefix' | 'suffix'
+  content: string | DataItem[]
+  readonly?: boolean
+  asChild?: boolean
 }
