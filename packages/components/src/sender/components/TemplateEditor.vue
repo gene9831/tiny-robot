@@ -60,6 +60,15 @@ const transformUserToInternal = (items: UserItem[]): (TextItem | TemplateItem)[]
   })
 }
 
+/**
+ * 将内部数据结构转换为用户数据结构
+ * @param items 内部数据结构
+ * @returns 用户数据结构
+ */
+const transformInternalToUser = (items: (TextItem | TemplateItem)[]): UserItem[] => {
+  return items.map((item) => ({ type: item.type, content: item.content }))
+}
+
 const originalData = ref<(TextItem | TemplateItem)[]>(transformUserToInternal(model.value || []))
 
 const flattenedData = computed<ExtendedTextItem[]>(() => {
@@ -147,29 +156,9 @@ const history = useUndoRedo<string>(serializeWithTimestamp(originalData.value), 
   },
 })
 
-/**
- * 将内部数据结构转换为用户数据结构
- * @param items 内部数据结构
- * @returns 用户数据结构
- */
-const transformInternalToUser = (items: (TextItem | TemplateItem)[]): UserItem[] => {
-  return items.map((item) => {
-    if (item.type === 'template') {
-      return { type: 'template', content: item.content }
-    }
-    return { type: 'text', content: item.content }
-  })
-}
-
 watch(
   () => model.value,
   (newModel) => {
-    // 比较新旧值，避免因组件内部修改 model.value 而触发的无限循环
-    const internalStateAsUserItem = transformInternalToUser(originalData.value)
-    if (JSON.stringify(newModel) === JSON.stringify(internalStateAsUserItem)) {
-      return
-    }
-
     // 当 props 变化时，更新内部状态
     originalData.value = transformUserToInternal(newModel || [])
 
@@ -287,6 +276,8 @@ const insertNewTextAndSetCaretPosition = (content: string, insertAfter?: string)
       setCaretPosition(el, content.length)
     }
   })
+
+  model.value = transformInternalToUser(originalData.value)
 }
 
 const compositionContext = ref<{ hasStarted: boolean; range: EditorRange | null }>({
@@ -356,7 +347,6 @@ const handleBeforeInput = (e: Event) => {
       if (selectionRange) {
         rangeMap.set(history.get(), transformRange(selectionRange))
       }
-      history.commit(serializeWithTimestamp(originalData.value))
       return
     }
 
@@ -367,7 +357,6 @@ const handleBeforeInput = (e: Event) => {
       if (selectionRange) {
         rangeMap.set(history.get(), transformRange(selectionRange))
       }
-      history.commit(serializeWithTimestamp(originalData.value))
     } else {
       console.warn('range is not valid, range:', transformedRange)
     }
@@ -470,6 +459,8 @@ const processInput = (range: EditorRange, inputType: string, inputData: string) 
     // 光标定位
     setCaretPositionBySelected(selectedItems, inputData)
   }
+
+  model.value = transformInternalToUser(originalData.value)
 }
 
 // 光标定位
@@ -699,12 +690,10 @@ const handleCompositionEnd = (e: CompositionEvent) => {
       insertNewTextAndSetCaretPosition(e.data)
 
       rangeMap.set(history.get(), transformRange(range))
-      history.commit(serializeWithTimestamp(originalData.value))
     } else if (range.startId && range.endId) {
       processInput(range, 'insertCompositionText', e.data)
 
       rangeMap.set(history.get(), transformRange(range))
-      history.commit(serializeWithTimestamp(originalData.value))
     } else {
       console.warn('range is not valid, range:', range)
     }
