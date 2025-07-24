@@ -1,4 +1,4 @@
-import { Component, VNode } from 'vue'
+import { Component, TeleportProps, VNode } from 'vue'
 
 export interface SuggestionBaseItem {
   id: string
@@ -17,7 +17,7 @@ export interface SuggestionGroup<T = Record<string, unknown>> {
 export type SuggestionData<T = Record<string, unknown>> = (SuggestionItem<T> | SuggestionGroup<T>)[]
 
 export interface SuggestionPopoverProps<T = Record<string, unknown>> {
-  appendTo?: string | HTMLElement
+  appendTo?: TeleportProps['to']
   data: SuggestionData<T>
   title?: string
   icon?: VNode | Component

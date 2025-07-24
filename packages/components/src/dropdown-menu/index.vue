@@ -5,6 +5,7 @@ import TrBasePopper from '../base-popper'
 import { DropdownMenuEmits, DropdownMenuItem, DropdownMenuProps } from './index.type'
 
 const props = withDefaults(defineProps<DropdownMenuProps>(), {
+  appendTo: 'body',
   trigger: 'click',
 })
 

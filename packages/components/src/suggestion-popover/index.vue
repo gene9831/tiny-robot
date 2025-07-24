@@ -5,7 +5,7 @@ import { computed, CSSProperties, ref, watch } from 'vue'
 import TrBasePopper from '../base-popper'
 import FlowLayoutButtons from '../flow-layout-buttons'
 import IconButton from '../icon-button'
-import { createTeleport, useTeleportTarget } from '../shared/composables'
+import { useTeleport } from '../shared/composables'
 import Backdrop from './components/Backdrop.vue'
 import Header from './components/Header.vue'
 import Loading from './components/Loading.vue'
@@ -20,6 +20,7 @@ import {
 } from './index.type'
 
 const props = withDefaults(defineProps<SuggestionPopoverProps>(), {
+  appendTo: 'body',
   title: '热门问题',
   trigger: 'click',
   topOffset: 8,
@@ -136,10 +137,8 @@ const popoverStyles = computed<CSSProperties>(() => {
   return {}
 })
 
-const teleportTarget = useTeleportTarget(triggerRef, props.appendTo)
-
-createTeleport(
-  () => ({ to: teleportTarget.value }),
+useTeleport(
+  computed(() => props.appendTo),
   () => <Backdrop show={show.value && isMobile.value} />,
 )
 

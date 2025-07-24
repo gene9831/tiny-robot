@@ -1,8 +1,8 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="tsx">
 import { useElementBounding, useElementSize } from '@vueuse/core'
-import { computed, CSSProperties, ref, TransitionProps, useAttrs, VNode, watch } from 'vue'
-import { createTeleport, useSlotRefs, useTeleportTarget } from '../shared/composables'
+import { computed, CSSProperties, ref, TransitionProps, useAttrs, VNode, watch, type TeleportProps } from 'vue'
+import { useSlotRefs, useTeleport } from '../shared/composables'
 import { toCssUnit } from '../shared/utils'
 import Popper from './components/Popper.vue'
 
@@ -14,7 +14,7 @@ type TriggerEvents = Partial<Record<`on${Capitalize<string>}`, (...args: any[]) 
 
 const props = withDefaults(
   defineProps<{
-    appendTo?: string | HTMLElement
+    appendTo?: TeleportProps['to']
     offset?: number | { mainAxis?: number; crossAxis?: number }
     placement?: 'top-center' | 'bottom-center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
     preventOverflow?: boolean
@@ -109,12 +109,10 @@ watch(
   { flush: 'post' },
 )
 
-const teleportTarget = useTeleportTarget(triggerRef, props.appendTo)
-
 const attrs = useAttrs()
 
-createTeleport(
-  () => ({ to: teleportTarget.value }),
+useTeleport(
+  computed(() => props.appendTo),
   () => (
     <Popper
       ref={popperInstance}

@@ -1,3 +1,2 @@
 export * from './useSlotRefs'
-export * from './createTeleport'
-export * from './useTeleportTarget'
+export * from './useTeleport'
