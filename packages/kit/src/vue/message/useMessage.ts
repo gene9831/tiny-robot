@@ -4,8 +4,8 @@
  */
 
 import { reactive, Reactive, ref, toRaw, type Ref } from 'vue'
-import type { ChatMessage } from '../../types'
 import type { AIClient } from '../../client'
+import type { ChatMessage } from '../../types'
 
 export enum STATUS {
   INIT = 'init', // 初始状态
@@ -39,6 +39,9 @@ export interface UseMessageOptions {
   errorMessage?: string
   /** 初始消息列表 */
   initialMessages?: ChatMessage[]
+  events?: {
+    onReceiveData?: (data: unknown, messages: Ref<ChatMessage[]>) => void
+  }
 }
 
 /**
@@ -54,10 +57,12 @@ export interface UseMessageReturn {
   useStream: Ref<boolean>
   /** 发送消息 */
   sendMessage: (content?: string, clearInput?: boolean) => Promise<void>
+  /** 手动执行addMessage添加消息后，可以执行send发送消息 */
+  send: () => Promise<void>
   /** 清空消息 */
   clearMessages: () => void
   /** 添加消息 */
-  addMessage: (message: ChatMessage) => void
+  addMessage: (message: ChatMessage | ChatMessage[]) => void
   /** 中止请求 */
   abortRequest: () => void
   /** 重试请求 */
@@ -102,11 +107,15 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
       },
     })
 
-    const assistantMessage: ChatMessage = {
-      role: 'assistant',
-      content: response.choices[0].message.content,
+    if (options.events?.onReceiveData) {
+      options.events.onReceiveData(response, messages)
+    } else {
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: response.choices[0].message.content,
+      }
+      messages.value.push(assistantMessage)
     }
-    messages.value.push(assistantMessage)
   }
 
   // 流式请求
@@ -125,9 +134,14 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
           if (messages.value[messages.value.length - 1].role === 'user') {
             messages.value.push({ role: 'assistant', content: '' })
           }
-          const choice = data.choices?.[0]
-          if (choice && choice.delta.content) {
-            messages.value[messages.value.length - 1].content += choice.delta.content
+
+          if (options.events?.onReceiveData) {
+            options.events.onReceiveData(data, messages)
+          } else {
+            const choice = data.choices?.[0]
+            if (choice && choice.delta.content) {
+              messages.value[messages.value.length - 1].content += choice.delta.content
+            }
           }
         },
         onError: (error) => {
@@ -167,8 +181,20 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
   }
 
   // 发送消息
-  const sendMessage = async (content: string = inputMessage.value, clearInput: boolean = true) => {
-    if (!content?.trim() || GeneratingStatus.includes(messageState.status)) {
+  const sendMessage = async (content: ChatMessage['content'] = inputMessage.value, clearInput: boolean = true) => {
+    if (GeneratingStatus.includes(messageState.status)) {
+      return
+    }
+
+    if (!content) {
+      return
+    }
+
+    if (typeof content === 'string' && !content.trim()) {
+      return
+    }
+
+    if (typeof content === 'object' && !content.type) {
       return
     }
 
@@ -179,6 +205,14 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
     messages.value.push(userMessage)
     if (clearInput) {
       inputMessage.value = ''
+    }
+
+    await chatRequest()
+  }
+
+  const send = async () => {
+    if (GeneratingStatus.includes(messageState.status)) {
+      return
     }
 
     await chatRequest()
@@ -209,8 +243,12 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
   }
 
   // 添加消息
-  const addMessage = (message: ChatMessage) => {
-    messages.value.push(message)
+  const addMessage = (message: ChatMessage | ChatMessage[]) => {
+    if (Array.isArray(message)) {
+      messages.value.push(...message)
+    } else {
+      messages.value.push(message)
+    }
   }
 
   return {
@@ -219,6 +257,7 @@ export function useMessage(options: UseMessageOptions): UseMessageReturn {
     inputMessage,
     useStream,
     sendMessage,
+    send,
     clearMessages,
     addMessage,
     abortRequest,
