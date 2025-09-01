@@ -71,6 +71,11 @@ export default defineConfig({
             { text: 'McpServerPicker 插件选择器', link: 'mcp-server-picker' },
           ],
         },
+        {
+          text: '其他内置组件',
+          base: '/components/others/',
+          items: [{ text: 'FlowLayout 流式布局', link: 'flow-layout' }],
+        },
       ],
       '/tools/': [
         {
