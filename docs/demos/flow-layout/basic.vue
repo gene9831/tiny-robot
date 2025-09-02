@@ -86,7 +86,7 @@ button {
     background-color: #f0f0f0;
   }
 
-  &[data-more-item='true'] {
+  &[data-more-list-item='true'] {
     border: none;
     border-radius: 8px;
   }

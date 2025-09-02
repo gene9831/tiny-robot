@@ -9,8 +9,8 @@ import { FlowLayoutProps, FlowLayoutSlots } from './index.type'
 
 const props = withDefaults(defineProps<FlowLayoutProps>(), {
   linesLimit: Number.MAX_SAFE_INTEGER,
-  openMoreTrigger: 'click',
   expandMode: 'expand',
+  dropdownTrigger: 'click',
 })
 
 const slots = defineSlots<FlowLayoutSlots>()
@@ -127,19 +127,21 @@ const visibleItemCount = computed(() => {
 
 const moreRef = ref<HTMLDivElement | null>(null)
 
-if (props.openMoreTrigger === 'click') {
-  onClickOutside(moreRef, () => {
-    openMore.value = false
-  })
-} else if (props.openMoreTrigger === 'hover') {
-  const isHovering = useElementHover(moreRef)
-  watch(isHovering, (isHover) => {
-    if (isHover) {
-      openMore.value = true
-    } else {
+if (props.expandMode === 'dropdown') {
+  if (props.dropdownTrigger === 'click') {
+    onClickOutside(moreRef, () => {
       openMore.value = false
-    }
-  })
+    })
+  } else if (props.dropdownTrigger === 'hover') {
+    const isHovering = useElementHover(moreRef)
+    watch(isHovering, (isHover) => {
+      if (isHover) {
+        openMore.value = true
+      } else {
+        openMore.value = false
+      }
+    })
+  }
 }
 </script>
 
@@ -157,12 +159,12 @@ if (props.openMoreTrigger === 'click') {
       <IconButton v-else :ref="setRef" :icon="IconArrowDown" @click="openMore = !openMore" />
       <div class="tr-flow-layout-more-list" v-if="props.expandMode === 'dropdown'" v-show="openMore">
         <div class="tr-flow-layout-more-list-top-gap"></div>
-        <div class="tr-flow-layout-more-list-content">
+        <div class="tr-flow-layout-more-list-content" data-more-list="true">
           <component
             :is="vnode"
             v-for="vnode in vnodes.slice(maxLineIndex)"
             :key="isVNode(vnode) ? vnode.key : undefined"
-            data-more-item="true"
+            data-more-list-item="true"
           />
         </div>
       </div>

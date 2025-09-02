@@ -33,7 +33,7 @@ FlowLayout 流式布局组件用于自动换行显示子元素，当内容超出
 | `gap`             | `number \| string \| { rowGap?: number \| string, columnGap?: number \| string }` | -                         | 子元素间距，支持数字、字符串或对象形式设置行间距和列间距               |
 | `linesLimit`      | `number`                                                                          | `Number.MAX_SAFE_INTEGER` | 显示的最大行数限制，默认不限制                                         |
 | `openMore`        | `boolean`                                                                         | `false`                   | 是否打开"更多"列表，支持 v-model 双向绑定                              |
-| `openMoreTrigger` | `'click' \| 'hover'`                                                              | `'click'`                 | 触发"更多"按钮显示的方式，可选值为 'click' 或 'hover'                  |
+| `dropdownTrigger` | `'click' \| 'hover'`                                                              | `'click'`                 | 触发"更多"按钮显示的方式，可选值为 'click' 或 'hover'                  |
 | `expandMode`      | `'dropdown' \| 'expand'`                                                          | `'expand'`                | 更多项目的展开方式，'dropdown' 为下拉菜单，'expand' 为直接在容器中展开 |
 
 ### FlowLayoutSlots
@@ -63,6 +63,7 @@ FlowLayout 流式布局组件用于自动换行显示子元素，当内容超出
 
 FlowLayout 组件提供了一些 data 属性，可以用于样式定制和功能识别：
 
-| 属性名           | 说明                                         |
-| ---------------- | -------------------------------------------- |
-| `data-more-item` | 在 `dropdown` 模式下标识"更多"列表中的子元素 |
+| 属性名                | 说明                                         |
+| --------------------- | -------------------------------------------- |
+| `data-more-list`      | 在 `dropdown` 模式下标识"更多"列表容器       |
+| `data-more-list-item` | 在 `dropdown` 模式下标识"更多"列表中的子元素 |
