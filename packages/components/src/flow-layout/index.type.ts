@@ -1,6 +1,13 @@
 import { VNode } from 'vue'
 
 export interface FlowLayoutProps {
+  gap?:
+    | number
+    | string
+    | {
+        rowGap?: number | string
+        columnGap?: number | string
+      }
   /**
    * 显示的最大行数限制。默认不限制
    */
@@ -17,5 +24,5 @@ export interface FlowLayoutProps {
 
 export interface FlowLayoutSlots {
   default: () => VNode[]
-  moreTrigger: () => VNode[]
+  moreTrigger: (props: { active: boolean }) => VNode[]
 }

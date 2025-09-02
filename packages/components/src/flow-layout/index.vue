@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
-import { onClickOutside, useElementHover, useElementSize } from '@vueuse/core'
-import { computed, isVNode, ref, watch } from 'vue'
+import { onClickOutside, unrefElement, useElementHover, useElementSize } from '@vueuse/core'
+import { computed, CSSProperties, isVNode, nextTick, ref, watch } from 'vue'
 import IconButton from '../icon-button'
 import { useSlotRefs } from '../shared/composables'
+import { toCssUnit } from '../shared/utils'
 import { FlowLayoutProps, FlowLayoutSlots } from './index.type'
 
 const props = withDefaults(defineProps<FlowLayoutProps>(), {
@@ -13,15 +14,47 @@ const props = withDefaults(defineProps<FlowLayoutProps>(), {
 
 const slots = defineSlots<FlowLayoutSlots>()
 
-const { vnodes, refs: itemRefs, setRefs } = useSlotRefs(slots.default, true)
-const { vnodes: moreTriggerVnodes, ref: moreTriggerRef, setRef } = useSlotRefs(slots.moreTrigger)
+const openMore = defineModel<FlowLayoutProps['openMore']>('openMore', { default: false })
 
 const containerRef = ref<HTMLElement | null>(null)
 const { width: containerWidth } = useElementSize(containerRef)
+
+const gapStyle = computed(() => {
+  const result = {} as CSSProperties
+  if (props.gap && typeof props.gap === 'object') {
+    result.rowGap = toCssUnit(props.gap.rowGap)
+    result.columnGap = toCssUnit(props.gap.columnGap)
+  } else {
+    result.gap = toCssUnit(props.gap)
+  }
+  return result
+})
+
+const { vnodes, refs: itemRefs, setRefs } = useSlotRefs(slots.default, true)
+
+const renderMoreTiggerSlot = () => {
+  if (!slots.moreTrigger) return []
+  return slots.moreTrigger({ active: openMore.value || false })
+}
+const { vnodes: moreTriggerVnodes, ref: moreTriggerRef, setRef } = useSlotRefs(renderMoreTiggerSlot)
 const { width: moreWidth } = useElementSize(moreTriggerRef)
 
+// columnGap 不能直接取 props 中的值，因为 props 中的 gap 单位可能不一致。使用 getComputedStyle 获取的值单位会标准化为 px
+const columnGap = ref(0)
+
+watch(
+  gapStyle,
+  () => {
+    nextTick(() => {
+      if (!containerRef.value) return
+      columnGap.value = parseFloat(getComputedStyle(containerRef.value!).columnGap) || 0
+    })
+  },
+  { immediate: true },
+)
+
 const computedItems = computed(() => {
-  return itemRefs.value.map((e) => e).filter((e) => e instanceof Element)
+  return itemRefs.value.map((e) => unrefElement(e)).filter((e): e is HTMLElement | SVGElement => Boolean(e))
 })
 
 const calcLineNumber = (width: number, itemsWidth: number[], gap: number) => {
@@ -55,18 +88,13 @@ const calcLineNumber = (width: number, itemsWidth: number[], gap: number) => {
   return result
 }
 
-const sliceIndex = computed(() => {
-  if (containerWidth.value <= 0) return 0
-
-  const itemsWidth = computedItems.value.map((item) => item.getBoundingClientRect().width)
-  const gap = parseFloat(getComputedStyle(containerRef.value!).rowGap) || 0
-  const itemLines = calcLineNumber(containerWidth.value, itemsWidth, gap)
-
+const calcHiddenIndex = (width: number, itemsWidth: number[], moreWidth: number, gap: number) => {
+  const itemLines = calcLineNumber(width, itemsWidth, gap)
   const firstHidden = itemLines.find((line) => line.line >= props.linesLimit)
 
   if (firstHidden) {
     const beforeFirstHidden = itemLines[firstHidden.index - 1]
-    if (beforeFirstHidden.right + gap + moreWidth.value > containerWidth.value) {
+    if (beforeFirstHidden.right + gap + moreWidth > width) {
       return firstHidden.index - 1
     } else {
       return firstHidden.index
@@ -74,9 +102,18 @@ const sliceIndex = computed(() => {
   } else {
     return itemLines.length
   }
-})
+}
 
-const openMore = defineModel<FlowLayoutProps['openMore']>('openMore', { default: false })
+const hiddenIndex = computed(() => {
+  const containerW = containerWidth.value
+  if (containerW <= 0) return 0
+
+  const itemsWidth = computedItems.value.map((item) => item.getBoundingClientRect().width)
+  const moreW = moreWidth.value
+  const colGap = columnGap.value
+
+  return calcHiddenIndex(containerW, itemsWidth, moreW, colGap)
+})
 
 const moreRef = ref<HTMLDivElement | null>(null)
 
@@ -97,38 +134,25 @@ if (props.openMoreTrigger === 'click') {
 </script>
 
 <template>
-  <div class="tr-flow-layout" ref="containerRef">
+  <div class="tr-flow-layout" ref="containerRef" :style="gapStyle">
     <component
       :is="vnode"
       v-for="(vnode, index) in vnodes"
       :key="isVNode(vnode) ? vnode.key : undefined"
       :ref="(el: unknown) => setRefs(el, index)"
-      :class="{ hidden: index >= sliceIndex }"
-      :style="{ margin: 0 }"
+      :data-hidden="index >= hiddenIndex || undefined"
     />
-    <div class="tr-flow-layout-more" v-if="sliceIndex < computedItems.length" ref="moreRef">
-      <component
-        v-if="moreTriggerVnodes[0]"
-        :is="moreTriggerVnodes[0]"
-        :ref="setRef"
-        :data-active="openMore"
-        @click="openMore = !openMore"
-      />
-      <IconButton
-        v-else
-        :ref="setRef"
-        :icon="IconArrowDown"
-        :data-default-trigger="true"
-        :data-active="openMore"
-        @click="openMore = !openMore"
-      />
+    <div class="tr-flow-layout-more" v-if="hiddenIndex < computedItems.length" ref="moreRef">
+      <component v-if="moreTriggerVnodes[0]" :is="moreTriggerVnodes[0]" :ref="setRef" @click="openMore = !openMore" />
+      <IconButton v-else :ref="setRef" :icon="IconArrowDown" @click="openMore = !openMore" />
       <div class="tr-flow-layout-more-list" v-show="openMore">
         <div class="tr-flow-layout-more-list-top-gap"></div>
         <div class="tr-flow-layout-more-list-content">
           <component
             :is="vnode"
-            v-for="vnode in vnodes.slice(sliceIndex)"
+            v-for="vnode in vnodes.slice(hiddenIndex)"
             :key="isVNode(vnode) ? vnode.key : undefined"
+            data-more-item="true"
           />
         </div>
       </div>
@@ -138,10 +162,11 @@ if (props.openMoreTrigger === 'click') {
 
 <style lang="less">
 :root {
-  --tr-flow-layout-gap: 8px;
-
+  --tr-flow-layout-more-list-top-gap: 8px;
   --tr-flow-layout-more-list-bg: white;
   --tr-flow-layout-more-list-box-shadow: 0 0 16px rgba(0, 0, 0, 0.08);
+  --tr-flow-layout-more-list-padding: 0;
+  --tr-flow-layout-more-list-border-radius: 0;
 }
 </style>
 
@@ -150,14 +175,13 @@ if (props.openMoreTrigger === 'click') {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--tr-flow-layout-gap);
   position: relative;
 
   & > * {
     flex-shrink: 0;
   }
 
-  & > :deep(.hidden) {
+  & > :deep([data-hidden='true']) {
     position: absolute;
     visibility: hidden;
   }
@@ -166,26 +190,24 @@ if (props.openMoreTrigger === 'click') {
 .tr-flow-layout-more {
   position: relative;
   display: inline-flex;
-
-  & > [data-default-trigger][data-active='true'] {
-    background-color: var(--tr-icon-button-hover-bg);
-  }
 }
 
 .tr-flow-layout-more-list {
+  z-index: var(--tr-z-index-dropdown);
   position: absolute;
   top: 100%;
   right: 0;
 
   .tr-flow-layout-more-list-top-gap {
-    height: 8px;
+    height: var(--tr-flow-layout-more-list-top-gap);
   }
   .tr-flow-layout-more-list-content {
     display: flex;
     flex-direction: column;
     background: var(--tr-flow-layout-more-list-bg);
     box-shadow: var(--tr-flow-layout-more-list-box-shadow);
-
+    padding: var(--tr-flow-layout-more-list-padding);
+    border-radius: var(--tr-flow-layout-more-list-border-radius);
     white-space: nowrap;
   }
 }
