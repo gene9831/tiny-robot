@@ -13,13 +13,19 @@ export interface FlowLayoutProps {
    */
   linesLimit?: number
   /**
-   * 是否打开“更多”列表。默认关闭(v-model)
+   * 是否打开"更多"列表。默认关闭(v-model)
    */
   openMore?: boolean
   /**
-   * 触发“更多”按钮显示的方式，可选值为 'click' 或 'hover'。默认值为 'click'
+   * 触发"更多"按钮显示的方式，可选值为 'click' 或 'hover'。默认值为 'click'
    */
   openMoreTrigger?: 'click' | 'hover'
+  /**
+   * 更多项目的展开方式，可选值为 'dropdown' 或 'expand'。默认值为 'expand'
+   * - 'dropdown': 使用下拉菜单方式展开
+   * - 'expand': 直接在容器中展开所有项目
+   */
+  expandMode?: 'dropdown' | 'expand'
 }
 
 export interface FlowLayoutSlots {

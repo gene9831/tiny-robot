@@ -10,6 +10,7 @@ import { FlowLayoutProps, FlowLayoutSlots } from './index.type'
 const props = withDefaults(defineProps<FlowLayoutProps>(), {
   linesLimit: Number.MAX_SAFE_INTEGER,
   openMoreTrigger: 'click',
+  expandMode: 'expand',
 })
 
 const slots = defineSlots<FlowLayoutSlots>()
@@ -47,7 +48,7 @@ watch(
   () => {
     nextTick(() => {
       if (!containerRef.value) return
-      columnGap.value = parseFloat(getComputedStyle(containerRef.value!).columnGap) || 0
+      columnGap.value = parseFloat(getComputedStyle(containerRef.value).columnGap) || 0
     })
   },
   { immediate: true },
@@ -88,7 +89,7 @@ const calcLineNumber = (width: number, itemsWidth: number[], gap: number) => {
   return result
 }
 
-const calcHiddenIndex = (width: number, itemsWidth: number[], moreWidth: number, gap: number) => {
+const calcMaxLineIndex = (width: number, itemsWidth: number[], moreWidth: number, gap: number) => {
   const itemLines = calcLineNumber(width, itemsWidth, gap)
   const firstHidden = itemLines.find((line) => line.line >= props.linesLimit)
 
@@ -104,7 +105,8 @@ const calcHiddenIndex = (width: number, itemsWidth: number[], moreWidth: number,
   }
 }
 
-const hiddenIndex = computed(() => {
+// 计算在行数限制下能显示到第几个索引
+const maxLineIndex = computed(() => {
   const containerW = containerWidth.value
   if (containerW <= 0) return 0
 
@@ -112,7 +114,15 @@ const hiddenIndex = computed(() => {
   const moreW = moreWidth.value
   const colGap = columnGap.value
 
-  return calcHiddenIndex(containerW, itemsWidth, moreW, colGap)
+  return calcMaxLineIndex(containerW, itemsWidth, moreW, colGap)
+})
+
+// 最终可见项目数量（考虑展开模式）
+const visibleItemCount = computed(() => {
+  if (props.expandMode === 'expand' && openMore.value) {
+    return computedItems.value.length
+  }
+  return maxLineIndex.value
 })
 
 const moreRef = ref<HTMLDivElement | null>(null)
@@ -140,17 +150,17 @@ if (props.openMoreTrigger === 'click') {
       v-for="(vnode, index) in vnodes"
       :key="isVNode(vnode) ? vnode.key : undefined"
       :ref="(el: unknown) => setRefs(el, index)"
-      :data-hidden="index >= hiddenIndex || undefined"
+      :data-hidden="index >= visibleItemCount || undefined"
     />
-    <div class="tr-flow-layout-more" v-if="hiddenIndex < computedItems.length" ref="moreRef">
+    <div class="tr-flow-layout-more" v-if="maxLineIndex < computedItems.length" ref="moreRef">
       <component v-if="moreTriggerVnodes[0]" :is="moreTriggerVnodes[0]" :ref="setRef" @click="openMore = !openMore" />
       <IconButton v-else :ref="setRef" :icon="IconArrowDown" @click="openMore = !openMore" />
-      <div class="tr-flow-layout-more-list" v-show="openMore">
+      <div class="tr-flow-layout-more-list" v-if="props.expandMode === 'dropdown'" v-show="openMore">
         <div class="tr-flow-layout-more-list-top-gap"></div>
         <div class="tr-flow-layout-more-list-content">
           <component
             :is="vnode"
-            v-for="vnode in vnodes.slice(hiddenIndex)"
+            v-for="vnode in vnodes.slice(maxLineIndex)"
             :key="isVNode(vnode) ? vnode.key : undefined"
             data-more-item="true"
           />

@@ -16,11 +16,17 @@ const removeItem = () => {
   items.value.pop()
 }
 
-const openMore = ref(false)
+const openMoreExpand = ref(false)
+const openMoreDropdown = ref(false)
 
-const handleClick = (item: string) => {
+const handleClick1 = (item: string) => {
   console.log(item)
-  openMore.value = false
+  openMoreExpand.value = false
+}
+
+const handleClick2 = (item: string) => {
+  console.log(item)
+  openMoreDropdown.value = false
 }
 
 const gap = ref(10)
@@ -35,8 +41,24 @@ const gap = ref(10)
     <label>gap（支持不同单位）: </label>
     <input v-model="gap" style="border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px" />
   </div>
-  <TrFlowLayout :lines-limit="2" :gap="gap" class="custom-flow-layout" v-model:open-more="openMore">
-    <button v-for="(item, index) in items" :key="index" @click="handleClick(item)">{{ item }}</button>
+  <hr />
+  <div><p>expand mode</p></div>
+  <TrFlowLayout :lines-limit="2" :gap="gap" class="custom-flow-layout" v-model:open-more="openMoreExpand">
+    <button v-for="(item, index) in items" :key="index" @click="handleClick1(item)">{{ item }}</button>
+    <template #moreTrigger="{ active }">
+      <button class="more-trigger">{{ active ? 'less' : 'more' }}</button>
+    </template>
+  </TrFlowLayout>
+  <hr />
+  <div><p>dropdown mode</p></div>
+  <TrFlowLayout
+    :lines-limit="2"
+    :gap="gap"
+    expand-mode="dropdown"
+    class="custom-flow-layout"
+    v-model:open-more="openMoreDropdown"
+  >
+    <button v-for="(item, index) in items" :key="index" @click="handleClick2(item)">{{ item }}</button>
     <template #moreTrigger="{ active }">
       <button class="more-trigger" :class="{ active }">more</button>
     </template>
