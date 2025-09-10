@@ -1,4 +1,5 @@
 import { VNode } from 'vue'
+import { BasePopperProps } from '../base-popper/index.type'
 
 export interface DropdownMenuItem {
   id: string
@@ -7,6 +8,7 @@ export interface DropdownMenuItem {
 
 export interface DropdownMenuProps {
   appendTo?: string | HTMLElement
+  placement?: BasePopperProps['placement']
   items: DropdownMenuItem[]
   /**
    * 当 trigger 为 'click' 或 'hover' 时，是一个双向绑定的 model(v-model:show)，可在组件外部控制显示状态。

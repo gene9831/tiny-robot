@@ -61,7 +61,6 @@ const components = [
   ThemeProvider,
   Welcome,
   McpServerPicker,
-  FlowLayout,
 ]
 
 export default {

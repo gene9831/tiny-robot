@@ -21,6 +21,7 @@ outline: deep
 | 属性       | 类型                             | 默认值    | 说明                                                                                              |
 | ---------- | -------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
 | `appendTo` | `string \| HTMLElement`          | -         | 指定下拉菜单挂载的容器元素或选择器                                                                |
+| `placement`| `BasePopperProps['placement']`   | -         | 下拉菜单的弹出位置，继承自 BasePopper 组件                                                        |
 | `items`    | `DropdownMenuItem[]`             | -         | **必填**，菜单项数据数组                                                                          |
 | `show`     | `boolean`                        | -         | 控制菜单显示状态：<br>• `click`/`hover` 模式：双向绑定(v-model:show)<br>• `manual` 模式：单向绑定 |
 | `trigger`  | `'click' \| 'hover' \| 'manual'` | `'click'` | 菜单触发方式：<br>• `click` - 点击触发<br>• `hover` - 悬停触发<br>• `manual` - 手动控制           |

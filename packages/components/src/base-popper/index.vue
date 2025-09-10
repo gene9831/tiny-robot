@@ -1,31 +1,20 @@
-<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="tsx">
 import { useElementBounding, useElementSize } from '@vueuse/core'
-import { computed, CSSProperties, ref, TransitionProps, useAttrs, VNode, watch } from 'vue'
+import { computed, CSSProperties, ref, useAttrs, VNode, watch } from 'vue'
 import { createTeleport, useSlotRefs, useTeleportTarget } from '../shared/composables'
 import { toCssUnit } from '../shared/utils'
 import Popper from './components/Popper.vue'
+import { BasePopperProps } from './index.type'
 
 defineOptions({
   inheritAttrs: false,
 })
 
-type TriggerEvents = Partial<Record<`on${Capitalize<string>}`, (...args: any[]) => void>>
+type TriggerEvents = BasePopperProps['triggerEvents']
 
-const props = withDefaults(
-  defineProps<{
-    appendTo?: string | HTMLElement
-    offset?: number | { mainAxis?: number; crossAxis?: number }
-    placement?: 'top-center' | 'bottom-center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-    preventOverflow?: boolean
-    show?: boolean
-    transitionProps?: TransitionProps
-    triggerEvents?: TriggerEvents
-  }>(),
-  {
-    placement: 'top-center',
-  },
-)
+const props = withDefaults(defineProps<BasePopperProps>(), {
+  placement: 'top-center',
+})
 
 const slots = defineSlots<{
   trigger?: () => VNode[]

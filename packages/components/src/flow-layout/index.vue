@@ -1,21 +1,40 @@
-<script setup lang="ts">
-import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
-import { onClickOutside, unrefElement, useElementHover, useElementSize } from '@vueuse/core'
+<script setup lang="ts" generic="T = unknown">
+import { unrefElement, useElementSize } from '@vueuse/core'
 import { computed, CSSProperties, isVNode, nextTick, ref, watch } from 'vue'
-import IconButton from '../icon-button'
 import { useSlotRefs } from '../shared/composables'
 import { toCssUnit } from '../shared/utils'
 import { FlowLayoutProps, FlowLayoutSlots } from './index.type'
 
-const props = withDefaults(defineProps<FlowLayoutProps>(), {
+const props = withDefaults(defineProps<FlowLayoutProps<T>>(), {
   linesLimit: Number.MAX_SAFE_INTEGER,
-  expandMode: 'expand',
-  dropdownTrigger: 'click',
 })
 
-const slots = defineSlots<FlowLayoutSlots>()
+const slots = defineSlots<FlowLayoutSlots<T>>()
 
-const openMore = defineModel<FlowLayoutProps['openMore']>('openMore', { default: false })
+const renderItemSlot = () => {
+  if (!slots.item) return []
+
+  // 遍历 items 数组，为每个 item 调用 slot 函数
+  return props.items.flatMap((item, index) => {
+    return slots.item({ item, index })
+  })
+}
+
+const { vnodes, refs: itemRefs, setRefs } = useSlotRefs(renderItemSlot, true)
+
+const computedItems = computed(() => {
+  return itemRefs.value.map((e) => unrefElement(e)).filter((e): e is HTMLElement | SVGElement => Boolean(e))
+})
+
+const visibleItemCount = ref(0)
+
+const renderMoreTiggerSlot = () => {
+  if (!slots.moreTrigger) return []
+  return slots.moreTrigger({ visibleItemCount: visibleItemCount.value })
+}
+const { vnodes: moreTriggerVnodes, ref: moreTriggerRef, setRef } = useSlotRefs(renderMoreTiggerSlot)
+const moreTriggerVnode = computed(() => moreTriggerVnodes.value.at(0))
+const { width: moreWidth } = useElementSize(moreTriggerRef, undefined, { box: 'border-box' })
 
 const containerRef = ref<HTMLElement | null>(null)
 const { width: containerWidth } = useElementSize(containerRef)
@@ -31,15 +50,6 @@ const gapStyle = computed(() => {
   return result
 })
 
-const { vnodes, refs: itemRefs, setRefs } = useSlotRefs(slots.default, true)
-
-const renderMoreTiggerSlot = () => {
-  if (!slots.moreTrigger) return []
-  return slots.moreTrigger({ active: openMore.value || false })
-}
-const { vnodes: moreTriggerVnodes, ref: moreTriggerRef, setRef } = useSlotRefs(renderMoreTiggerSlot)
-const { width: moreWidth } = useElementSize(moreTriggerRef)
-
 // columnGap 不能直接取 props 中的值，因为 props 中的 gap 单位可能不一致。使用 getComputedStyle 获取的值单位会标准化为 px
 const columnGap = ref(0)
 
@@ -53,10 +63,6 @@ watch(
   },
   { immediate: true },
 )
-
-const computedItems = computed(() => {
-  return itemRefs.value.map((e) => unrefElement(e)).filter((e): e is HTMLElement | SVGElement => Boolean(e))
-})
 
 const calcLineNumber = (width: number, itemsWidth: number[], gap: number) => {
   const result: { index: number; line: number; right: number }[] = []
@@ -89,60 +95,51 @@ const calcLineNumber = (width: number, itemsWidth: number[], gap: number) => {
   return result
 }
 
-const calcMaxLineIndex = (width: number, itemsWidth: number[], moreWidth: number, gap: number) => {
+const calcVisibleItemCount = (
+  width: number,
+  itemsWidth: number[],
+  moreWidth: number,
+  gap: number,
+  linesLimit: number,
+) => {
   const itemLines = calcLineNumber(width, itemsWidth, gap)
-  const firstHidden = itemLines.find((line) => line.line >= props.linesLimit)
+  const firstHidden = itemLines.find((line) => line.line >= linesLimit)
 
   if (firstHidden) {
-    const beforeFirstHidden = itemLines[firstHidden.index - 1]
-    if (beforeFirstHidden.right + gap + moreWidth > width) {
-      return firstHidden.index - 1
-    } else {
-      return firstHidden.index
+    if (firstHidden.index > 0) {
+      // 从firstHidden前一个索引开始往前遍历，直到找到一个索引，其right + gap + moreWidth <= width
+      for (let i = firstHidden.index - 1; i >= 0; i--) {
+        const item = itemLines[i]
+        if (Math.ceil(item.right) + gap + Math.ceil(moreWidth) <= width) {
+          return i + 1
+        }
+      }
+      return 0
     }
+    return firstHidden.index
   } else {
     return itemLines.length
   }
 }
 
-// 计算在行数限制下能显示到第几个索引
-const maxLineIndex = computed(() => {
-  const containerW = containerWidth.value
-  if (containerW <= 0) return 0
-
-  const itemsWidth = computedItems.value.map((item) => item.getBoundingClientRect().width)
-  const moreW = moreWidth.value
-  const colGap = columnGap.value
-
-  return calcMaxLineIndex(containerW, itemsWidth, moreW, colGap)
-})
-
-// 最终可见项目数量（考虑展开模式）
-const visibleItemCount = computed(() => {
-  if (props.expandMode === 'expand' && openMore.value) {
-    return computedItems.value.length
-  }
-  return maxLineIndex.value
-})
-
-const moreRef = ref<HTMLDivElement | null>(null)
-
-if (props.expandMode === 'dropdown') {
-  if (props.dropdownTrigger === 'click') {
-    onClickOutside(moreRef, () => {
-      openMore.value = false
-    })
-  } else if (props.dropdownTrigger === 'hover') {
-    const isHovering = useElementHover(moreRef)
-    watch(isHovering, (isHover) => {
-      if (isHover) {
-        openMore.value = true
-      } else {
-        openMore.value = false
-      }
-    })
-  }
-}
+watch(
+  () =>
+    [
+      containerWidth.value,
+      computedItems.value.map((item) => item.getBoundingClientRect().width),
+      Math.max(moreWidth.value, props.moreTriggerMinWidth || 0),
+      columnGap.value,
+      props.linesLimit,
+    ] as const,
+  ([containerW, itemsWidth, moreW, colGap, linesLimit]) => {
+    if (containerW <= 0) {
+      visibleItemCount.value = 0
+    } else {
+      // 计算在行数限制下能显示到第几个索引
+      visibleItemCount.value = calcVisibleItemCount(containerW, itemsWidth, moreW, colGap, linesLimit)
+    }
+  },
+)
 </script>
 
 <template>
@@ -154,33 +151,9 @@ if (props.expandMode === 'dropdown') {
       :ref="(el: unknown) => setRefs(el, index)"
       :data-hidden="index >= visibleItemCount || undefined"
     />
-    <div class="tr-flow-layout-more" v-if="maxLineIndex < computedItems.length" ref="moreRef">
-      <component v-if="moreTriggerVnodes[0]" :is="moreTriggerVnodes[0]" :ref="setRef" @click="openMore = !openMore" />
-      <IconButton v-else :ref="setRef" :icon="IconArrowDown" @click="openMore = !openMore" />
-      <div class="tr-flow-layout-more-list" v-if="props.expandMode === 'dropdown'" v-show="openMore">
-        <div class="tr-flow-layout-more-list-top-gap"></div>
-        <div class="tr-flow-layout-more-list-content" data-more-list="true">
-          <component
-            :is="vnode"
-            v-for="vnode in vnodes.slice(maxLineIndex)"
-            :key="isVNode(vnode) ? vnode.key : undefined"
-            data-more-list-item="true"
-          />
-        </div>
-      </div>
-    </div>
+    <component :is="moreTriggerVnode" :ref="setRef" />
   </div>
 </template>
-
-<style lang="less">
-:root {
-  --tr-flow-layout-more-list-top-gap: 8px;
-  --tr-flow-layout-more-list-bg: white;
-  --tr-flow-layout-more-list-box-shadow: 0 0 16px rgba(0, 0, 0, 0.08);
-  --tr-flow-layout-more-list-padding: 0;
-  --tr-flow-layout-more-list-border-radius: 0;
-}
-</style>
 
 <style lang="less" scoped>
 .tr-flow-layout {
@@ -196,31 +169,6 @@ if (props.expandMode === 'dropdown') {
   & > :deep([data-hidden='true']) {
     position: absolute;
     visibility: hidden;
-  }
-}
-
-.tr-flow-layout-more {
-  position: relative;
-  display: inline-flex;
-}
-
-.tr-flow-layout-more-list {
-  z-index: var(--tr-z-index-dropdown);
-  position: absolute;
-  top: 100%;
-  right: 0;
-
-  .tr-flow-layout-more-list-top-gap {
-    height: var(--tr-flow-layout-more-list-top-gap);
-  }
-  .tr-flow-layout-more-list-content {
-    display: flex;
-    flex-direction: column;
-    background: var(--tr-flow-layout-more-list-bg);
-    box-shadow: var(--tr-flow-layout-more-list-box-shadow);
-    padding: var(--tr-flow-layout-more-list-padding);
-    border-radius: var(--tr-flow-layout-more-list-border-radius);
-    white-space: nowrap;
   }
 }
 </style>

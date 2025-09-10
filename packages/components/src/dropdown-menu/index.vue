@@ -6,6 +6,7 @@ import { usePopperHover } from './composables/usePopperHover'
 import { DropdownMenuEmits, DropdownMenuItem, DropdownMenuProps } from './index.type'
 
 const props = withDefaults(defineProps<DropdownMenuProps>(), {
+  placement: 'top-left',
   trigger: 'click',
 })
 
@@ -73,7 +74,7 @@ defineExpose({
     :show="show"
     class="tr-dropdown-menu"
     ref="basePopperRef"
-    placement="top-left"
+    :placement="props.placement"
     :append-to="props.appendTo"
     :offset="8"
     :transition-props="{ name: 'tr-dropdown-menu' }"
