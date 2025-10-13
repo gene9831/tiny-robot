@@ -1,4 +1,4 @@
-import { useVueImportMap as h, useStore as b, File as f } from "@vue/repl";
+import { useVueImportMap as b, useStore as h, File as f } from "@vue/repl";
 function $() {
   return [
     {
@@ -17,24 +17,33 @@ import { TrBubble } from '@opentiny/tiny-robot'
     },
     {
       filename: "src/index.css",
-      code: `@import url('https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@0.3.0-rc.5/dist/style.css');
-@import url('https://cdn.jsdelivr.net/npm/@opentiny/vue-theme@3.22.0/index.min.css');
+      code: `@import url('https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@0.3.0-rc.5/dist/style.css') layer(base);
+@import url('https://cdn.jsdelivr.net/npm/@opentiny/vue-theme@3.22.0/index.min.css') layer(base);
 
-body {
-  background-color: #fafafa;
-}`
+@layer base {
+  body {
+    background-color: #fafafa;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+`
     }
   ];
 }
 function j(s) {
-  const { tinyRobotVersion: n, builtinImportMap: t } = s;
+  const { tinyRobotVersion: n, builtinImportMap: e } = s;
   return {
     imports: {
-      ...t == null ? void 0 : t.imports,
+      ...e == null ? void 0 : e.imports,
       // TinyRobot 相关包 - 使用统一版本号
       "@opentiny/tiny-robot": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@${n}/dist/index.min.js`,
       "@opentiny/tiny-robot-svgs": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-svgs@${n}/dist/tiny-robot-svgs.min.js`,
-      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${n}/dist/index.min.js`,
+      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${n}/+esm`,
       // TinyVue 相关包
       "@opentiny/vue": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-pc.mjs",
       "@opentiny/vue-icon": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-icon.mjs",
@@ -50,9 +59,9 @@ function j(s) {
   };
 }
 const V = (s) => {
-  const { files: n, tinyRobotVersion: t = "latest", vueVersion: p = "latest" } = s, { importMap: o, vueVersion: c, productionMode: a } = h();
+  const { files: n, tinyRobotVersion: e = "latest", vueVersion: p = "latest" } = s, { importMap: o, vueVersion: c, productionMode: a } = b();
   c.value = p, a.value = !0;
-  const r = b({
+  const r = h({
     // pre-set import map
     builtinImportMap: o,
     vueVersion: c
@@ -63,7 +72,7 @@ const V = (s) => {
     r.setActive(n[0].filename);
   }
   const m = j({
-    tinyRobotVersion: t,
+    tinyRobotVersion: e,
     builtinImportMap: o.value
   });
   return r.setImportMap(m), {
@@ -74,17 +83,17 @@ const V = (s) => {
 }, d = /* @__PURE__ */ new Map();
 async function w(s, n = {}) {
   var r;
-  const { includePrerelease: t = !1, limit: p = 20, includeLatest: o = !0 } = n, c = Array.isArray(t) ? t.join(",") : t, a = `${s}-${c}-${p}-${o}`;
+  const { includePrerelease: e = !1, limit: p = 20, includeLatest: o = !0 } = n, c = Array.isArray(e) ? e.join(",") : e, a = `${s}-${c}-${p}-${o}`;
   if (d.has(a))
     return d.get(a);
   try {
     const i = await (await fetch(`https://registry.npmmirror.com/${s}`)).json(), v = (i == null ? void 0 : i.time) || {};
-    let l = Object.entries(v).filter(([e]) => e !== "created" && e !== "modified").slice().sort((e, y) => new Date(y[1]).getTime() - new Date(e[1]).getTime()).map(([e]) => e).filter((e) => {
-      if (typeof t == "boolean") {
-        if (!t && /[a-zA-Z]/.test(e))
+    let l = Object.entries(v).filter(([t]) => t !== "created" && t !== "modified").slice().sort((t, y) => new Date(y[1]).getTime() - new Date(t[1]).getTime()).map(([t]) => t).filter((t) => {
+      if (typeof e == "boolean") {
+        if (!e && /[a-zA-Z]/.test(t))
           return !1;
-      } else if (Array.isArray(t) && /[a-zA-Z]/.test(e) && !t.some(
-        (u) => e.includes(`-${u}.`) || e.includes(`-${u}-`) || e.endsWith(`-${u}`)
+      } else if (Array.isArray(e) && /[a-zA-Z]/.test(t) && !e.some(
+        (u) => t.includes(`-${u}.`) || t.includes(`-${u}-`) || t.endsWith(`-${u}`)
       ))
         return !1;
       return !0;
