@@ -6,6 +6,7 @@ interface GenerateStoreOptions {
         filename: string;
         code: string;
     })[];
+    extraImports?: Record<string, string>;
 }
 export declare const generateStore: (options: GenerateStoreOptions) => {
     store: import('@vue/repl').ReplStore;

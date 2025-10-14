@@ -1,5 +1,6 @@
-import { useVueImportMap as b, useStore as h, File as f } from "@vue/repl";
-function $() {
+import { useVueImportMap as b, useStore as h, File as v } from "@vue/repl";
+function M(s) {
+  const { tinyRobotVersion: e = "latest" } = s || {};
   return [
     {
       filename: "src/App.vue",
@@ -17,7 +18,7 @@ import { TrBubble } from '@opentiny/tiny-robot'
     },
     {
       filename: "src/index.css",
-      code: `@import url('https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@0.3.0-rc.5/dist/style.css') layer(base);
+      code: `@import url('https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@${e}/dist/style.css') layer(base);
 @import url('https://cdn.jsdelivr.net/npm/@opentiny/vue-theme@3.22.0/index.min.css') layer(base);
 
 @layer base {
@@ -36,76 +37,79 @@ import { TrBubble } from '@opentiny/tiny-robot'
   ];
 }
 function j(s) {
-  const { tinyRobotVersion: n, builtinImportMap: e } = s;
+  const { tinyRobotVersion: e, builtinImportMap: t, extraImports: p } = s, a = Object.entries(p || {}).map(([n, r]) => ({
+    [n]: `https://cdn.jsdelivr.net/npm/${n}@${r}`
+  })).reduce((n, r) => ({ ...n, ...r }), {});
   return {
     imports: {
-      ...e == null ? void 0 : e.imports,
+      ...t == null ? void 0 : t.imports,
       // TinyRobot 相关包 - 使用统一版本号
-      "@opentiny/tiny-robot": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@${n}/dist/index.min.js`,
-      "@opentiny/tiny-robot-svgs": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-svgs@${n}/dist/tiny-robot-svgs.min.js`,
-      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${n}/+esm`,
+      "@opentiny/tiny-robot": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@${e}/dist/index.min.js`,
+      "@opentiny/tiny-robot-svgs": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-svgs@${e}/dist/tiny-robot-svgs.min.js`,
+      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${e}/+esm`,
       // TinyVue 相关包
       "@opentiny/vue": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-pc.mjs",
       "@opentiny/vue-icon": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-icon.mjs",
       "@opentiny/vue-locale": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-locale.mjs",
       "@opentiny/vue-common": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-common.mjs",
-      // TODO 特殊包
       // 其他常用库
       "@vueuse/core": "https://cdn.jsdelivr.net/npm/@vueuse/core@13/index.iife.min.js",
       dompurify: "https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js",
       "markdown-it": "https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js",
-      echarts: "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"
+      echarts: "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js",
+      ...a
     }
   };
 }
 const V = (s) => {
-  const { files: n, tinyRobotVersion: e = "latest", vueVersion: p = "latest" } = s, { importMap: o, vueVersion: c, productionMode: a } = b();
-  c.value = p, a.value = !0;
-  const r = h({
+  const { files: e, tinyRobotVersion: t = "latest", vueVersion: p = "latest", extraImports: a } = s, { importMap: c, vueVersion: n, productionMode: r } = b();
+  n.value = p, r.value = !0;
+  const o = h({
     // pre-set import map
-    builtinImportMap: o,
-    vueVersion: c
+    builtinImportMap: c,
+    vueVersion: n
   });
-  if (n && n.length > 0) {
-    for (const i of n)
-      r.addFile(i instanceof f ? i : new f(i.filename, i.code));
-    r.setActive(n[0].filename);
+  if (e && e.length > 0) {
+    for (const m of e)
+      o.addFile(m instanceof v ? m : new v(m.filename, m.code));
+    o.setActive(e[0].filename);
   }
-  const m = j({
-    tinyRobotVersion: e,
-    builtinImportMap: o.value
+  const l = j({
+    tinyRobotVersion: t,
+    builtinImportMap: c.value,
+    extraImports: a
   });
-  return r.setImportMap(m), {
-    store: r,
-    builtinImportMap: o,
-    vueVersion: c
+  return o.setImportMap(l), {
+    store: o,
+    builtinImportMap: c,
+    vueVersion: n
   };
-}, d = /* @__PURE__ */ new Map();
-async function w(s, n = {}) {
+}, y = /* @__PURE__ */ new Map();
+async function x(s, e = {}) {
   var r;
-  const { includePrerelease: e = !1, limit: p = 20, includeLatest: o = !0 } = n, c = Array.isArray(e) ? e.join(",") : e, a = `${s}-${c}-${p}-${o}`;
-  if (d.has(a))
-    return d.get(a);
+  const { includePrerelease: t = !1, limit: p = 20, includeLatest: a = !0 } = e, c = Array.isArray(t) ? t.join(",") : t, n = `${s}-${c}-${p}-${a}`;
+  if (y.has(n))
+    return y.get(n);
   try {
-    const i = await (await fetch(`https://registry.npmmirror.com/${s}`)).json(), v = (i == null ? void 0 : i.time) || {};
-    let l = Object.entries(v).filter(([t]) => t !== "created" && t !== "modified").slice().sort((t, y) => new Date(y[1]).getTime() - new Date(t[1]).getTime()).map(([t]) => t).filter((t) => {
-      if (typeof e == "boolean") {
-        if (!e && /[a-zA-Z]/.test(t))
+    const l = await (await fetch(`https://registry.npmmirror.com/${s}`)).json(), m = (l == null ? void 0 : l.time) || {};
+    let u = Object.entries(m).filter(([i]) => i !== "created" && i !== "modified").slice().sort((i, f) => new Date(f[1]).getTime() - new Date(i[1]).getTime()).map(([i]) => i).filter((i) => {
+      if (typeof t == "boolean") {
+        if (!t && /[a-zA-Z]/.test(i))
           return !1;
-      } else if (Array.isArray(e) && /[a-zA-Z]/.test(t) && !e.some(
-        (u) => t.includes(`-${u}.`) || t.includes(`-${u}-`) || t.endsWith(`-${u}`)
+      } else if (Array.isArray(t) && /[a-zA-Z]/.test(i) && !t.some(
+        (d) => i.includes(`-${d}.`) || i.includes(`-${d}-`) || i.endsWith(`-${d}`)
       ))
         return !1;
       return !0;
     });
-    return l = l.slice(0, p), o && ((r = i["dist-tags"]) != null && r.latest) && l.unshift("latest"), d.set(a, l), l;
-  } catch (m) {
-    return console.error(`Failed to fetch versions for ${s}:`, m), ["latest"];
+    return u = u.slice(0, p), a && ((r = l["dist-tags"]) != null && r.latest) && u.unshift("latest"), y.set(n, u), u;
+  } catch (o) {
+    return console.error(`Failed to fetch versions for ${s}:`, o), ["latest"];
   }
 }
 export {
   j as generateImportMap,
   V as generateStore,
-  $ as getDefaultFiles,
-  w as getVersions
+  M as getDefaultFiles,
+  x as getVersions
 };
