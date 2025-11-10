@@ -46,7 +46,7 @@ function j(s) {
       // TinyRobot 相关包 - 使用统一版本号
       "@opentiny/tiny-robot": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot@${e}/dist/index.min.js`,
       "@opentiny/tiny-robot-svgs": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-svgs@${e}/dist/tiny-robot-svgs.min.js`,
-      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${e}/+esm`,
+      "@opentiny/tiny-robot-kit": `https://cdn.jsdelivr.net/npm/@opentiny/tiny-robot-kit@${e}/dist/index.mjs`,
       // TinyVue 相关包
       "@opentiny/vue": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-pc.mjs",
       "@opentiny/vue-icon": "https://cdn.jsdelivr.net/npm/@opentiny/vue-runtime@3/dist3/tiny-vue-icon.mjs",
@@ -102,7 +102,7 @@ async function x(s, e = {}) {
         return !1;
       return !0;
     });
-    return u = u.slice(0, p), a && ((r = l["dist-tags"]) != null && r.latest) && u.unshift("latest"), y.set(n, u), u;
+    return u = u.slice(0, p), a && ((r = l["dist-tags"]) != null && r.latest) && (u.includes("latest") || u.unshift("latest")), y.set(n, u), u;
   } catch (o) {
     return console.error(`Failed to fetch versions for ${s}:`, o), ["latest"];
   }
