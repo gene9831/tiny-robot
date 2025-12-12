@@ -112,7 +112,7 @@ export interface UseConversationReturn {
   /** 创建新会话 */
   createConversation: (title?: string, metadata?: Record<string, unknown>) => string
   /** 切换会话 */
-  switchConversation: (id: string) => void
+  switchConversation: (id: string, shouldAbortRequest?: boolean) => void
   /** 删除会话 */
   deleteConversation: (id: string) => void
   /** 更新会话标题 */
@@ -225,10 +225,15 @@ export function useConversation(options: UseConversationOptions): UseConversatio
 
   /**
    * 切换会话
+   * @param id - 会话ID
+   * @param abortRequest - 是否终止当前请求，默认为 false
    */
-  const switchConversation = (id: string): void => {
+  const switchConversation = (id: string, abortRequest?: boolean): void => {
     const conversation = state.conversations.find((conv: Conversation) => conv.id === id)
     if (conversation) {
+      if (abortRequest) {
+        messageManager.abortRequest()
+      }
       state.currentId = id
       messageManager.clearMessages()
       if (conversation.messages.length > 0) {
