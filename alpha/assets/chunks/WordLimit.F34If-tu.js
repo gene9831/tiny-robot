@@ -1,0 +1,1 @@
+import{F as e}from"./theme.PsgsRnkd.js";import{M as t,s as o,aL as a,bk as r}from"./framework.CeenPgEK.js";const u=t({__name:"WordLimit",setup(m){return(s,n)=>(a(),o(r(e),{mode:"multiple",showWordLimit:!0,maxLength:20,defaultValue:"测试超出字数限制，当前已经超过了字数限制。"}))}});export{u as default};

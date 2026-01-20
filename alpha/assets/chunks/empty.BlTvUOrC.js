@@ -1,0 +1,1 @@
+import{s as e}from"./theme.PsgsRnkd.js";import{M as t,s,aL as o,bk as r,aS as n}from"./framework.CeenPgEK.js";const u=t({__name:"empty",setup(c){const a=n([]);return(p,m)=>(o(),s(r(e),{data:a},null,8,["data"]))}});export{u as default};

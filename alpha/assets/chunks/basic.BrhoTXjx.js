@@ -1,0 +1,1 @@
+import{U as e}from"./theme.PsgsRnkd.js";import{M as a,u as o,aL as s,I as c,bk as t,bR as r}from"./framework.CeenPgEK.js";const n={class:"form-container"},_=a({__name:"basic",setup(p){return(d,i)=>(s(),o("div",n,[c(t(e))]))}}),u=r(_,[["__scopeId","data-v-d15cc8d6"]]);export{u as default};
