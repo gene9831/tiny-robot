@@ -1,0 +1,122 @@
+<template>
+  <div class="chat-root" :class="`layout-${layout}`">
+    <header class="header">
+      <slot name="header">
+        <component :is="slotsMap.header" />
+      </slot>
+    </header>
+    <aside class="sidebar-left">
+      <slot name="sidebar-left">
+        <component :is="slotsMap['sidebar-left']" />
+      </slot>
+    </aside>
+    <main class="main">
+      <slot name="main">
+        <component :is="slotsMap.main" />
+      </slot>
+    </main>
+    <aside class="sidebar-right">
+      <slot name="sidebar-right">
+        <component :is="slotsMap['sidebar-right']" />
+      </slot>
+    </aside>
+    <footer class="footer">
+      <slot name="footer">
+        <component :is="slotsMap.footer" />
+      </slot>
+    </footer>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { reactive, useSlots, type Component, type VNode } from 'vue'
+import { ChatFooter, ChatHeader, ChatMain, ChatSidebar } from '.'
+
+type SlotName = 'header' | 'main' | 'footer' | 'sidebar-left' | 'sidebar-right'
+
+withDefaults(
+  defineProps<{
+    layout?: 'left-right' | 'top-bottom'
+  }>(),
+  {
+    layout: 'left-right',
+  },
+)
+
+const slots = useSlots()
+
+const defaultSlotVnodes = slots.default?.() || []
+
+const slotsMap = reactive<Record<SlotName, VNode | null>>({
+  header: null,
+  main: null,
+  footer: null,
+  'sidebar-left': null,
+  'sidebar-right': null,
+})
+
+for (const vnode of defaultSlotVnodes) {
+  const compName = typeof vnode.type === 'object' ? (vnode.type as Component).name : null
+
+  if (compName === ChatHeader.name) {
+    slotsMap.header = vnode
+  } else if (compName === ChatMain.name) {
+    slotsMap.main = vnode
+  } else if (compName === ChatFooter.name) {
+    slotsMap.footer = vnode
+  } else if (compName === ChatSidebar.name) {
+    const position = vnode.props?.position || 'left'
+    const slotName = position === 'right' ? 'sidebar-right' : 'sidebar-left'
+    slotsMap[slotName] = vnode
+  }
+}
+</script>
+
+<style scoped>
+.chat-root {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  height: 100vh;
+  height: 100dvh;
+}
+.layout-top-bottom {
+  grid-template-areas:
+    'header header header'
+    'sidebar-left main sidebar-right'
+    'footer footer footer';
+  grid-template-rows: auto 1fr auto;
+}
+.layout-left-right {
+  grid-template-areas:
+    'sidebar-left header sidebar-right'
+    'sidebar-left main sidebar-right'
+    'sidebar-left footer sidebar-right';
+  grid-template-rows: auto 1fr auto;
+}
+.header {
+  grid-area: header;
+  background: #f0f0f0;
+  padding: 8px;
+}
+.sidebar-left {
+  grid-area: sidebar-left;
+  background: #fafafa;
+  padding: 8px;
+}
+.main {
+  grid-area: main;
+  background: #fff;
+  padding: 8px;
+  overflow-y: auto;
+}
+.sidebar-right {
+  grid-area: sidebar-right;
+  background: #fafafa;
+  padding: 8px;
+}
+.footer {
+  grid-area: footer;
+  background: #f0f0f0;
+  padding: 8px;
+}
+</style>
