@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, useSlots, type Component, type VNode } from 'vue'
+import { computed, ref, useSlots, type Component, type VNode } from 'vue'
 import { ChatFooter, ChatHeader, ChatMain, ChatSidebar } from '.'
 import { provideChatContext } from '../context'
 
@@ -56,31 +56,35 @@ withDefaults(
 
 const slots = useSlots()
 
-const defaultSlotVnodes = slots.default?.() || []
-
-const slotsMap = reactive<Record<SlotName, VNode | null>>({
-  header: null,
-  main: null,
-  footer: null,
-  'sidebar-left': null,
-  'sidebar-right': null,
-})
-
-for (const vnode of defaultSlotVnodes) {
-  const compName = typeof vnode.type === 'object' ? (vnode.type as Component).name : null
-
-  if (compName === ChatHeader.name) {
-    slotsMap.header = vnode
-  } else if (compName === ChatMain.name) {
-    slotsMap.main = vnode
-  } else if (compName === ChatFooter.name) {
-    slotsMap.footer = vnode
-  } else if (compName === ChatSidebar.name) {
-    const position = vnode.props?.position || 'left'
-    const slotName = position === 'right' ? 'sidebar-right' : 'sidebar-left'
-    slotsMap[slotName] = vnode
+const slotsMap = computed(() => {
+  const slotsMap: Record<SlotName, VNode | null> = {
+    header: null,
+    main: null,
+    footer: null,
+    'sidebar-left': null,
+    'sidebar-right': null,
   }
-}
+
+  const defaultSlotVnodes = slots.default?.() || []
+
+  for (const vnode of defaultSlotVnodes) {
+    const compName = typeof vnode.type === 'object' ? (vnode.type as Component).name : null
+
+    if (compName === ChatHeader.name) {
+      slotsMap.header = vnode
+    } else if (compName === ChatMain.name) {
+      slotsMap.main = vnode
+    } else if (compName === ChatFooter.name) {
+      slotsMap.footer = vnode
+    } else if (compName === ChatSidebar.name) {
+      const position = vnode.props?.position || 'left'
+      const slotName = position === 'right' ? 'sidebar-right' : 'sidebar-left'
+      slotsMap[slotName] = vnode
+    }
+  }
+
+  return slotsMap
+})
 
 const sidebarLeftOpen = ref(true)
 provideChatContext({ sidebarLeftOpen })

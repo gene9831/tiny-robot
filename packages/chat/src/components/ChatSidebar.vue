@@ -6,6 +6,7 @@
       'sidebar-right': !sidebarLeft,
       'sidebar-open': sidebarOpen,
       'sidebar-closed': !sidebarOpen,
+      'sidebar-slide': collapseMode === 'slide' && !sidebarOpen,
     }"
   >
     <slot :sidebar-left="sidebarLeft" :sidebar-open="sidebarOpen"></slot>
@@ -26,9 +27,16 @@ interface Slots {
 
 defineSlots<Slots>()
 
-const props = withDefaults(defineProps<{ position?: 'left' | 'right' }>(), {
-  position: 'left',
-})
+const props = withDefaults(
+  defineProps<{
+    position?: 'left' | 'right'
+    collapseMode?: 'overlay' | 'slide'
+  }>(),
+  {
+    position: 'left',
+    collapseMode: 'overlay',
+  },
+)
 
 const context = useChatContext()
 
@@ -40,5 +48,11 @@ const sidebarOpen = computed(() => Boolean(context?.sidebarLeftOpen.value))
 .sidebar-left {
   width: var(--sidebar-left-open-width);
   transition: right var(--sidebar-left-transition-duration) ease;
+
+  position: relative;
+  right: 0;
+}
+.sidebar-slide {
+  right: calc(var(--sidebar-left-open-width) - var(--sidebar-left-close-width));
 }
 </style>

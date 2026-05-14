@@ -2,11 +2,18 @@
   <Chat.Root :layout="layout">
     <Chat.Main>
       <p>这里是聊天内容</p>
-      <button @click="toggleLayout">切换布局</button>
-      <Chat.SidebarSwitch></Chat.SidebarSwitch>
+      <div>
+        <button @click="toggleLayout">切换布局</button>
+      </div>
+      <div>
+        <Chat.SidebarSwitch></Chat.SidebarSwitch>
+      </div>
+      <div>
+        <button @click="toggleSidebarCollapseMode">切换侧边栏折叠模式（当前：{{ sidebarCollapseMode }}）</button>
+      </div>
     </Chat.Main>
 
-    <Chat.Sidebar position="left">
+    <Chat.Sidebar position="left" :collapse-mode="sidebarCollapseMode">
       <template #default="{ sidebarLeft, sidebarOpen }">
         <div style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center; gap: 8px">
           <Chat.SidebarSwitch>
@@ -49,6 +56,11 @@ import IconMessageCirclePlus from './icons/IconMessageCirclePlus.vue'
 const layout = ref<'left-right' | 'top-bottom'>('left-right')
 function toggleLayout() {
   layout.value = layout.value === 'left-right' ? 'top-bottom' : 'left-right'
+}
+
+const sidebarCollapseMode = ref<'overlay' | 'slide'>('slide')
+function toggleSidebarCollapseMode() {
+  sidebarCollapseMode.value = sidebarCollapseMode.value === 'overlay' ? 'slide' : 'overlay'
 }
 </script>
 
