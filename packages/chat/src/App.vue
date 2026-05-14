@@ -1,67 +1,87 @@
 <template>
-  <Chat.Root :layout="layout">
-    <Chat.Main>
-      <p>这里是聊天内容</p>
-      <div>
-        <button @click="toggleLayout">切换布局</button>
-      </div>
-      <div>
-        <Chat.SidebarSwitch></Chat.SidebarSwitch>
-      </div>
-      <div>
-        <button @click="toggleSidebarCollapseMode">切换侧边栏折叠模式（当前：{{ sidebarCollapseMode }}）</button>
-      </div>
-    </Chat.Main>
-
-    <Chat.Sidebar position="left" :collapse-mode="sidebarCollapseMode">
-      <template #default="{ sidebarLeft, sidebarOpen }">
-        <div style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center; gap: 8px">
-          <Chat.SidebarSwitch>
-            <IconPanelLeft :size="20" style="color: #0d0d0d; stroke-width: 1.5" />
-          </Chat.SidebarSwitch>
-          <p class="sidebar-title" :class="{ hidden: sidebarLeft && !sidebarOpen }">Tiny Robot Chat</p>
+  <Chat.Root>
+    <Chat.Layout
+      :layout="layout"
+      :sidebar-left-width="sidebarLeftWidth"
+      :sidebar-left-close-width="sidebarLeftCloseWidth"
+    >
+      <Chat.Main>
+        <p>这里是聊天内容</p>
+        <div>
+          <button @click="toggleLayout">切换布局</button>
         </div>
-        <div class="new-session-container" style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center">
-          <button class="icon-button" :class="{ hidden: sidebarLeft && sidebarOpen }">
-            <IconMessageCirclePlus :size="20" style="color: #0d0d0d; stroke-width: 1.5" />
-          </button>
-          <button class="new-session" :class="{ hidden: sidebarLeft && !sidebarOpen }">
-            <IconMessageCirclePlus :size="20" style="stroke-width: 1.5" />
-            <span>新会话</span>
-          </button>
+        <div>
+          <Chat.SidebarSwitch></Chat.SidebarSwitch>
         </div>
-      </template>
-    </Chat.Sidebar>
+        <div>
+          <button @click="toggleSidebarCollapseMode">切换侧边栏折叠模式（当前：{{ sidebarCollapseMode }}）</button>
+        </div>
+        <div>
+          <label
+            >展开宽度: {{ sidebarLeftWidth }}px
+            <input type="range" min="100" max="500" v-model.number="sidebarLeftWidth"
+          /></label>
+        </div>
+        <div>
+          <label
+            >折叠宽度: {{ sidebarLeftCloseWidth }}px
+            <input type="range" min="0" max="100" v-model.number="sidebarLeftCloseWidth"
+          /></label>
+        </div>
+      </Chat.Main>
 
-    <Chat.Header>
-      <h1>AI 聊天应用</h1>
-    </Chat.Header>
+      <Chat.Sidebar position="left" :collapse-mode="sidebarCollapseMode">
+        <template #default="{ sidebarLeft, sidebarOpen }">
+          <div style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center; gap: 8px">
+            <Chat.SidebarSwitch>
+              <IconPanelLeft :size="20" style="color: #0d0d0d; stroke-width: 1.5" />
+            </Chat.SidebarSwitch>
+            <p class="sidebar-title" :class="{ hidden: sidebarLeft && !sidebarOpen }">Tiny Robot Chat</p>
+          </div>
+          <div class="new-session-container" style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center">
+            <button class="icon-button" :class="{ hidden: sidebarLeft && sidebarOpen }">
+              <IconMessageCirclePlus :size="20" style="color: #0d0d0d; stroke-width: 1.5" />
+            </button>
+            <button class="new-session" :class="{ hidden: sidebarLeft && !sidebarOpen }">
+              <IconMessageCirclePlus :size="20" style="stroke-width: 1.5" />
+              <span>新会话</span>
+            </button>
+          </div>
+        </template>
+      </Chat.Sidebar>
 
-    <Chat.Footer>
-      <input type="text" placeholder="请输入..." />
-    </Chat.Footer>
+      <Chat.Header>
+        <h1>AI 聊天应用</h1>
+      </Chat.Header>
 
-    <Chat.Sidebar position="right">
-      <p>扩展功能</p>
-    </Chat.Sidebar>
+      <Chat.Footer>
+        <input type="text" placeholder="请输入..." />
+      </Chat.Footer>
+
+      <Chat.Sidebar position="right">
+        <p>扩展功能</p>
+      </Chat.Sidebar>
+    </Chat.Layout>
   </Chat.Root>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Chat } from './index'
-import { IconPanelLeft } from './icons'
-import IconMessageCirclePlus from './icons/IconMessageCirclePlus.vue'
+import { IconPanelLeft, IconMessageCirclePlus } from './icons'
 
 const layout = ref<'left-right' | 'top-bottom'>('left-right')
 function toggleLayout() {
   layout.value = layout.value === 'left-right' ? 'top-bottom' : 'left-right'
 }
 
-const sidebarCollapseMode = ref<'overlay' | 'slide'>('slide')
+const sidebarCollapseMode = ref<'overlay' | 'slide'>('overlay')
 function toggleSidebarCollapseMode() {
   sidebarCollapseMode.value = sidebarCollapseMode.value === 'overlay' ? 'slide' : 'overlay'
 }
+
+const sidebarLeftWidth = ref(300)
+const sidebarLeftCloseWidth = ref(48)
 </script>
 
 <style scoped>
@@ -97,10 +117,9 @@ function toggleSidebarCollapseMode() {
 }
 .new-session {
   position: absolute;
-  left: calc((100% - 150px) / 2);
-  right: 0;
+  left: 40px;
+  right: 40px;
   display: inline-flex;
-  width: 150px;
   align-items: center;
   justify-content: center;
   gap: 8px;

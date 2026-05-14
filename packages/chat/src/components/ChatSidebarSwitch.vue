@@ -1,29 +1,17 @@
 <template>
-  <button class="sidebar-switch" @click="sidebarLeftOpen = !sidebarLeftOpen">
+  <button class="sidebar-switch" @click="toggleSidebarLeftOpen">
     <slot> {{ sidebarLeftOpen ? '收起' : '展开' }}左侧面板 </slot>
   </button>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useChatContext } from '../context'
+import { useChatSidebarContext } from '../context'
 
 withDefaults(defineProps<{ position?: 'left' | 'right' }>(), {
   position: 'left',
 })
 
-const context = useChatContext()
-
-const sidebarLeftOpen = computed({
-  get() {
-    return context?.sidebarLeftOpen.value
-  },
-  set(value: boolean) {
-    if (context) {
-      context.sidebarLeftOpen.value = value
-    }
-  },
-})
+const { sidebarLeftOpen, toggleSidebarLeftOpen } = useChatSidebarContext()
 </script>
 
 <style scoped>

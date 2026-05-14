@@ -1,6 +1,7 @@
 export { default as ChatFooter } from './ChatFooter.vue'
 export { default as ChatHeader } from './ChatHeader.vue'
 export { default as ChatMain } from './ChatMain.vue'
+export { default as ChatLayout } from './ChatLayout.vue'
 export { default as ChatRoot } from './ChatRoot.vue'
 export { default as ChatSidebar } from './ChatSidebar.vue'
 export { default as ChatSidebarSwitch } from './ChatSidebarSwitch.vue'

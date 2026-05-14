@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { computed, type VNode } from 'vue'
-import { useChatContext } from '../context'
+import { useChatSidebarContext } from '../context'
 
 defineOptions({
   name: 'TinyRobotChatSidebar',
@@ -38,10 +38,10 @@ const props = withDefaults(
   },
 )
 
-const context = useChatContext()
+const { sidebarLeftOpen } = useChatSidebarContext()
 
 const sidebarLeft = computed(() => props.position === 'left')
-const sidebarOpen = computed(() => Boolean(context?.sidebarLeftOpen.value))
+const sidebarOpen = computed(() => Boolean(sidebarLeftOpen.value))
 </script>
 
 <style scoped>
