@@ -1,4 +1,4 @@
-import { ChatFooter, ChatHeader, ChatMain, ChatRoot, ChatSidebar } from './components'
+import { ChatFooter, ChatHeader, ChatMain, ChatRoot, ChatSidebar, ChatSidebarSwitch } from './components'
 
 export const Chat = {
   Root: ChatRoot,
@@ -6,4 +6,5 @@ export const Chat = {
   Main: ChatMain,
   Sidebar: ChatSidebar,
   Footer: ChatFooter,
+  SidebarSwitch: ChatSidebarSwitch,
 }

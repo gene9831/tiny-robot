@@ -1,7 +1,6 @@
-import ChatFooter from './ChatFooter.vue'
-import ChatHeader from './ChatHeader.vue'
-import ChatMain from './ChatMain.vue'
-import ChatRoot from './ChatRoot.vue'
-import ChatSidebar from './ChatSidebar.vue'
-
-export { ChatFooter, ChatHeader, ChatMain, ChatRoot, ChatSidebar }
+export { default as ChatFooter } from './ChatFooter.vue'
+export { default as ChatHeader } from './ChatHeader.vue'
+export { default as ChatMain } from './ChatMain.vue'
+export { default as ChatRoot } from './ChatRoot.vue'
+export { default as ChatSidebar } from './ChatSidebar.vue'
+export { default as ChatSidebarSwitch } from './ChatSidebarSwitch.vue'

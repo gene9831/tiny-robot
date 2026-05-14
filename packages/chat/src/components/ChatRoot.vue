@@ -1,11 +1,19 @@
 <template>
-  <div class="chat-root" :class="`layout-${layout}`">
+  <div
+    class="chat-root"
+    :class="`layout-${layout}`"
+    :style="{
+      '--sidebar-left-open-width': `${sidebarLeftWidth}px`,
+      '--sidebar-left-close-width': '48px',
+      '--sidebar-left-transition-duration': '0.2s',
+    }"
+  >
     <header class="header">
       <slot name="header">
         <component :is="slotsMap.header" />
       </slot>
     </header>
-    <aside class="sidebar-left">
+    <aside class="sidebar-left" :class="{ 'sidebar-open': sidebarLeftOpen, 'sidebar-closed': !sidebarLeftOpen }">
       <slot name="sidebar-left">
         <component :is="slotsMap['sidebar-left']" />
       </slot>
@@ -29,17 +37,20 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, useSlots, type Component, type VNode } from 'vue'
+import { reactive, ref, useSlots, type Component, type VNode } from 'vue'
 import { ChatFooter, ChatHeader, ChatMain, ChatSidebar } from '.'
+import { provideChatContext } from '../context'
 
 type SlotName = 'header' | 'main' | 'footer' | 'sidebar-left' | 'sidebar-right'
 
 withDefaults(
   defineProps<{
     layout?: 'left-right' | 'top-bottom'
+    sidebarLeftWidth?: number
   }>(),
   {
     layout: 'left-right',
+    sidebarLeftWidth: 300,
   },
 )
 
@@ -70,6 +81,9 @@ for (const vnode of defaultSlotVnodes) {
     slotsMap[slotName] = vnode
   }
 }
+
+const sidebarLeftOpen = ref(true)
+provideChatContext({ sidebarLeftOpen })
 </script>
 
 <style scoped>
@@ -101,7 +115,13 @@ for (const vnode of defaultSlotVnodes) {
 .sidebar-left {
   grid-area: sidebar-left;
   background: #fafafa;
-  padding: 8px;
+  padding: 0;
+  width: var(--sidebar-left-open-width);
+  transition: width var(--sidebar-left-transition-duration) ease;
+  overflow: hidden;
+}
+.sidebar-left.sidebar-closed {
+  width: var(--sidebar-left-close-width);
 }
 .main {
   grid-area: main;
