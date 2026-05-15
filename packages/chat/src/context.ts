@@ -36,5 +36,15 @@ export function useChatSidebarContext() {
     toggleSidebarLeftOpen() {
       sidebarLeftOpen.value = !sidebarLeftOpen.value
     },
+    openSidebarLeft() {
+      if (!sidebarLeftOpen.value) {
+        sidebarLeftOpen.value = true
+      }
+    },
+    closeSidebarLeft() {
+      if (sidebarLeftOpen.value) {
+        sidebarLeftOpen.value = false
+      }
+    },
   }
 }

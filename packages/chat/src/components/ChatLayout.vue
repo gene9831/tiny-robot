@@ -69,6 +69,8 @@ const slotsMap = computed(() => {
 
   const defaultSlotVnodes = slots.default?.() || []
 
+  console.log('Default slot VNodes:', defaultSlotVnodes) // Debug log to check the VNodes
+
   for (const vnode of defaultSlotVnodes) {
     const compName = typeof vnode.type === 'object' ? (vnode.type as Component).name : null
 

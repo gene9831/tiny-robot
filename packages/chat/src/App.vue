@@ -38,11 +38,11 @@
             </Chat.SidebarSwitch>
             <p class="sidebar-title" :class="{ hidden: sidebarLeft && !sidebarOpen }">Tiny Robot Chat</p>
           </div>
-          <div class="new-session-container" style="padding: 0 8px; margin: 8px 0; display: flex; align-items: center">
-            <button class="icon-button" :class="{ hidden: sidebarLeft && sidebarOpen }">
+          <div class="new-session-container">
+            <button class="new-session-button icon-button" :class="{ hidden: sidebarLeft && sidebarOpen }">
               <IconMessageCirclePlus :size="20" style="color: #0d0d0d; stroke-width: 1.5" />
             </button>
-            <button class="new-session" :class="{ hidden: sidebarLeft && !sidebarOpen }">
+            <button class="new-session new-session-button" :class="{ hidden: sidebarLeft && !sidebarOpen }">
               <IconMessageCirclePlus :size="20" style="stroke-width: 1.5" />
               <span>新会话</span>
             </button>
@@ -92,7 +92,7 @@ const sidebarLeftCloseWidth = ref(48)
 }
 .hidden {
   opacity: 0;
-  user-select: none;
+  pointer-events: none;
 }
 .icon-button {
   display: inline-flex;
@@ -110,15 +110,22 @@ const sidebarLeftCloseWidth = ref(48)
   }
 }
 .new-session-container {
-  position: relative;
+  display: grid;
+  padding: 0 8px;
+  margin: 8px 0;
 }
 .new-session-container button {
   transition: opacity 0.2s ease;
 }
+.new-session-button {
+  grid-area: 1/1;
+
+  &.icon-button {
+    align-self: center;
+    justify-self: start;
+  }
+}
 .new-session {
-  position: absolute;
-  left: 40px;
-  right: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
