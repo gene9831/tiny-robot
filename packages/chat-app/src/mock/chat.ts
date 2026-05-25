@@ -30,6 +30,10 @@ async function* createMockResponse(
 ): AsyncGenerator<ChatCompletion> {
   await wait(1000, abortSignal)
 
+  if (Math.random() < 0.5) {
+    throw new Error('Mock response failed')
+  }
+
   for (const [index, char] of Array.from(mockReply).entries()) {
     await wait(24, abortSignal)
 

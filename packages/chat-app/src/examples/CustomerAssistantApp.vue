@@ -7,7 +7,32 @@ import { initialMessages, mockResponseProvider } from '../mock/chat'
 const { messages, isProcessing, sendMessage, abortRequest } = useMessage({
   initialMessages,
   responseProvider: mockResponseProvider,
+  plugins: [
+    {
+      name: 'mock-error-state',
+      onError({ currentTurn }) {
+        const lastMessage = currentTurn.at(-1)
+
+        if (lastMessage) {
+          lastMessage.content = '响应失败，请点击重试图标重试。'
+          lastMessage.state = {
+            ...lastMessage.state,
+            error: true,
+          }
+        }
+      },
+    },
+  ],
 })
+
+const resendUserMessage = (userMessageIndex: number) => {
+  const content = messages.value[userMessageIndex]?.content
+
+  if (typeof content === 'string') {
+    messages.value.splice(userMessageIndex)
+    sendMessage(content)
+  }
+}
 </script>
 
 <template>
@@ -17,7 +42,7 @@ const { messages, isProcessing, sendMessage, abortRequest } = useMessage({
     </header>
     <aside class="app-aside">Aside</aside>
     <main class="app-main">
-      <ChatMessages :messages="messages" />
+      <ChatMessages :messages="messages" :isProcessing="isProcessing" @regenerate="resendUserMessage" />
     </main>
     <footer class="app-footer">
       <ChatSender :processing="isProcessing" @send="sendMessage" @stop="abortRequest" />
