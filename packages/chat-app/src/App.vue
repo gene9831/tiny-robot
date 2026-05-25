@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import BasicDemoChat from './examples/BasicDemoChat.vue'
+import CustomerAssistantApp from './examples/CustomerAssistantApp.vue'
 </script>
 
 <template>
-  <BasicDemoChat />
+  <CustomerAssistantApp />
 </template>
