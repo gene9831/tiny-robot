@@ -87,6 +87,10 @@ const regenerate = (messageIndexes: number[]) => {
   height: 100%;
   max-height: 100%;
   overflow: auto;
+  &.tr-bubble-list {
+    padding-block: 24px;
+    padding-inline: max(16px, calc((100% - 800px) / 2));
+  }
 }
 
 .chat-messages :deep(.tr-bubble[data-role='assistant']) {
@@ -124,5 +128,11 @@ const regenerate = (messageIndexes: number[]) => {
 .message-actions svg {
   width: 16px;
   height: 16px;
+}
+
+@media (max-width: 480px) {
+  .chat-messages :deep(.tr-bubble__avatar) {
+    display: none;
+  }
 }
 </style>

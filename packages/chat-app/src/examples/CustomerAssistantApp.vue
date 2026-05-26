@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTheme } from '@opentiny/tiny-robot'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import ChatHistory from '../components/ChatHistory.vue'
 import ChatMessages from '../components/ChatMessages.vue'
 import ChatSender from '../components/ChatSender.vue'
@@ -18,6 +18,15 @@ const activeTitle = computed(() => activeConversation.value?.title || 'TinyRobot
 const messages = computed(() => activeEngine.value?.messages.value ?? [])
 const isProcessing = computed(() => activeEngine.value?.isProcessing.value ?? false)
 const isDark = computed(() => resolvedColorMode?.value === 'dark')
+const historyDrawerOpen = ref(false)
+
+const openHistoryDrawer = () => {
+  historyDrawerOpen.value = true
+}
+
+const closeHistoryDrawer = () => {
+  historyDrawerOpen.value = false
+}
 
 const handleSendMessage = (content: string) => {
   const message = content.trim()
@@ -60,7 +69,14 @@ const resendUserMessage = (userMessageIndex: number) => {
 <template>
   <div class="chat-app">
     <header class="app-header">
-      <h3>{{ activeTitle }}</h3>
+      <div class="header-title">
+        <button type="button" class="history-button" aria-label="打开历史会话" @click="openHistoryDrawer">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <h3>{{ activeTitle }}</h3>
+      </div>
       <button
         type="button"
         class="theme-button"
@@ -75,6 +91,11 @@ const resendUserMessage = (userMessageIndex: number) => {
     <aside class="app-aside">
       <ChatHistory />
     </aside>
+    <div v-if="historyDrawerOpen" class="drawer-mask" @click="closeHistoryDrawer">
+      <aside class="history-drawer" @click.stop>
+        <ChatHistory @select="closeHistoryDrawer" />
+      </aside>
+    </div>
     <main class="app-main">
       <ChatMessages :messages="messages" :isProcessing="isProcessing" @regenerate="resendUserMessage" />
     </main>
@@ -123,6 +144,17 @@ const resendUserMessage = (userMessageIndex: number) => {
   color: var(--tr-text-primary);
 }
 
+.header-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-button {
+  display: none;
+}
+
 .theme-button {
   display: inline-flex;
   width: 36px;
@@ -146,6 +178,19 @@ const resendUserMessage = (userMessageIndex: number) => {
   height: 18px;
 }
 
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: var(--tr-z-index-modal-backdrop);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.history-drawer {
+  width: min(300px, 85vw);
+  height: 100%;
+  background: var(--tr-container-bg-default);
+}
+
 .app-aside {
   grid-area: aside;
 }
@@ -158,5 +203,47 @@ const resendUserMessage = (userMessageIndex: number) => {
 .app-footer {
   grid-area: footer;
   padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .chat-app {
+    grid-template-areas:
+      'header'
+      'main'
+      'footer';
+    grid-template-columns: 1fr;
+  }
+
+  .app-aside {
+    display: none;
+  }
+
+  .history-button {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    border-radius: var(--tr-radius-full);
+    padding: 0;
+    background: transparent;
+    color: var(--tr-text-primary);
+    cursor: pointer;
+  }
+
+  .history-button:hover {
+    background: var(--tr-container-bg-active);
+  }
+
+  .history-button span {
+    width: 16px;
+    height: 2px;
+    border-radius: var(--tr-radius-full);
+    background: currentColor;
+  }
 }
 </style>

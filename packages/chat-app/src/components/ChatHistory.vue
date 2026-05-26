@@ -13,6 +13,10 @@ const {
   updateConversationTitle,
 } = useChatConversation()
 
+const emit = defineEmits<{
+  select: []
+}>()
+
 const historyData = ref<Array<{ id: string; title: string }>>([])
 
 watch(
@@ -29,6 +33,7 @@ watch(
 const handleItemClick = (item: { id?: string }) => {
   if (item.id) {
     switchConversation(item.id)
+    emit('select')
   }
 }
 
@@ -39,6 +44,7 @@ const handleCreate = () => {
       initialMessages,
     },
   })
+  emit('select')
 }
 
 const handleItemTitleChange = (title: string, item: { id?: string }) => {
