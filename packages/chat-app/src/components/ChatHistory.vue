@@ -33,6 +33,14 @@ const handleItemClick = (item: { id?: string }) => {
 
 const handleCreate = () => {
   createConversation({
+    useMessageOptions: {
+      initialMessages: [
+        {
+          role: 'assistant',
+          content: '您好，我是 AI 智能客服，请问有什么可以帮助您？',
+        },
+      ],
+    },
     title: '新客服咨询',
   })
 }

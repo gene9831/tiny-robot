@@ -36,6 +36,9 @@ const handleSendMessage = (content: string) => {
 
   if (!activeConversation.value) {
     const conversation = createConversation({
+      useMessageOptions: {
+        initialMessages: [],
+      },
       title: message.slice(0, 24),
     })
 
