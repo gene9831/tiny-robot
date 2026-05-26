@@ -104,12 +104,12 @@ const handleItemAction = (action: { id: string }, item: { id?: string }) => {
 
 .history-header button {
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--tr-radius-md);
   padding: 6px 10px;
-  background: #2563eb;
+  background: var(--tr-color-primary);
   color: #fff;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--tr-font-size-xs);
 }
 
 .history-list {

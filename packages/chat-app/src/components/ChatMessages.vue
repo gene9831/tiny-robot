@@ -84,11 +84,19 @@ const regenerate = (messageIndexes: number[]) => {
 
 <style scoped>
 .chat-messages {
-  --tr-bubble-box-bg: #f0f1f3;
-
   height: 100%;
   max-height: 100%;
   overflow: auto;
+}
+
+.chat-messages :deep(.tr-bubble[data-role='assistant']) {
+  --tr-bubble-box-bg: var(--tr-container-bg-default-2);
+  --tr-bubble-text-color: var(--tr-text-primary);
+}
+
+.chat-messages :deep(.tr-bubble[data-role='user']) {
+  --tr-bubble-box-bg: var(--tr-color-primary);
+  --tr-bubble-text-color: #fff;
 }
 
 .message-actions {
@@ -105,12 +113,12 @@ const regenerate = (messageIndexes: number[]) => {
   border-radius: 8px;
   padding: 6px;
   background: transparent;
-  color: #4b5563;
+  color: var(--tr-icon-color-default);
   cursor: pointer;
 }
 
 .message-actions button:hover {
-  background: #eef2f7;
+  background: var(--tr-container-bg-hover);
 }
 
 .message-actions svg {
