@@ -205,7 +205,7 @@ async function* createMockResponse(
 }
 
 export const mockCallTool = async (toolCall: ToolCall) => {
-  await new Promise((resolve) => window.setTimeout(resolve, 800))
+  await new Promise((resolve) => window.setTimeout(resolve, 2000))
 
   if (toolCall.function.name === 'query_order_status') {
     const args = JSON.parse(toolCall.function.arguments || '{}')

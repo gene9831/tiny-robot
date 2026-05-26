@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { TrBubbleList, type BubbleMessage, type BubbleRoleConfig } from '@opentiny/tiny-robot'
+import {
+  BubbleRendererMatchPriority,
+  TrBubbleList,
+  TrBubbleProvider,
+  type BubbleContentRendererMatch,
+  type BubbleMessage,
+  type BubbleRoleConfig,
+} from '@opentiny/tiny-robot'
 import { IconAi, IconCopy, IconRefresh, IconUser } from '@opentiny/tiny-robot-svgs'
-import { h } from 'vue'
+import { h, markRaw } from 'vue'
+import CustomerToolRenderer from './renderers/CustomerToolRenderer.vue'
 
 const props = defineProps<{
   messages: BubbleMessage[]
@@ -22,6 +30,14 @@ const roles: Record<string, BubbleRoleConfig> = {
     avatar: h(IconAi, { style: { width: '32px', height: '32px' } }),
   },
 }
+
+const contentRendererMatches: BubbleContentRendererMatch[] = [
+  {
+    find: (message) => Array.isArray(message.tool_calls) && message.tool_calls.length > 0,
+    renderer: markRaw(CustomerToolRenderer),
+    priority: BubbleRendererMatchPriority.NORMAL,
+  },
+]
 
 const copyMessage = async (messages: BubbleMessage[]) => {
   const content = messages
@@ -58,28 +74,30 @@ const regenerate = (messageIndexes: number[]) => {
 </script>
 
 <template>
-  <TrBubbleList :messages="messages" :role-configs="roles" auto-scroll class="chat-messages">
-    <template #after="{ messages: slotMessages, role, messageIndexes }">
-      <div v-if="hasContent(slotMessages)" class="message-actions">
-        <button v-if="role === 'user'" type="button" title="复制" @click="copyMessage(slotMessages)">
-          <IconCopy />
-        </button>
-        <template v-if="role === 'assistant' && !messageIsGenerating(messageIndexes)">
-          <button type="button" title="复制" @click="copyMessage(slotMessages)">
+  <TrBubbleProvider :content-renderer-matches="contentRendererMatches">
+    <TrBubbleList :messages="messages" :role-configs="roles" auto-scroll class="chat-messages">
+      <template #after="{ messages: slotMessages, role, messageIndexes }">
+        <div v-if="hasContent(slotMessages)" class="message-actions">
+          <button v-if="role === 'user'" type="button" title="复制" @click="copyMessage(slotMessages)">
             <IconCopy />
           </button>
-          <button
-            v-if="!isProcessing"
-            type="button"
-            :title="hasError(slotMessages) ? '重试' : '重新生成'"
-            @click="regenerate(messageIndexes)"
-          >
-            <IconRefresh />
-          </button>
-        </template>
-      </div>
-    </template>
-  </TrBubbleList>
+          <template v-if="role === 'assistant' && !messageIsGenerating(messageIndexes)">
+            <button type="button" title="复制" @click="copyMessage(slotMessages)">
+              <IconCopy />
+            </button>
+            <button
+              v-if="!isProcessing"
+              type="button"
+              :title="hasError(slotMessages) ? '重试' : '重新生成'"
+              @click="regenerate(messageIndexes)"
+            >
+              <IconRefresh />
+            </button>
+          </template>
+        </div>
+      </template>
+    </TrBubbleList>
+  </TrBubbleProvider>
 </template>
 
 <style scoped>
@@ -87,6 +105,7 @@ const regenerate = (messageIndexes: number[]) => {
   height: 100%;
   max-height: 100%;
   overflow: auto;
+
   &.tr-bubble-list {
     padding-block: 24px;
     padding-inline: max(16px, calc((100% - 800px) / 2));
