@@ -1,29 +1,46 @@
 <script setup lang="ts">
-import { useMessage } from '@opentiny/tiny-robot-kit'
+import { computed } from 'vue'
+import ChatHistory from '../components/ChatHistory.vue'
 import ChatMessages from '../components/ChatMessages.vue'
 import ChatSender from '../components/ChatSender.vue'
-import { initialMessages, mockResponseProvider } from '../mock/chat'
+import { useChatConversation } from '../composables/useChatConversation'
+import { initialMessages } from '../mock/chat'
 
-const { messages, isProcessing, sendMessage, abortRequest } = useMessage({
-  initialMessages,
-  responseProvider: mockResponseProvider,
-  plugins: [
-    {
-      name: 'mock-error-state',
-      onError({ currentTurn }) {
-        const lastMessage = currentTurn.at(-1)
+const { activeConversation, createConversation, sendMessage, abortActiveRequest, updateConversationTitle } =
+  useChatConversation()
 
-        if (lastMessage) {
-          lastMessage.content = '响应失败，请点击重试图标重试。'
-          lastMessage.state = {
-            ...lastMessage.state,
-            error: true,
-          }
-        }
+const activeEngine = computed(() => activeConversation.value?.engine)
+const activeTitle = computed(() => activeConversation.value?.title || 'TinyRobot AI 智能客服')
+const messages = computed(() => activeEngine.value?.messages.value ?? [])
+const isProcessing = computed(() => activeEngine.value?.isProcessing.value ?? false)
+
+const handleSendMessage = (content: string) => {
+  const message = content.trim()
+
+  if (!message) {
+    return
+  }
+
+  if (!activeConversation.value) {
+    const conversation = createConversation({
+      title: message.slice(0, 24),
+      useMessageOptions: {
+        initialMessages,
       },
-    },
-  ],
-})
+    })
+
+    conversation.engine.sendMessage(message)
+    return
+  }
+
+  const hasUserMessage = activeEngine.value?.messages.value.some((item) => item.role === 'user')
+
+  if (!hasUserMessage) {
+    updateConversationTitle(activeConversation.value.id, message.slice(0, 24))
+  }
+
+  sendMessage(message)
+}
 
 const resendUserMessage = (userMessageIndex: number) => {
   const content = messages.value[userMessageIndex]?.content
@@ -38,14 +55,16 @@ const resendUserMessage = (userMessageIndex: number) => {
 <template>
   <div class="chat-app">
     <header class="app-header">
-      <h3>TinyRobot AI 智能客服</h3>
+      <h3>{{ activeTitle }}</h3>
     </header>
-    <aside class="app-aside">Aside</aside>
+    <aside class="app-aside">
+      <ChatHistory />
+    </aside>
     <main class="app-main">
       <ChatMessages :messages="messages" :isProcessing="isProcessing" @regenerate="resendUserMessage" />
     </main>
     <footer class="app-footer">
-      <ChatSender :processing="isProcessing" @send="sendMessage" @stop="abortRequest" />
+      <ChatSender :processing="isProcessing" @send="handleSendMessage" @stop="abortActiveRequest" />
     </footer>
   </div>
 </template>
