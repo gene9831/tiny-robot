@@ -97,7 +97,12 @@ const resendUserMessage = (userMessageIndex: number) => {
       </aside>
     </div>
     <main class="app-main">
-      <ChatMessages :messages="messages" :isProcessing="isProcessing" @regenerate="resendUserMessage" />
+      <ChatMessages
+        :messages="messages"
+        :isProcessing="isProcessing"
+        @regenerate="resendUserMessage"
+        @follow-up="handleSendMessage"
+      />
     </main>
     <footer class="app-footer">
       <ChatSender :processing="isProcessing" @send="handleSendMessage" @stop="abortActiveRequest" />
