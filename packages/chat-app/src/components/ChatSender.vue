@@ -24,6 +24,7 @@ const handleSubmit = (content: string) => {
 <template>
   <TrSender
     v-model="input"
+    class="chat-sender"
     mode="multiple"
     placeholder="请输入您的问题"
     :loading="processing"
@@ -32,3 +33,12 @@ const handleSubmit = (content: string) => {
     @cancel="emit('stop')"
   />
 </template>
+
+<style scoped>
+.chat-sender {
+  max-width: 860px;
+  margin: 0 auto;
+  border-radius: var(--tr-radius-xl);
+  box-shadow: var(--tr-shadow-sm);
+}
+</style>

@@ -109,6 +109,7 @@ const resendUserMessage = (userMessageIndex: number) => {
 <style scoped>
 .chat-app {
   --aside-width: 300px;
+  --app-divider-color: color-mix(in srgb, var(--tr-border-color-default) 45%, transparent);
 
   height: 100vh;
   background: var(--tr-page-bg-default);
@@ -127,7 +128,6 @@ const resendUserMessage = (userMessageIndex: number) => {
 .app-aside,
 .app-main,
 .app-footer {
-  border: 1px solid var(--tr-border-color-default);
   background: var(--tr-container-bg-default);
 }
 
@@ -137,12 +137,18 @@ const resendUserMessage = (userMessageIndex: number) => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 12px;
+  border-bottom: 1px solid var(--app-divider-color);
+  padding: 0 20px;
 }
 
 .app-header h3 {
   margin: 16px 0;
+  overflow: hidden;
   color: var(--tr-text-primary);
+  font-size: var(--tr-font-size-md);
+  font-weight: var(--tr-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-title {
@@ -190,20 +196,28 @@ const resendUserMessage = (userMessageIndex: number) => {
   width: min(300px, 85vw);
   height: 100%;
   background: var(--tr-container-bg-default);
+  box-shadow: 12px 0 32px rgba(0, 0, 0, 0.18);
 }
 
 .app-aside {
   grid-area: aside;
+  border-right: 1px solid var(--app-divider-color);
+  background: var(--tr-page-bg-default);
 }
 
 .app-main {
   grid-area: main;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0, color-mix(in srgb, var(--tr-color-primary) 8%, transparent), transparent 32%),
+    var(--tr-page-bg-default);
 }
 
 .app-footer {
   grid-area: footer;
-  padding: 16px;
+  border-top: 1px solid var(--app-divider-color);
+  padding: 16px 20px 20px;
+  background: color-mix(in srgb, var(--tr-container-bg-default) 92%, transparent);
 }
 
 @media (max-width: 768px) {
@@ -213,6 +227,10 @@ const resendUserMessage = (userMessageIndex: number) => {
       'main'
       'footer';
     grid-template-columns: 1fr;
+  }
+
+  .app-header {
+    padding-inline: 12px;
   }
 
   .app-aside {
@@ -245,6 +263,10 @@ const resendUserMessage = (userMessageIndex: number) => {
     height: 2px;
     border-radius: var(--tr-radius-full);
     background: currentColor;
+  }
+
+  .app-footer {
+    padding: 12px;
   }
 }
 </style>

@@ -80,7 +80,7 @@ const handleItemAction = (action: { id: string }, item: { id?: string }) => {
   height: 100%;
   min-height: 0;
   flex-direction: column;
-  padding: 16px;
+  padding: 18px 14px;
 
   background: var(--tr-page-bg-default);
 }
@@ -95,22 +95,37 @@ const handleItemAction = (action: { id: string }, item: { id?: string }) => {
 
 .history-header h2 {
   margin: 0;
-  font-size: 16px;
+  color: var(--tr-text-primary);
+  font-size: var(--tr-font-size-md);
+  font-weight: var(--tr-font-weight-semibold);
 }
 
 .history-header button {
   border: 0;
-  border-radius: var(--tr-radius-md);
-  padding: 6px 10px;
+  border-radius: var(--tr-radius-full);
+  padding: 7px 12px;
   background: var(--tr-color-primary);
   color: #fff;
   cursor: pointer;
   font-size: var(--tr-font-size-xs);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--tr-color-primary) 22%, transparent);
+}
+
+.history-header button:hover {
+  background: color-mix(in srgb, var(--tr-color-primary) 88%, #000);
 }
 
 .history-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.history-list :deep(.tr-history-list) {
+  gap: 6px;
+}
+
+.history-list :deep(.tr-history-item) {
+  border-radius: var(--tr-radius-md);
 }
 </style>
