@@ -1,5 +1,11 @@
-import { useConversation, type UseConversationReturn, type UseMessagePlugin } from '@opentiny/tiny-robot-kit'
-import { initialMessages, mockResponseProvider } from '../mock/chat'
+import {
+  toolPlugin,
+  useConversation,
+  type ToolCall,
+  type UseConversationReturn,
+  type UseMessagePlugin,
+} from '@opentiny/tiny-robot-kit'
+import { initialMessages, mockCallTool, mockResponseProvider, mockTools } from '../mock/chat'
 
 let chatConversation: UseConversationReturn | undefined
 
@@ -18,13 +24,20 @@ const mockErrorPlugin: UseMessagePlugin = {
   },
 }
 
+const mockToolPlugin = toolPlugin({
+  getTools: async () => mockTools,
+  callTool: (toolCall: ToolCall) => mockCallTool(toolCall),
+  toolCallCancelledContent: '工具调用已取消。',
+  toolCallFailedContent: '工具调用失败，请稍后重试。',
+})
+
 const createChatConversation = () => {
   const conversation = useConversation({
     autoSaveMessages: true,
     useMessageOptions: {
       initialMessages,
       responseProvider: mockResponseProvider,
-      plugins: [mockErrorPlugin],
+      plugins: [mockToolPlugin, mockErrorPlugin],
     },
   })
 
