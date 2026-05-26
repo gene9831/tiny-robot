@@ -2,7 +2,6 @@
 import { TrHistory } from '@opentiny/tiny-robot'
 import { ref, watch } from 'vue'
 import { useChatConversation } from '../composables/useChatConversation'
-import { initialMessages } from '../mock/chat'
 
 const {
   conversations,
@@ -12,10 +11,6 @@ const {
   deleteConversation,
   updateConversationTitle,
 } = useChatConversation()
-
-const emit = defineEmits<{
-  select: []
-}>()
 
 const historyData = ref<Array<{ id: string; title: string }>>([])
 
@@ -33,18 +28,13 @@ watch(
 const handleItemClick = (item: { id?: string }) => {
   if (item.id) {
     switchConversation(item.id)
-    emit('select')
   }
 }
 
 const handleCreate = () => {
   createConversation({
     title: '新客服咨询',
-    useMessageOptions: {
-      initialMessages,
-    },
   })
-  emit('select')
 }
 
 const handleItemTitleChange = (title: string, item: { id?: string }) => {

@@ -7,7 +7,6 @@ import ChatSender from '../components/ChatSender.vue'
 import IconMoon from '../components/icons/IconMoon.vue'
 import IconSun from '../components/icons/IconSun.vue'
 import { useChatConversation } from '../composables/useChatConversation'
-import { initialMessages } from '../mock/chat'
 
 const { activeConversation, createConversation, sendMessage, abortActiveRequest, updateConversationTitle } =
   useChatConversation()
@@ -38,9 +37,6 @@ const handleSendMessage = (content: string) => {
   if (!activeConversation.value) {
     const conversation = createConversation({
       title: message.slice(0, 24),
-      useMessageOptions: {
-        initialMessages,
-      },
     })
 
     conversation.engine.sendMessage(message)
