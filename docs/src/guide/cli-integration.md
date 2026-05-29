@@ -4,134 +4,112 @@ outline: [1, 3]
 
 # CLI 接入
 
-TinyRobot 当前提供两种 CLI 快速接入方式：
+TinyRobot 提供官方 CLI 工具 [@opentiny/tiny-robot-cli](https://www.npmjs.com/package/@opentiny/tiny-robot-cli)，用于：
 
-1. 基于 `basic` 模板创建一个完整工程。
-2. 在已有 Vue 项目中注入 `TrChat` 所需依赖和基础配置。
+- `create` 创建完整的 TinyRobot 示例工程
+- `add` 向现有 Vue 项目快速注入聊天能力
 
-## 什么时候用哪一种
+## 安装方式
 
-| 场景 | 推荐方式 |
-| --- | --- |
-| 从 0 开始搭一个 TinyRobot 示例或产品原型 | `create` + `basic` |
-| 已经有 Vue 项目，只想补一个可用的聊天能力 | `add chat` |
+无需全局安装，可直接通过 `npx` 或 `pnpm dlx` 使用。
 
-## 方式一：创建完整工程
+```bash
+# npm
+npx @opentiny/tiny-robot-cli
 
-这种方式适合新项目。
+# pnpm
+pnpm dlx @opentiny/tiny-robot-cli
+```
 
-### 命令
+## create
+
+创建一个完整的 TinyRobot 工程。
+
+```bash
+npx @opentiny/tiny-robot-cli create <project-name> --template basic
+```
+
+示例：
 
 ```bash
 npx @opentiny/tiny-robot-cli create my-app --template basic
 ```
 
-### 你会得到什么
-
-- 一个可直接运行的完整 Vue 工程
-- 已接好的基础模型配置结构
-- 完整的聊天页面和示例交互
-- `README`、环境变量示例、启动命令
-
-### 使用步骤
+创建完成后：
 
 ```bash
 cd my-app
 pnpm install
+
+# configure your API key
+# edit .env
+
 pnpm dev
 ```
 
-### 特点
+create 命令特性
 
-- 上手最快
-- 适合先看完整效果
-- 适合基于模板继续做业务改造
+- 自动生成 Vue 工程结构
+- 内置 TinyRobot 基础聊天能力
+- 自动生成环境变量模板
+- 提供可直接运行的示例页面
 
-## 方式二：注入到已有项目
+## add
 
-这种方式适合已有 Vue 项目。
-
-### 命令
-
-在你的项目根目录执行：
+向现有项目添加 TinyRobot 能力。
 
 ```bash
 npx @opentiny/tiny-robot-cli add chat
 ```
 
-### CLI 会做什么
+CLI 会自动检测当前项目或 workspace 包，并引导选择目标 package。
 
-- 给当前项目补充 `@opentiny/tiny-robot`、`dompurify`、`markdown-it`
-- 生成 `src/tiny-robot/chat.ts`
-- 输出后续接入提示
-
-### 注入后的文件
-
-默认会生成一个基础配置文件：
-
-```ts
-import type { ChatMcpServerConfig, ChatModelOption } from '@opentiny/tiny-robot/experimental'
-
-export const chatModelOptions: ChatModelOption[] = [
-  {
-    id: 'deepseek-chat',
-    provider: 'deepseek',
-    name: 'DeepSeek Chat',
-    model: 'deepseek-chat',
-    apiUrl: 'https://api.deepseek.com/chat/completions',
-    apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY || '',
-  },
-]
-
-export const chatMcpServers: Record<string, ChatMcpServerConfig> = {}
+```bash
+npx @opentiny/tiny-robot-cli add chat
 ```
 
-### 业务侧接入
+执行后，CLI 会根据当前项目状态自动处理以下内容：
 
-然后在业务组件中直接引入 `TrChat`：
+| 变更项                  | 说明                                   |
+| ----------------------- | -------------------------------------- |
+| `src/TinyRobotChat.vue` | 集成 TinyRobot Chat 组件               |
+| `main.ts` / `main.js`   | 自动插入 TinyRobot 样式导入            |
+| `.env`                  | 添加所需环境变量                       |
+| `package.json`          | 添加或升级 `@opentiny/tiny-robot` 依赖 |
 
-```vue
+执行过程中会展示变更确认列表，可按需勾选。
+
+```shell
+? Select which file changes to apply (all selected by default):
+❯◉ create TinyRobotChat.vue — integrate TinyRobot chat component
+ ◉ modify main entry style import — import TinyRobot styles
+ ◉ create .env — add environment variables
+ ◉ modify package.json — add TinyRobot dependencies
+```
+
+### 接入组件
+
+在你的主业务组件中，添加 CLI 创建的 `<TinyRobotChat/>` 组件代码。比如 `src/App.vue` 是你的主应用
+
+```diff
+// src/App.vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { TrThemeProvider } from '@opentiny/tiny-robot'
-import { TrChat } from '@opentiny/tiny-robot/experimental'
-import { chatModelOptions, chatMcpServers } from './tiny-robot/chat'
-
-const show = ref(false)
-const fullscreen = ref(false)
+import HelloWord from './components/HelloWorld.vue'
++ import HelloWord from './TinyRobotChat.vue'
 </script>
 
 <template>
-  <TrThemeProvider>
-    <TrChat
-      v-model:show="show"
-      v-model:fullscreen="fullscreen"
-      title="AI 助手"
-      system-prompt="You are a helpful assistant."
-      :model-options="chatModelOptions"
-      :mcp-servers="chatMcpServers"
-    />
-  </TrThemeProvider>
+  <HelloWorld />
++ <TinyRobotChat />
 </template>
 ```
 
-当前 `TrChat` 内部包含主题切换按钮，业务侧接入时需要用 `TrThemeProvider` 包裹，才能提供主题上下文。
+### Workspace 支持
 
-同时在入口文件引入样式：
+CLI 支持 pnpm workspace。
 
-```ts
-import '@opentiny/tiny-robot/dist/style.css'
-```
+当检测到多 package workspace 时：
 
-### 特点
-
-- 不需要新建工程
-- 更适合增量接入
-- 业务项目可以继续保留原有目录结构
-
-## 推荐理解
-
-- `basic`：完整脚手架
-- `add chat`：能力注入
-
-前者解决“我要一个能跑的工程”，后者解决“我已有工程，只想快速接一个聊天组件”。
+- 自动识别 workspace 根目录
+- 自动识别 package 列表
+- 支持交互式选择目标 package
