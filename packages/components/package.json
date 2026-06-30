@@ -42,6 +42,7 @@
   ],
   "scripts": {
     "dev": "vue-tsc && vite build --watch",
+    "dev:build": "vite build --watch",
     "build": "vue-tsc && vite build",
     "type-check": "vue-tsc --noEmit"
   },

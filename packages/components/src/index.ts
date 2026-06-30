@@ -1,7 +1,7 @@
 import './styles/root.css'
 import './styles/components/index.css'
 
-import { App } from 'vue'
+import type { App } from 'vue'
 import Attachments from './attachments'
 import { Bubble, BubbleList, BubbleProvider } from './bubble'
 import Container from './container'
@@ -21,6 +21,7 @@ import ThemeProvider from './theme-provider'
 import Welcome from './welcome'
 import McpServerPicker from './mcp-server-picker'
 import McpAddForm from './mcp-add-form'
+import ExtensionManager from './extension-manager'
 import {
   ActionButton,
   SubmitButton,
@@ -52,6 +53,7 @@ export * from './theme-provider/index.type'
 export * from './welcome/index.type'
 export * from './mcp-server-picker/index.type'
 export * from './mcp-add-form/index.type'
+export * from './extension-manager/index.type'
 
 export {
   BubbleRendererMatchPriority,
@@ -92,6 +94,7 @@ const components = [
   Welcome,
   McpServerPicker,
   McpAddForm,
+  ExtensionManager,
   ActionButton,
   SubmitButton,
   ClearButton,
@@ -157,6 +160,8 @@ export {
   McpServerPicker as TrMcpServerPicker,
   McpAddForm,
   McpAddForm as TrMcpAddForm,
+  ExtensionManager,
+  ExtensionManager as TrExtensionManager,
   ActionButton,
   ActionButton as TrActionButton,
   SubmitButton,
