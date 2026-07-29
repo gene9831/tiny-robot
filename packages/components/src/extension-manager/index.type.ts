@@ -1,4 +1,5 @@
-import type { VNode } from 'vue'
+import type { Component, VNode } from 'vue'
+import type { ExtensionCardPopoverPlacement } from './internal.type'
 
 export type ExtensionType = 'mcp' | 'skill'
 
@@ -19,42 +20,103 @@ export interface ExtensionItem<TMetadata = Record<string, unknown>> {
   metadata?: TMetadata
 }
 
+export interface ExtensionCardActionBase {
+  id: string
+  hidden?: boolean
+  disabled?: boolean
+  ariaLabel?: string
+}
+
+export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
+  type: 'toggle'
+  enabled?: boolean
+}
+
+export interface ExtensionCardAddAction extends ExtensionCardActionBase {
+  type: 'add'
+  state?: ExtensionAddState
+  progress?: number
+  label?: string
+}
+
+export interface ExtensionCardButtonAction extends ExtensionCardActionBase {
+  type: 'button'
+  label: string
+  icon?: Component
+  loading?: boolean
+}
+
+export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
+  type: 'custom'
+  data?: unknown
+}
+
 export type ExtensionCardPrimaryAction =
+  | ExtensionCardToggleAction
+  | ExtensionCardAddAction
+  | ExtensionCardButtonAction
+  | ExtensionCardCustomAction
+
+export interface ExtensionCardMoreAction {
+  id: string
+  label: string
+  icon?: Component
+  disabled?: boolean
+  danger?: boolean
+}
+
+export type ExtensionCardMoreActionPlacement = ExtensionCardPopoverPlacement
+
+export type ExtensionCardActionEvent =
   | {
+      area: 'primary'
       type: 'toggle'
-      enabled?: boolean
-      disabled?: boolean
+      action: ExtensionCardToggleAction
+      enabled: boolean
     }
   | {
+      area: 'primary'
       type: 'add'
-      state?: ExtensionAddState
-      progress?: number
-      disabled?: boolean
+      action: ExtensionCardAddAction
+    }
+  | {
+      area: 'primary'
+      type: 'button'
+      action: ExtensionCardButtonAction
+    }
+  | {
+      area: 'primary'
+      type: 'custom'
+      action: ExtensionCardCustomAction
+      payload?: unknown
+    }
+  | {
+      area: 'more'
+      type: 'more'
+      action: ExtensionCardMoreAction
     }
 
 export interface ExtensionCardProps {
   name: string
   description?: string
-  descriptionLines?: number
   icon?: string
   iconAlt?: string
   nameClickable?: boolean
-  primaryAction?: ExtensionCardPrimaryAction
-  deleteAction?: {
-    disabled?: boolean
-  }
+  primaryActions?: ExtensionCardPrimaryAction[]
+  moreActions?: ExtensionCardMoreAction[]
+  moreActionDisabled?: boolean
+  moreActionAriaLabel?: string
+  moreActionPlacement?: ExtensionCardMoreActionPlacement
 }
 
 export interface ExtensionCardSlots {
   icon?: () => VNode[]
-  meta?: () => VNode[]
+  'custom-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
 }
 
 export interface ExtensionCardEmits {
   (e: 'name-click', event: MouseEvent | KeyboardEvent): void
-  (e: 'toggle', enabled: boolean): void
-  (e: 'add'): void
-  (e: 'delete'): void
+  (e: 'action', payload: ExtensionCardActionEvent): void
 }
 
 export interface ExtensionTypeOption {

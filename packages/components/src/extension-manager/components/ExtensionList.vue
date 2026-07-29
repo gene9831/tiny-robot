@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { ExtensionCardPrimaryAction, ExtensionItem, ExtensionListEmits, ExtensionListProps } from '../index.type'
+import { IconDelete } from '@opentiny/tiny-robot-svgs'
+import type {
+  ExtensionCardActionEvent,
+  ExtensionCardMoreAction,
+  ExtensionCardPrimaryAction,
+  ExtensionItem,
+  ExtensionListEmits,
+  ExtensionListProps,
+} from '../index.type'
 import ExtensionCard from './ExtensionCard.vue'
 
 const props = withDefaults(defineProps<ExtensionListProps>(), {
@@ -11,45 +18,57 @@ const props = withDefaults(defineProps<ExtensionListProps>(), {
 
 const emit = defineEmits<ExtensionListEmits>()
 
-const getMetaText = (item: ExtensionItem) => {
-  if (item.type === 'skill') {
-    return ''
-  }
-  const allTools = Array.isArray(item.metadata?.tools) ? item.metadata?.tools : []
-
-  if (allTools.length === 0) {
-    return ''
-  }
-
-  return `${allTools.length} 个工具`
-}
-
-const getDescriptionLines = (item: ExtensionItem) => {
-  return getMetaText(item) ? 1 : 2
-}
-
-const getPrimaryAction = (item: ExtensionItem): ExtensionCardPrimaryAction => {
+const getPrimaryActions = (item: ExtensionItem): ExtensionCardPrimaryAction[] => {
   if (props.source === 'installed') {
-    return {
-      type: 'toggle',
-      enabled: Boolean(item.enabled),
-    }
+    return [
+      {
+        id: 'toggle',
+        type: 'toggle',
+        enabled: Boolean(item.enabled),
+        ariaLabel: item.enabled ? '停用扩展' : '启用扩展',
+      },
+    ]
   }
 
-  return {
-    type: 'add',
-    state: item.addState,
-    progress: item.progress,
-  }
+  return [
+    {
+      id: 'add',
+      type: 'add',
+      state: item.addState,
+      progress: item.progress,
+    },
+  ]
 }
 
-const deleteAction = computed(() => {
+const getMoreActions = (): ExtensionCardMoreAction[] => {
   if (props.source !== 'installed') {
-    return undefined
+    return []
   }
 
-  return {}
-})
+  return [
+    {
+      id: 'delete',
+      label: '删除',
+      icon: IconDelete,
+      danger: true,
+    },
+  ]
+}
+
+const handleAction = (item: ExtensionItem, event: ExtensionCardActionEvent) => {
+  if (event.type === 'more') {
+    if (event.action.id === 'delete') {
+      emit('extension-delete', item)
+    }
+    return
+  }
+
+  if (event.type === 'toggle') {
+    emit('extension-toggle', item, event.enabled)
+  } else if (event.type === 'add') {
+    emit('extension-add', item)
+  }
+}
 </script>
 
 <template>
@@ -63,18 +82,11 @@ const deleteAction = computed(() => {
         :name="item.name"
         :description="item.description"
         :icon="item.icon"
-        :description-lines="getDescriptionLines(item)"
-        :primary-action="getPrimaryAction(item)"
-        :delete-action="deleteAction"
-        @add="emit('extension-add', item)"
+        :primary-actions="getPrimaryActions(item)"
+        :more-actions="getMoreActions()"
+        @action="(event) => handleAction(item, event)"
         @name-click="emit('extension-detail-open', item)"
-        @delete="emit('extension-delete', item)"
-        @toggle="(enabled) => emit('extension-toggle', item, enabled)"
-      >
-        <template v-if="getMetaText(item)" #meta>
-          {{ getMetaText(item) }}
-        </template>
-      </ExtensionCard>
+      />
     </template>
 
     <div v-else class="tr-extension-list__state">

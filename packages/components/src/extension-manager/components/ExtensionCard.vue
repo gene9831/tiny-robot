@@ -1,55 +1,44 @@
 <script setup lang="ts">
-import { IconDelete } from '@opentiny/tiny-robot-svgs'
+import { IconMore } from '@opentiny/tiny-robot-svgs'
 import type { CSSProperties } from 'vue'
 import { computed } from 'vue'
-import type { ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
+import type {
+  ExtensionCardAddAction,
+  ExtensionCardEmits,
+  ExtensionCardMoreAction,
+  ExtensionCardProps,
+  ExtensionCardSlots,
+} from '../index.type'
+import ExtensionCardPopover from './ExtensionCardPopover.vue'
+import ExtensionCardPrimaryActions from './ExtensionCardPrimaryActions.vue'
 
 const props = withDefaults(defineProps<ExtensionCardProps>(), {
   nameClickable: true,
+  primaryActions: () => [],
+  moreActions: () => [],
+  moreActionDisabled: false,
+  moreActionAriaLabel: '更多操作',
+  moreActionPlacement: 'bottom-end',
 })
 
 defineSlots<ExtensionCardSlots>()
 
 const emit = defineEmits<ExtensionCardEmits>()
 
-const toggleAction = computed(() => {
-  return props.primaryAction?.type === 'toggle' ? props.primaryAction : undefined
+const loadingAddAction = computed(() => {
+  return props.primaryActions.find(
+    (action): action is ExtensionCardAddAction => !action.hidden && action.type === 'add' && action.state === 'loading',
+  )
 })
 
-const addAction = computed(() => {
-  return props.primaryAction?.type === 'add' ? props.primaryAction : undefined
-})
+const hasVisiblePrimaryActions = computed(() => props.primaryActions.some((action) => !action.hidden))
 
-const addState = computed(() => addAction.value?.state ?? 'idle')
+const shouldShowActions = computed(() => hasVisiblePrimaryActions.value || props.moreActions.length > 0)
 
-const addText = computed(() => {
-  if (addState.value === 'loading') return '添加中'
-  if (addState.value === 'added') return '已添加'
-  if (addState.value === 'failed') return '重试'
-  return '添加'
-})
-
-const descriptionStyle = computed<CSSProperties | undefined>(() => {
-  if (typeof props.descriptionLines !== 'number') {
-    return undefined
-  }
-
-  return {
-    '--tr-extension-card-description-lines': Math.max(1, Math.floor(props.descriptionLines)),
-  }
-})
-
-const isAddDisabled = computed(() => {
-  if (!addAction.value) return true
-  return addAction.value.disabled || addState.value === 'loading' || addState.value === 'added'
-})
-
-const shouldShowActions = computed(() => Boolean(props.primaryAction || props.deleteAction))
-
-const isProgressIndeterminate = computed(() => typeof addAction.value?.progress !== 'number')
+const isProgressIndeterminate = computed(() => typeof loadingAddAction.value?.progress !== 'number')
 
 const progressStyle = computed<CSSProperties | undefined>(() => {
-  const progress = addAction.value?.progress
+  const progress = loadingAddAction.value?.progress
 
   if (typeof progress !== 'number') {
     return undefined
@@ -71,19 +60,10 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   emit('name-click', event)
 }
 
-const handleAdd = () => {
-  if (isAddDisabled.value) return
-  emit('add')
-}
-
-const handleToggle = (event: Event) => {
-  if (!toggleAction.value || toggleAction.value.disabled) return
-  emit('toggle', (event.target as HTMLInputElement).checked)
-}
-
-const handleDelete = () => {
-  if (!props.deleteAction || props.deleteAction.disabled) return
-  emit('delete')
+const handleMoreAction = (action: ExtensionCardMoreAction, close: () => void) => {
+  if (action.disabled) return
+  close()
+  emit('action', { area: 'more', type: 'more', action })
 }
 </script>
 
@@ -110,56 +90,59 @@ const handleDelete = () => {
       >
         {{ name }}
       </div>
-      <div v-if="description" class="tr-extension-card__description" :style="descriptionStyle" :title="description">
+      <div v-if="description" class="tr-extension-card__description" :title="description">
         {{ description }}
-      </div>
-      <div v-if="$slots.meta" class="tr-extension-card__meta">
-        <slot name="meta" />
       </div>
     </div>
 
     <div v-if="shouldShowActions" class="tr-extension-card__actions" @click.stop @keydown.stop>
-      <div v-if="deleteAction" class="tr-extension-card__secondary-actions">
-        <button
-          class="tr-extension-card__icon-button"
-          type="button"
-          title="删除"
-          :disabled="deleteAction.disabled"
-          @click="handleDelete"
-        >
-          <IconDelete class="tr-extension-card__action-icon" />
-        </button>
-      </div>
+      <ExtensionCardPrimaryActions
+        v-if="hasVisiblePrimaryActions"
+        :actions="primaryActions"
+        @action="emit('action', $event)"
+      >
+        <template #custom-action="{ action, trigger }">
+          <slot name="custom-action" :action="action" :trigger="trigger" />
+        </template>
+      </ExtensionCardPrimaryActions>
 
-      <div v-if="primaryAction" class="tr-extension-card__primary-action">
-        <label v-if="toggleAction" class="tr-extension-card__switch" :class="{ 'is-disabled': toggleAction.disabled }">
-          <input
-            type="checkbox"
-            :checked="toggleAction.enabled"
-            :disabled="toggleAction.disabled"
-            @change="handleToggle"
-          />
-          <span class="tr-extension-card__switch-track"></span>
-        </label>
-
-        <button
-          v-else-if="addAction"
-          class="tr-extension-card__add"
-          :class="{
-            'is-loading': addState === 'loading',
-            'is-added': addState === 'added',
-            'is-failed': addState === 'failed',
-          }"
-          type="button"
-          :disabled="isAddDisabled"
-          @click="handleAdd"
-        >
-          {{ addText }}
-        </button>
+      <div v-if="moreActions.length" class="tr-extension-card__more-action">
+        <ExtensionCardPopover as-child :placement="moreActionPlacement">
+          <template #trigger="{ popoverId, open }">
+            <button
+              class="tr-extension-card__icon-button"
+              type="button"
+              :popovertarget="popoverId"
+              popovertargetaction="toggle"
+              :title="moreActionAriaLabel"
+              :aria-label="moreActionAriaLabel"
+              :aria-expanded="open"
+              :disabled="moreActionDisabled"
+            >
+              <IconMore class="tr-extension-card__action-icon" />
+            </button>
+          </template>
+          <template #content="{ close }">
+            <ul class="tr-extension-card__more-menu">
+              <li v-for="action in moreActions" :key="action.id">
+                <button
+                  class="tr-extension-card__more-menu-item"
+                  :class="{ 'is-danger': action.danger }"
+                  type="button"
+                  :disabled="action.disabled"
+                  @click="handleMoreAction(action, close)"
+                >
+                  <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
+                  <span>{{ action.label }}</span>
+                </button>
+              </li>
+            </ul>
+          </template>
+        </ExtensionCardPopover>
       </div>
     </div>
 
-    <div v-if="addAction && addState === 'loading'" class="tr-extension-card__progress">
+    <div v-if="loadingAddAction" class="tr-extension-card__progress">
       <span
         class="tr-extension-card__progress-bar"
         :class="{ 'is-indeterminate': isProgressIndeterminate }"
@@ -239,10 +222,7 @@ const handleDelete = () => {
   outline: none;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tr-extension-card__name.is-clickable {
-  cursor: pointer;
+  cursor: default;
 }
 
 .tr-extension-card__name.is-clickable:hover {
@@ -255,20 +235,6 @@ const handleDelete = () => {
 }
 
 .tr-extension-card__description {
-  --description-lines: var(--tr-extension-card-description-lines, 1);
-
-  color: var(--tr-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  display: -webkit-box;
-  min-block-size: calc(var(--description-lines) * 1lh);
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  line-clamp: var(--description-lines);
-  -webkit-line-clamp: var(--description-lines);
-}
-
-.tr-extension-card__meta {
   overflow: hidden;
   color: var(--tr-text-secondary);
   font-size: 12px;
@@ -284,8 +250,7 @@ const handleDelete = () => {
   flex-shrink: 0;
 }
 
-.tr-extension-card__primary-action,
-.tr-extension-card__secondary-actions {
+.tr-extension-card__more-action {
   display: inline-flex;
   align-items: center;
 }
@@ -316,88 +281,50 @@ const handleDelete = () => {
   width: 16px;
   height: 16px;
   color: var(--tr-extension-card-icon-color);
+  transform: rotate(90deg);
 }
 
-.tr-extension-card__switch {
-  position: relative;
-  display: inline-flex;
+.tr-extension-card__more-menu {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tr-extension-card__more-menu-item {
+  display: flex;
   align-items: center;
-  width: 40px;
-  height: 22px;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tr-dropdown-menu-item-color);
   cursor: pointer;
+  font-size: 14px;
+  line-height: 24px;
+  text-align: left;
+  white-space: nowrap;
+  transition: background-color 0.3s ease;
 }
 
-.tr-extension-card__switch.is-disabled {
+.tr-extension-card__more-menu-item:hover:not(:disabled) {
+  background-color: var(--tr-dropdown-menu-item-hover-bg-color);
+}
+
+.tr-extension-card__more-menu-item.is-danger {
+  color: var(--tr-error-color, #f23030);
+}
+
+.tr-extension-card__more-menu-item:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.tr-extension-card__switch input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.tr-extension-card__switch input:checked + .tr-extension-card__switch-track {
-  background: var(--tr-extension-card-switch-bg-color-checked);
-}
-
-.tr-extension-card__switch input:checked + .tr-extension-card__switch-track::after {
-  transform: translateX(18px);
-}
-
-.tr-extension-card__switch-track {
-  position: relative;
-  display: block;
-  width: 40px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--tr-extension-card-switch-bg-color);
-  transition: background 0.2s ease;
-}
-
-.tr-extension-card__switch-track::after {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
-  content: '';
-  transition: transform 0.2s ease;
-}
-
-.tr-extension-card__add {
-  min-width: 64px;
-  height: 30px;
-  padding: 0 16px;
-  border: 1px solid var(--tr-extension-card-add-button-border-color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--tr-text-primary);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.tr-extension-card__add:disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.tr-extension-card__add.is-loading {
-  color: var(--tr-extension-card-add-button-text-color);
-}
-
-.tr-extension-card__add.is-added {
-  color: var(--tr-text-secondary);
-}
-
-.tr-extension-card__add.is-failed {
-  color: var(--tr-error-color, #f23030);
+.tr-extension-card__more-menu-item-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
 }
 
 .tr-extension-card__progress {

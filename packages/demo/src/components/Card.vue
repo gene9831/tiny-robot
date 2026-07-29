@@ -1,47 +1,98 @@
 <script setup lang="ts">
-import type { ExtensionAddState, ExtensionCardPrimaryAction } from '@opentiny/tiny-robot'
+import type {
+  ExtensionAddState,
+  ExtensionCardActionEvent,
+  ExtensionCardCustomAction,
+  ExtensionCardMoreAction,
+  ExtensionCardMoreActionPlacement,
+  ExtensionCardPrimaryAction,
+} from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
+import { IconDelete, IconEditPen, IconRefresh } from '@opentiny/tiny-robot-svgs'
 import { computed, ref } from 'vue'
 
-const primaryActionType = ref<ExtensionCardPrimaryAction['type'] | 'none'>('toggle')
 const enabled = ref(true)
 const toggleDisabled = ref(false)
+const showToggleAction = ref(true)
 const addState = ref<ExtensionAddState>('idle')
 const progress = ref(45)
 const showProgressValue = ref(true)
 const addDisabled = ref(false)
-const hasDeleteAction = ref(true)
-const deleteDisabled = ref(false)
+const showAddAction = ref(false)
+const buttonLoading = ref(false)
+const buttonDisabled = ref(false)
+const showButtonAction = ref(false)
+const customDisabled = ref(false)
+const showCustomAction = ref(false)
+const moreActionDisabled = ref(false)
+const moreActionPlacement = ref<ExtensionCardMoreActionPlacement>('bottom-end')
+const editDisabled = ref(false)
 const nameClickable = ref(true)
 const events = ref<string[]>([])
 
-const primaryAction = computed<ExtensionCardPrimaryAction | undefined>(() => {
-  if (primaryActionType.value === 'toggle') {
-    return {
+const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
+  return [
+    {
+      id: 'switch',
       type: 'toggle',
       enabled: enabled.value,
+      hidden: !showToggleAction.value,
       disabled: toggleDisabled.value,
-    }
-  }
-
-  if (primaryActionType.value === 'add') {
-    return {
+      ariaLabel: enabled.value ? '停用扩展' : '启用扩展',
+    },
+    {
+      id: 'install',
       type: 'add',
       state: addState.value,
+      hidden: !showAddAction.value,
       progress: showProgressValue.value ? progress.value : undefined,
       disabled: addDisabled.value,
-    }
-  }
-
-  return undefined
+      label: '安装',
+      ariaLabel: '安装扩展',
+    },
+    {
+      id: 'configure',
+      type: 'button',
+      label: '配置',
+      icon: IconEditPen,
+      hidden: !showButtonAction.value,
+      loading: buttonLoading.value,
+      disabled: buttonDisabled.value,
+      ariaLabel: '配置扩展',
+    },
+    {
+      id: 'status',
+      type: 'custom',
+      hidden: !showCustomAction.value,
+      disabled: customDisabled.value,
+      ariaLabel: '查看扩展状态',
+      data: {
+        label: '运行正常',
+      },
+    },
+  ]
 })
 
-const deleteAction = computed(() => {
-  if (!hasDeleteAction.value) return undefined
-
-  return {
-    disabled: deleteDisabled.value,
-  }
+const moreActions = computed<ExtensionCardMoreAction[]>(() => {
+  return [
+    {
+      id: 'edit',
+      label: '编辑',
+      icon: IconEditPen,
+      disabled: editDisabled.value,
+    },
+    {
+      id: 'refresh',
+      label: '刷新',
+      icon: IconRefresh,
+    },
+    {
+      id: 'delete',
+      label: '删除',
+      icon: IconDelete,
+      danger: true,
+    },
+  ]
 })
 
 const logEvent = (message: string) => {
@@ -49,9 +100,24 @@ const logEvent = (message: string) => {
   events.value = events.value.slice(0, 8)
 }
 
-const handleToggle = (value: boolean) => {
-  enabled.value = value
-  logEvent(`切换：${value ? '启用' : '停用'}`)
+const getCustomActionLabel = (action: ExtensionCardCustomAction) => {
+  return (action.data as { label?: string } | undefined)?.label ?? action.id
+}
+
+const handleAction = (event: ExtensionCardActionEvent) => {
+  if (event.type === 'more') {
+    logEvent(`more：${event.action.id}`)
+    return
+  }
+
+  if (event.type === 'toggle') {
+    enabled.value = event.enabled
+    logEvent(`primary/toggle：${event.action.id} → ${event.enabled}`)
+  } else if (event.type === 'custom') {
+    logEvent(`primary/custom：${event.action.id} → ${JSON.stringify(event.payload)}`)
+  } else {
+    logEvent(`primary/${event.type}：${event.action.id}`)
+  }
 }
 </script>
 
@@ -59,72 +125,94 @@ const handleToggle = (value: boolean) => {
   <div class="extension-card-demo">
     <header class="extension-card-demo__header">
       <h2>ExtensionCard</h2>
-      <p>primaryAction 表达互斥的主操作，deleteAction 表达独立的次级删除操作。</p>
+      <p>primaryActions 支持多个内置或自定义操作，moreActions 通过统一菜单承载次级操作。</p>
     </header>
 
     <section class="card-playground">
       <form class="card-playground__form">
+        <strong>toggle action</strong>
+        <label class="card-playground__checkbox">
+          <input v-model="showToggleAction" type="checkbox" />
+          show action
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="enabled" type="checkbox" />
+          enabled
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="toggleDisabled" type="checkbox" />
+          disabled
+        </label>
+
+        <strong>add action</strong>
+        <label class="card-playground__checkbox">
+          <input v-model="showAddAction" type="checkbox" />
+          show action
+        </label>
         <label>
-          primaryAction
-          <select v-model="primaryActionType">
-            <option value="none">none</option>
-            <option value="toggle">toggle</option>
-            <option value="add">add</option>
+          state
+          <select v-model="addState">
+            <option value="idle">idle</option>
+            <option value="loading">loading</option>
+            <option value="added">added</option>
+            <option value="failed">failed</option>
           </select>
         </label>
-
-        <template v-if="primaryActionType === 'toggle'">
-          <label class="card-playground__checkbox">
-            <input v-model="enabled" type="checkbox" />
-            toggle enabled
-          </label>
-          <label class="card-playground__checkbox">
-            <input v-model="toggleDisabled" type="checkbox" />
-            toggle disabled
-          </label>
-        </template>
-
-        <template v-else-if="primaryActionType === 'add'">
-          <label>
-            add state
-            <select v-model="addState">
-              <option value="idle">idle</option>
-              <option value="loading">loading</option>
-              <option value="added">added</option>
-              <option value="failed">failed</option>
-            </select>
-          </label>
-
-          <template v-if="addState === 'loading'">
-            <label>
-              progress
-              <input v-model.number="progress" type="number" min="0" max="100" :disabled="!showProgressValue" />
-            </label>
-
-            <label class="card-playground__checkbox">
-              <input v-model="showProgressValue" type="checkbox" />
-              progress is number
-            </label>
-          </template>
-
-          <template v-if="addState === 'idle'">
-            <label class="card-playground__checkbox">
-              <input v-model="addDisabled" type="checkbox" />
-              add disabled
-            </label>
-          </template>
-        </template>
-
+        <label>
+          progress
+          <input v-model.number="progress" type="number" min="0" max="100" :disabled="!showProgressValue" />
+        </label>
         <label class="card-playground__checkbox">
-          <input v-model="hasDeleteAction" type="checkbox" />
-          deleteAction
+          <input v-model="showProgressValue" type="checkbox" />
+          determinate progress
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="addDisabled" type="checkbox" />
+          disabled
         </label>
 
+        <strong>button action</strong>
         <label class="card-playground__checkbox">
-          <input v-model="deleteDisabled" type="checkbox" :disabled="!hasDeleteAction" />
-          delete disabled
+          <input v-model="showButtonAction" type="checkbox" />
+          show action
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="buttonLoading" type="checkbox" />
+          loading
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="buttonDisabled" type="checkbox" />
+          disabled
         </label>
 
+        <strong>custom action slot</strong>
+        <label class="card-playground__checkbox">
+          <input v-model="showCustomAction" type="checkbox" />
+          show action
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="customDisabled" type="checkbox" />
+          disabled
+        </label>
+
+        <strong>more action</strong>
+        <label>
+          placement
+          <select v-model="moreActionPlacement">
+            <option value="bottom-end">bottom-end</option>
+            <option value="top-end">top-end</option>
+          </select>
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="moreActionDisabled" type="checkbox" />
+          trigger disabled
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="editDisabled" type="checkbox" />
+          edit item disabled
+        </label>
+
+        <strong>card</strong>
         <label class="card-playground__checkbox">
           <input v-model="nameClickable" type="checkbox" />
           nameClickable
@@ -133,38 +221,34 @@ const handleToggle = (value: boolean) => {
 
       <div class="card-playground__preview">
         <div class="card-playground__preview-group">
-          <div class="card-playground__preview-title">MCP：name + description + tools meta</div>
+          <div class="card-playground__preview-title">
+            toggle + add + button + custom slot + more menu + unified action event
+          </div>
           <ExtensionManager.Card
             name="高德地图 MCP"
             description="提供地理编码、路线规划、天气查询等地图工具。"
             icon="https://img.alicdn.com/imgextra/i4/O1CN01iPPabT1EGRN6uatHP_!!6000000000324-0-tps-512-512.jpg"
-            :description-lines="1"
-            :primary-action="primaryAction"
-            :delete-action="deleteAction"
+            :primary-actions="primaryActions"
+            :more-actions="moreActions"
+            :more-action-disabled="moreActionDisabled"
+            :more-action-placement="moreActionPlacement"
+            more-action-aria-label="更多扩展操作"
             :name-clickable="nameClickable"
-            @add="logEvent('添加：高德地图 MCP')"
-            @delete="logEvent('删除：高德地图 MCP')"
             @name-click="logEvent('打开详情：高德地图 MCP')"
-            @toggle="handleToggle"
+            @action="handleAction"
           >
-            <template #meta>2 个工具 · 已启用 1 个</template>
+            <template #custom-action="{ action, trigger }">
+              <button
+                class="custom-status-action"
+                type="button"
+                :disabled="action.disabled"
+                :aria-label="action.ariaLabel"
+                @click="trigger({ source: 'custom-status' })"
+              >
+                {{ getCustomActionLabel(action) }}
+              </button>
+            </template>
           </ExtensionManager.Card>
-        </div>
-
-        <div class="card-playground__preview-group">
-          <div class="card-playground__preview-title">Skill：name + 最多两行 description</div>
-          <ExtensionManager.Card
-            name="头条搜索"
-            description="使用头条的搜索功能来阅读或搜索 URL，并对搜索结果进行提炼、归纳和结构化输出。"
-            :description-lines="2"
-            :primary-action="primaryAction"
-            :delete-action="deleteAction"
-            :name-clickable="nameClickable"
-            @add="logEvent('添加：头条搜索')"
-            @delete="logEvent('删除：头条搜索')"
-            @name-click="logEvent('打开详情：头条搜索')"
-            @toggle="handleToggle"
-          />
         </div>
       </div>
     </section>
@@ -217,6 +301,12 @@ const handleToggle = (value: boolean) => {
   align-content: start;
 }
 
+.card-playground__form strong {
+  margin-top: 4px;
+  color: #1f2937;
+  font-size: 13px;
+}
+
 .card-playground__form label {
   display: grid;
   gap: 6px;
@@ -263,6 +353,22 @@ const handleToggle = (value: boolean) => {
   color: #667085;
   font-size: 13px;
   font-weight: 600;
+}
+
+.custom-status-action {
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #027a48;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.custom-status-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .event-panel {
