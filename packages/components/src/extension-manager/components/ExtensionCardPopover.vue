@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance, VNode } from 'vue'
 import { computed, ref, toRef, useId } from 'vue'
-import { useAsChild } from '../composables/useAsChild'
-import { useExtensionCardPopoverPosition } from '../composables/useExtensionCardPopoverPosition'
+import { useAsChild, useExtensionCardPopoverPosition } from '../composables'
 import type { ExtensionCardPopoverPlacement } from '../internal.type'
 
 defineOptions({

@@ -31,12 +31,16 @@ export function useAsChild<TSlotProps>({ getSlot, debugName }: UseAsChildOptions
     const children = flattenAsChildVNodes(getSlot()?.(slotProps) ?? [])
 
     if (children.length !== 1) {
-      console.warn(`${warningPrefix} expects exactly one child, but received ${children.length}.`)
+      if (import.meta.env.DEV) {
+        console.warn(`${warningPrefix} expects exactly one child, but received ${children.length}.`)
+      }
       return null
     }
 
     if (!isSupportedAsChildVNode(children[0])) {
-      console.warn(`${warningPrefix} received an unsupported child node.`)
+      if (import.meta.env.DEV) {
+        console.warn(`${warningPrefix} received an unsupported child node.`)
+      }
       return null
     }
 
