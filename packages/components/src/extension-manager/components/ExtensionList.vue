@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IconDelete } from '@opentiny/tiny-robot-svgs'
-import { provideExtensionListContext } from '../composables'
+import { provideExtensionListContext } from '../composables/useExtensionListContext'
 import type {
   ExtensionCardMoreMenuAction,
   ExtensionCardPrimaryAction,
