@@ -1,24 +1,53 @@
-import type { Component, VNode } from 'vue'
+import type { Component, ComputedRef, Ref, VNode } from 'vue'
 import type { ExtensionCardPopoverPlacement } from './internal.type'
 
-export type ExtensionType = 'mcp' | 'skill'
+export type ExtensionType = 'mcp' | 'skill' | (string & {})
 
 export type ExtensionSource = 'installed' | 'market'
 
 export type ExtensionAddState = 'idle' | 'loading' | 'added' | 'failed'
 
-export interface ExtensionItem<TMetadata = Record<string, unknown>> {
+export interface ExtensionInstallation {
+  enabled: boolean
+}
+
+export interface ExtensionRecord<TMetadata = unknown> {
   id: string
   type: ExtensionType
   name: string
+  version?: string
   icon?: string
   description?: string
-  enabled?: boolean
   tags?: string[]
-  addState?: ExtensionAddState
-  progress?: number
   metadata?: TMetadata
+  installation?: ExtensionInstallation
 }
+
+/** @deprecated Use ExtensionRecord instead. */
+export type ExtensionItem<TMetadata = unknown> = ExtensionRecord<TMetadata>
+
+export type ExtensionSearchFn = (query: string, item: ExtensionItem, source: ExtensionSource) => boolean
+
+export type ExtensionOperationKind =
+  | 'install'
+  | 'create'
+  | 'toggle'
+  | 'edit'
+  | 'delete'
+  | 'refresh'
+  | 'tool-toggle'
+
+export interface ExtensionOperationState {
+  phase: 'idle' | 'pending' | 'success' | 'error'
+  progress?: number
+  error?: unknown
+  retryable?: boolean
+}
+
+export type ExtensionOperationStateMap = Record<
+  string,
+  Partial<Record<ExtensionOperationKind, ExtensionOperationState>>
+>
 
 export interface ExtensionCardActionBase {
   id: string
@@ -29,7 +58,7 @@ export interface ExtensionCardActionBase {
 
 export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
   type: 'toggle'
-  enabled?: boolean
+  checked?: boolean
 }
 
 export interface ExtensionCardAddAction extends ExtensionCardActionBase {
@@ -43,7 +72,6 @@ export interface ExtensionCardButtonAction extends ExtensionCardActionBase {
   type: 'button'
   label: string
   icon?: Component
-  loading?: boolean
 }
 
 export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
@@ -52,12 +80,9 @@ export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
 }
 
 export type ExtensionCardPrimaryAction =
-  | ExtensionCardToggleAction
-  | ExtensionCardAddAction
-  | ExtensionCardButtonAction
-  | ExtensionCardCustomAction
+  ExtensionCardToggleAction | ExtensionCardAddAction | ExtensionCardButtonAction | ExtensionCardCustomAction
 
-export interface ExtensionCardMoreAction {
+export interface ExtensionCardMoreMenuAction {
   id: string
   label: string
   icon?: Component
@@ -65,48 +90,29 @@ export interface ExtensionCardMoreAction {
   danger?: boolean
 }
 
-export type ExtensionCardMoreActionPlacement = ExtensionCardPopoverPlacement
+export type ExtensionCardMoreMenuPlacement = ExtensionCardPopoverPlacement
 
-export type ExtensionCardActionEvent =
-  | {
-      area: 'primary'
-      type: 'toggle'
-      action: ExtensionCardToggleAction
-      enabled: boolean
-    }
-  | {
-      area: 'primary'
-      type: 'add'
-      action: ExtensionCardAddAction
-    }
-  | {
-      area: 'primary'
-      type: 'button'
-      action: ExtensionCardButtonAction
-    }
-  | {
-      area: 'primary'
-      type: 'custom'
-      action: ExtensionCardCustomAction
-      payload?: unknown
-    }
-  | {
-      area: 'more'
-      type: 'more'
-      action: ExtensionCardMoreAction
-    }
+export interface ExtensionCardActionEvent {
+  id: string
+  checked?: boolean
+  payload?: unknown
+}
 
-export interface ExtensionCardProps {
+export interface ExtensionCardItem {
+  id?: string
   name: string
   description?: string
   icon?: string
   iconAlt?: string
+}
+
+export type ExtensionCardProps = Partial<ExtensionCardItem> & {
+  item?: ExtensionCardItem
   nameClickable?: boolean
   primaryActions?: ExtensionCardPrimaryAction[]
-  moreActions?: ExtensionCardMoreAction[]
-  moreActionDisabled?: boolean
-  moreActionAriaLabel?: string
-  moreActionPlacement?: ExtensionCardMoreActionPlacement
+  moreMenuActions?: ExtensionCardMoreMenuAction[]
+  moreMenuTriggerAriaLabel?: string
+  moreMenuPlacement?: ExtensionCardMoreMenuPlacement
 }
 
 export interface ExtensionCardSlots {
@@ -131,33 +137,35 @@ export interface ExtensionTagOption {
 
 export interface ExtensionListProps {
   items?: ExtensionItem[]
-  source: ExtensionSource
+  source?: ExtensionSource
   loading?: boolean
   emptyText?: string
 }
 
-export interface ExtensionListEmits {
-  (e: 'extension-add', item: ExtensionItem): void
-  (e: 'extension-detail-open', item: ExtensionItem): void
-  (e: 'extension-toggle', item: ExtensionItem, enabled: boolean): void
-  (e: 'extension-delete', item: ExtensionItem): void
+export interface ExtensionListSlots {
+  default?: () => VNode[]
 }
 
-export interface ExtensionSectionProps {
-  title: string
-  expanded?: boolean
+export interface ExtensionDisplay {
+  installed: ExtensionRecord[]
+  market: ExtensionRecord[]
 }
 
-export interface ExtensionSectionEmits {
-  (e: 'toggle'): void
+export interface ExtensionFilterProps {
+  searchPlaceholder?: string
+  tagPlaceholder?: string
+  showSearch?: boolean
+  showTagFilter?: boolean
+  searchFn?: ExtensionSearchFn
 }
 
-export interface ExtensionManagerProps {
-  installedExtensions?: ExtensionItem[]
-  marketExtensions?: ExtensionItem[]
-  typeOptions?: ExtensionTypeOption[]
-  tagOptions?: ExtensionTagOption[]
+export interface ExtensionManagerRootProps {
+  extensions?: ExtensionRecord[]
+  operationStates?: ExtensionOperationStateMap
   defaultActiveType?: ExtensionType
+}
+
+export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   title?: string
   searchPlaceholder?: string
   tagPlaceholder?: string
@@ -169,17 +177,18 @@ export interface ExtensionManagerProps {
   customAddButtonText?: string
   enableSearch?: boolean
   enableTagFilter?: boolean
-  allowExtensionAdd?: boolean
-  allowExtensionCreate?: boolean
-  allowExtensionEdit?: boolean
-  allowExtensionDelete?: boolean
-  allowExtensionDetail?: boolean
-  allowExtensionToggle?: boolean
-  allowToolToggle?: boolean
-  loading?: boolean
-  marketLoading?: boolean
+  searchFn?: ExtensionSearchFn
   visible?: boolean
-  searchFn?: (query: string, item: ExtensionItem, source: ExtensionSource) => boolean
+}
+
+export interface ExtensionManagerPermissions {
+  allowExtensionAdd: boolean
+  allowExtensionCreate: boolean
+  allowExtensionEdit: boolean
+  allowExtensionDelete: boolean
+  allowExtensionDetail: boolean
+  allowExtensionToggle: boolean
+  allowToolToggle: boolean
 }
 
 export interface ExtensionManagerEmits {
@@ -195,4 +204,17 @@ export interface ExtensionManagerEmits {
   (e: 'extension-delete', item: ExtensionItem): void
   (e: 'tool-toggle', item: ExtensionItem, toolId: string, enabled: boolean): void
   (e: 'refresh', type: ExtensionType, source: ExtensionSource): void
+}
+
+export interface ExtensionManagerContext {
+  activeType: Ref<ExtensionType>
+  catalog: ComputedRef<ExtensionRecord[]>
+  displayItems: ComputedRef<ExtensionDisplay>
+  operationStates: ComputedRef<ExtensionOperationStateMap>
+  typeOptions: ComputedRef<ExtensionTypeOption[]>
+  installedItems: ComputedRef<ExtensionRecord[]>
+  marketItems: ComputedRef<ExtensionRecord[]>
+  setActiveType: (type: ExtensionType) => void
+  isSectionExpanded: (source: ExtensionSource) => boolean
+  toggleSection: (source: ExtensionSource) => void
 }
