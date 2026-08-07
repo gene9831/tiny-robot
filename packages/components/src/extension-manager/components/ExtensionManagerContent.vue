@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
+import { computed } from 'vue'
 import type { ExtensionCardActionEvent, ExtensionManagerProps, ExtensionRecord, ExtensionSource } from '../index.type'
 import { useExtensionManagerContext } from '../composables'
 import ExtensionCard from './ExtensionCard.vue'
@@ -21,11 +22,10 @@ const props = withDefaults(
 )
 
 const manager = useExtensionManagerContext()
-const sources: ExtensionSource[] = ['installed', 'market']
-
-const getItems = (source: ExtensionSource) => {
-  return source === 'installed' ? manager.installedItems.value : manager.marketItems.value
-}
+const sections = computed(() => [
+  { source: 'installed' as const, items: manager.displayItems.value.installed },
+  { source: 'market' as const, items: manager.displayItems.value.market },
+])
 
 const getSectionTitle = (source: ExtensionSource) => {
   const prefix = source === 'installed' ? props.installedTitle : props.marketTitle
@@ -66,36 +66,36 @@ const handleCardAction = (item: ExtensionRecord, source: ExtensionSource, event:
     </nav>
 
     <div class="extension-manager__sections">
-      <section v-for="source in sources" :key="source" class="extension-manager__section">
+      <section v-for="section in sections" :key="section.source" class="extension-manager__section">
         <button
           class="extension-manager__section-title"
           type="button"
-          :aria-expanded="manager.isSectionExpanded(source)"
-          @click="manager.toggleSection(source)"
+          :aria-expanded="manager.isSectionExpanded(section.source)"
+          @click="manager.toggleSection(section.source)"
         >
           <IconArrowDown
             class="extension-manager__section-arrow"
-            :class="{ 'is-expanded': manager.isSectionExpanded(source) }"
+            :class="{ 'is-expanded': manager.isSectionExpanded(section.source) }"
           />
-          <span>{{ getSectionTitle(source) }}</span>
+          <span>{{ getSectionTitle(section.source) }}</span>
         </button>
 
-        <div v-show="manager.isSectionExpanded(source)" class="extension-manager__section-body">
+        <div v-show="manager.isSectionExpanded(section.source)" class="extension-manager__section-body">
           <ExtensionList
-            :source="source"
-            :items="getItems(source)"
+            :source="section.source"
+            :items="section.items"
             :operation-states="manager.operationStates.value"
-            :loading="getLoading(source)"
-            :error="getError(source)"
-            :empty-text="getEmptyText(source)"
-            @retry="manager.requestRefresh(source)"
+            :loading="getLoading(section.source)"
+            :error="getError(section.source)"
+            :empty-text="getEmptyText(section.source)"
+            @retry="manager.requestRefresh(section.source)"
           >
             <ExtensionCard
-              v-for="item in getItems(source)"
+              v-for="item in section.items"
               :key="item.id"
               :item="item"
-              @name-click="manager.requestDetailOpen(item, source)"
-              @action="handleCardAction(item, source, $event)"
+              @name-click="manager.requestDetailOpen(item, section.source)"
+              @action="handleCardAction(item, section.source, $event)"
             />
           </ExtensionList>
         </div>

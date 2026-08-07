@@ -108,6 +108,7 @@ const components = [
   McpServerPicker,
   McpAddForm,
   ExtensionManager,
+  ExtensionFilter,
   ExtensionManagerRoot,
   ExtensionManagerContent,
   ActionButton,
