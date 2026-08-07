@@ -2,7 +2,9 @@ import { computed, inject, provide, ref, watch } from 'vue'
 import type { InjectionKey } from 'vue'
 import type {
   ExtensionDisplay,
+  ExtensionFilterLease,
   ExtensionIntent,
+  ExtensionManagerFilterContext,
   ExtensionManagerContext,
   ExtensionManagerEmits,
   ExtensionManagerRootProps,
@@ -19,10 +21,9 @@ const defaultTypeOptions = [
 ] satisfies Array<{ value: ExtensionType; label: string }>
 
 const extensionManagerContextKey: InjectionKey<ExtensionManagerContext> = Symbol('ExtensionManagerContext')
+const extensionManagerFilterContextKey: InjectionKey<ExtensionManagerFilterContext> = Symbol('ExtensionManagerFilterContext')
 
-interface ExtensionManagerRootContext extends ExtensionManagerContext {
-  setDisplayItems: (displayItems: ExtensionDisplay) => void
-}
+interface ExtensionManagerRootContext extends ExtensionManagerContext, ExtensionManagerFilterContext {}
 
 export const useExtensionManager = (
   props: Readonly<ExtensionManagerRootProps>,
@@ -38,8 +39,12 @@ export const useExtensionManager = (
     ...props.expandedSections,
   })
   const catalog = computed(() => props.extensions ?? [])
-  const displayItemsSource = ref<ExtensionDisplay>({ installed: [], market: [] })
-  const displayItems = computed<ExtensionDisplay>(() => displayItemsSource.value)
+  const installationDisplayItems = computed<ExtensionDisplay>(() => ({
+    installed: catalog.value.filter((item) => item.installation !== undefined),
+    market: catalog.value.filter((item) => item.installation === undefined),
+  }))
+  const displayItemsSource = ref<ExtensionDisplay>()
+  const displayItems = computed<ExtensionDisplay>(() => displayItemsSource.value ?? installationDisplayItems.value)
   const operationStates = computed<ExtensionOperationStateMap>(() => props.operationStates ?? {})
 
   const typeOptions = computed(() => defaultTypeOptions)
@@ -47,8 +52,27 @@ export const useExtensionManager = (
   const installedItems = computed(() => displayItems.value.installed)
   const marketItems = computed(() => displayItems.value.market)
 
-  const setDisplayItems = (nextDisplayItems: ExtensionDisplay) => {
+  const setDisplayItems = (nextDisplayItems?: ExtensionDisplay) => {
     displayItemsSource.value = nextDisplayItems
+  }
+
+  let activeFilterLease: ExtensionFilterLease | undefined
+  const claimFilter = (): ExtensionFilterLease => {
+    if (activeFilterLease) {
+      if (import.meta.env.DEV) {
+        console.error('[ExtensionManager] Only one ExtensionFilter can be mounted at a time.')
+      }
+
+      return Object.assign(() => undefined, { active: false })
+    }
+
+    const release: ExtensionFilterLease = Object.assign(() => {
+      if (activeFilterLease !== release) return
+      activeFilterLease = undefined
+      setDisplayItems()
+    }, { active: true })
+    activeFilterLease = release
+    return release
   }
 
   const setActiveType = (type: ExtensionType) => {
@@ -134,26 +158,17 @@ export const useExtensionManager = (
     },
     { deep: true },
   )
-  watch(
-    catalog,
-    (items) => {
-      setDisplayItems({
-        installed: items.filter((item) => item.installation !== undefined),
-        market: items.filter((item) => item.installation === undefined),
-      })
-    },
-    { deep: true, immediate: true },
-  )
-
   return {
     activeType,
     catalog,
+    installationDisplayItems,
     displayItems,
     operationStates,
     typeOptions,
     installedItems,
     marketItems,
     setDisplayItems,
+    claimFilter,
     setActiveType,
     isSectionExpanded,
     toggleSection,
@@ -168,8 +183,9 @@ export const useExtensionManager = (
   }
 }
 
-export const provideExtensionManagerContext = (context: ExtensionManagerContext) => {
+export const provideExtensionManagerContext = (context: ExtensionManagerRootContext) => {
   provide(extensionManagerContextKey, context)
+  provide(extensionManagerFilterContextKey, context)
 }
 
 export const useExtensionManagerContext = () => {
@@ -177,6 +193,16 @@ export const useExtensionManagerContext = () => {
 
   if (!context) {
     throw new Error('useExtensionManagerContext must be used inside ExtensionManagerRoot')
+  }
+
+  return context
+}
+
+export const useExtensionManagerFilterContext = () => {
+  const context = inject(extensionManagerFilterContextKey)
+
+  if (!context) {
+    throw new Error('useExtensionManagerFilterContext must be used inside ExtensionManagerRoot')
   }
 
   return context

@@ -152,11 +152,20 @@ export interface ExtensionDisplay {
 }
 
 export interface ExtensionFilterProps {
+  query?: string
+  tag?: string
   searchPlaceholder?: string
   tagPlaceholder?: string
   showSearch?: boolean
   showTagFilter?: boolean
   searchFn?: ExtensionSearchFn
+}
+
+export interface ExtensionFilterEmits {
+  (e: 'update:query', query: string): void
+  (e: 'update:tag', tag: string): void
+  (e: 'query-change', query: string): void
+  (e: 'tag-change', tag: string): void
 }
 
 export interface ExtensionManagerRootProps {
@@ -245,4 +254,16 @@ export interface ExtensionManagerContext {
   requestDelete: (item: ExtensionRecord, source?: ExtensionSource) => void
   requestToolToggle: (item: ExtensionRecord, toolId: string, enabled: boolean, source?: ExtensionSource) => void
   requestRefresh: (source: ExtensionSource) => void
+}
+
+export type ExtensionFilterLease = (() => void) & {
+  readonly active: boolean
+}
+
+export interface ExtensionManagerFilterContext {
+  activeType: Ref<ExtensionType>
+  catalog: ComputedRef<ExtensionRecord[]>
+  installationDisplayItems: ComputedRef<ExtensionDisplay>
+  setDisplayItems: (displayItems?: ExtensionDisplay) => void
+  claimFilter: () => ExtensionFilterLease
 }
