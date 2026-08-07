@@ -32,4 +32,18 @@ test.describe('ExtensionManagerRoot catalog composition', () => {
 
     await expect(component.getByTestId('install-operation-phase')).toHaveText('pending')
   })
+
+  test('tracks installed and market section expansion independently', async ({ mount }) => {
+    const component = await mount(ExtensionManagerRootFixture)
+
+    await expect(component.getByTestId('installed-section-expanded')).toHaveText('true')
+    await expect(component.getByTestId('market-section-expanded')).toHaveText('true')
+
+    await component.getByTestId('toggle-installed-section').click()
+    await expect(component.getByTestId('installed-section-expanded')).toHaveText('false')
+    await expect(component.getByTestId('market-section-expanded')).toHaveText('true')
+
+    await component.getByTestId('toggle-market-section').click()
+    await expect(component.getByTestId('market-section-expanded')).toHaveText('false')
+  })
 })

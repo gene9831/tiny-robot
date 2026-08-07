@@ -17,20 +17,22 @@ const defaultTypeOptions = [
 
 const extensionManagerContextKey: InjectionKey<ExtensionManagerContext> = Symbol('ExtensionManagerContext')
 
+interface ExtensionManagerRootContext extends ExtensionManagerContext {
+  setDisplayItems: (displayItems: ExtensionDisplay) => void
+}
+
 export const useExtensionManager = (
   props: Readonly<ExtensionManagerRootProps>,
   emit: ExtensionManagerEmits,
-): ExtensionManagerContext => {
+): ExtensionManagerRootContext => {
   const activeType = ref<ExtensionType>(props.defaultActiveType ?? 'mcp')
   const expandedSections = ref<Record<ExtensionSource, boolean>>({
     installed: true,
     market: true,
   })
   const catalog = computed(() => props.extensions ?? [])
-  const displayItems = computed<ExtensionDisplay>(() => ({
-    installed: catalog.value.filter((item) => item.installation !== undefined),
-    market: catalog.value.filter((item) => item.installation === undefined),
-  }))
+  const displayItemsSource = ref<ExtensionDisplay>({ installed: [], market: [] })
+  const displayItems = computed<ExtensionDisplay>(() => displayItemsSource.value)
   const operationStates = computed<ExtensionOperationStateMap>(() => props.operationStates ?? {})
 
   const typeOptions = computed(() => defaultTypeOptions)
@@ -39,6 +41,10 @@ export const useExtensionManager = (
     displayItems.value.installed.filter((item) => item.type === activeType.value),
   )
   const marketItems = computed(() => displayItems.value.market.filter((item) => item.type === activeType.value))
+
+  const setDisplayItems = (nextDisplayItems: ExtensionDisplay) => {
+    displayItemsSource.value = nextDisplayItems
+  }
 
   const setActiveType = (type: ExtensionType) => {
     activeType.value = type
@@ -55,6 +61,17 @@ export const useExtensionManager = (
     emit('type-change', type)
   })
 
+  watch(
+    catalog,
+    (items) => {
+      setDisplayItems({
+        installed: items.filter((item) => item.installation !== undefined),
+        market: items.filter((item) => item.installation === undefined),
+      })
+    },
+    { deep: true, immediate: true },
+  )
+
   return {
     activeType,
     catalog,
@@ -63,6 +80,7 @@ export const useExtensionManager = (
     typeOptions,
     installedItems,
     marketItems,
+    setDisplayItems,
     setActiveType,
     isSectionExpanded,
     toggleSection,
