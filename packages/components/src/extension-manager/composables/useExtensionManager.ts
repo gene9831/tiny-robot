@@ -2,11 +2,14 @@ import { computed, inject, provide, ref, watch } from 'vue'
 import type { InjectionKey } from 'vue'
 import type {
   ExtensionDisplay,
+  ExtensionIntent,
   ExtensionManagerContext,
   ExtensionManagerEmits,
   ExtensionManagerRootProps,
   ExtensionOperationStateMap,
+  ExtensionRecord,
   ExtensionSource,
+  ExtensionToggleIntent,
   ExtensionType,
 } from '../index.type'
 
@@ -25,10 +28,14 @@ export const useExtensionManager = (
   props: Readonly<ExtensionManagerRootProps>,
   emit: ExtensionManagerEmits,
 ): ExtensionManagerRootContext => {
-  const activeType = ref<ExtensionType>(props.defaultActiveType ?? 'mcp')
-  const expandedSections = ref<Record<ExtensionSource, boolean>>({
+  const defaultExpandedSections: Record<ExtensionSource, boolean> = {
     installed: true,
     market: true,
+  }
+  const activeType = ref<ExtensionType>(props.activeType ?? props.defaultActiveType ?? 'mcp')
+  const expandedSections = ref<Record<ExtensionSource, boolean>>({
+    ...defaultExpandedSections,
+    ...props.expandedSections,
   })
   const catalog = computed(() => props.extensions ?? [])
   const displayItemsSource = ref<ExtensionDisplay>({ installed: [], market: [] })
@@ -47,20 +54,88 @@ export const useExtensionManager = (
   }
 
   const setActiveType = (type: ExtensionType) => {
+    if (activeType.value === type) return
     activeType.value = type
+    emit('update:active-type', type)
+    emit('type-change', type)
   }
 
   const isSectionExpanded = (source: ExtensionSource) => expandedSections.value[source]
 
   const toggleSection = (source: ExtensionSource) => {
-    expandedSections.value[source] = !expandedSections.value[source]
+    const nextExpandedSections = {
+      ...expandedSections.value,
+      [source]: !expandedSections.value[source],
+    }
+
+    expandedSections.value = nextExpandedSections
+    emit('update:expanded-sections', nextExpandedSections)
   }
 
-  watch(activeType, (type, oldType) => {
-    if (type === oldType) return
-    emit('type-change', type)
+  const createIntent = (item: ExtensionRecord, source?: ExtensionSource): ExtensionIntent => ({
+    id: item.id,
+    type: item.type,
+    ...(source === undefined ? {} : { source }),
   })
 
+  const requestAdd = (item: ExtensionRecord, source?: ExtensionSource) => {
+    emit('extension-add', createIntent(item, source))
+  }
+
+  const requestCreate = () => {
+    emit('extension-create', activeType.value)
+  }
+
+  const requestToggle = (item: ExtensionRecord, enabled: boolean, source?: ExtensionSource) => {
+    const intent: ExtensionToggleIntent = {
+      ...createIntent(item, source),
+      enabled,
+    }
+    emit('extension-toggle', intent)
+  }
+
+  const requestDetailOpen = (item: ExtensionRecord, source?: ExtensionSource) => {
+    emit('extension-detail-open', createIntent(item, source))
+  }
+
+  const requestEdit = (item: ExtensionRecord, source?: ExtensionSource) => {
+    emit('extension-edit', createIntent(item, source))
+  }
+
+  const requestDelete = (item: ExtensionRecord, source?: ExtensionSource) => {
+    emit('extension-delete', createIntent(item, source))
+  }
+
+  const requestToolToggle = (item: ExtensionRecord, toolId: string, enabled: boolean, source?: ExtensionSource) => {
+    emit('tool-toggle', {
+      ...createIntent(item, source),
+      toolId,
+      enabled,
+    })
+  }
+
+  const requestRefresh = (source: ExtensionSource) => {
+    emit('refresh', activeType.value, source)
+  }
+
+  watch(
+    () => props.activeType,
+    (type) => {
+      if (type !== undefined) activeType.value = type
+    },
+  )
+
+  watch(
+    () => props.expandedSections,
+    (sections) => {
+      if (sections === undefined) return
+      expandedSections.value = {
+        ...defaultExpandedSections,
+        ...sections,
+      }
+    },
+    { deep: true },
+  )
   watch(
     catalog,
     (items) => {
@@ -84,6 +159,14 @@ export const useExtensionManager = (
     setActiveType,
     isSectionExpanded,
     toggleSection,
+    requestAdd,
+    requestCreate,
+    requestToggle,
+    requestDetailOpen,
+    requestEdit,
+    requestDelete,
+    requestToolToggle,
+    requestRefresh,
   }
 }
 

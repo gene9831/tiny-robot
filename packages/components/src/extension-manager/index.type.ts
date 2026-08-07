@@ -162,7 +162,9 @@ export interface ExtensionFilterProps {
 export interface ExtensionManagerRootProps {
   extensions?: ExtensionRecord[]
   operationStates?: ExtensionOperationStateMap
+  activeType?: ExtensionType
   defaultActiveType?: ExtensionType
+  expandedSections?: Record<ExtensionSource, boolean>
 }
 
 export interface ExtensionManagerProps extends ExtensionManagerRootProps {
@@ -193,17 +195,35 @@ export interface ExtensionManagerPermissions {
 
 export interface ExtensionManagerEmits {
   (e: 'update:visible', visible: boolean): void
+  (e: 'update:active-type', type: ExtensionType): void
+  (e: 'update:expanded-sections', expandedSections: Record<ExtensionSource, boolean>): void
   (e: 'type-change', type: ExtensionType): void
   (e: 'search-change', query: string, type: ExtensionType): void
   (e: 'tag-change', tag: string, type: ExtensionType): void
-  (e: 'extension-add', item: ExtensionItem): void
+  (e: 'extension-add', intent: ExtensionIntent): void
   (e: 'extension-create', type: ExtensionType): void
-  (e: 'extension-detail-open', item: ExtensionItem): void
-  (e: 'extension-toggle', item: ExtensionItem, enabled: boolean): void
-  (e: 'extension-edit', item: ExtensionItem): void
-  (e: 'extension-delete', item: ExtensionItem): void
-  (e: 'tool-toggle', item: ExtensionItem, toolId: string, enabled: boolean): void
+  (e: 'extension-detail-open', intent: ExtensionIntent): void
+  (e: 'extension-toggle', intent: ExtensionToggleIntent): void
+  (e: 'extension-edit', intent: ExtensionIntent): void
+  (e: 'extension-delete', intent: ExtensionIntent): void
+  (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
   (e: 'refresh', type: ExtensionType, source: ExtensionSource): void
+}
+
+export interface ExtensionIntent {
+  id: string
+  type: ExtensionType
+  source?: ExtensionSource
+  item?: ExtensionRecord
+}
+
+export interface ExtensionToggleIntent extends ExtensionIntent {
+  enabled: boolean
+}
+
+export interface ExtensionToolToggleIntent extends ExtensionIntent {
+  toolId: string
+  enabled: boolean
 }
 
 export interface ExtensionManagerContext {
@@ -217,4 +237,12 @@ export interface ExtensionManagerContext {
   setActiveType: (type: ExtensionType) => void
   isSectionExpanded: (source: ExtensionSource) => boolean
   toggleSection: (source: ExtensionSource) => void
+  requestAdd: (item: ExtensionRecord, source?: ExtensionSource) => void
+  requestCreate: () => void
+  requestToggle: (item: ExtensionRecord, enabled: boolean, source?: ExtensionSource) => void
+  requestDetailOpen: (item: ExtensionRecord, source?: ExtensionSource) => void
+  requestEdit: (item: ExtensionRecord, source?: ExtensionSource) => void
+  requestDelete: (item: ExtensionRecord, source?: ExtensionSource) => void
+  requestToolToggle: (item: ExtensionRecord, toolId: string, enabled: boolean, source?: ExtensionSource) => void
+  requestRefresh: (source: ExtensionSource) => void
 }
