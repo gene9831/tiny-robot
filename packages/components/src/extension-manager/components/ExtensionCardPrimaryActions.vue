@@ -10,8 +10,6 @@ import type {
   ExtensionCardToggleAction,
 } from '../index.type'
 
-type ExtensionCardPrimaryActionEvent = Extract<ExtensionCardActionEvent, { area: 'primary' }>
-
 const props = withDefaults(
   defineProps<{
     actions?: ExtensionCardPrimaryAction[]
@@ -26,7 +24,7 @@ defineSlots<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'action', payload: ExtensionCardPrimaryActionEvent): void
+  (e: 'action', payload: ExtensionCardActionEvent): void
 }>()
 
 const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
@@ -35,40 +33,38 @@ const getAddState = (action: ExtensionCardAddAction) => action.state ?? 'idle'
 
 const getAddText = (action: ExtensionCardAddAction) => {
   const state = getAddState(action)
-  if (state === 'loading') return '添加中'
-  if (state === 'added') return '已添加'
-  if (state === 'failed') return '重试'
+  if (state === 'pending') return '添加中'
+  if (state === 'success') return '已添加'
+  if (state === 'error') return '重试'
   return action.label ?? '添加'
 }
 
 const isAddDisabled = (action: ExtensionCardAddAction) => {
   const state = getAddState(action)
-  return action.disabled || state === 'loading' || state === 'added'
+  return action.disabled || state === 'pending' || state === 'success'
 }
 
 const handleAdd = (action: ExtensionCardAddAction) => {
   if (isAddDisabled(action)) return
-  emit('action', { area: 'primary', type: 'add', action })
+  emit('action', { id: action.id })
 }
 
 const handleToggle = (action: ExtensionCardToggleAction, event: Event) => {
   if (action.disabled) return
   emit('action', {
-    area: 'primary',
-    type: 'toggle',
-    action,
-    enabled: (event.target as HTMLInputElement).checked,
+    id: action.id,
+    checked: (event.target as HTMLInputElement).checked,
   })
 }
 
 const handleButton = (action: ExtensionCardButtonAction) => {
-  if (action.disabled || action.loading) return
-  emit('action', { area: 'primary', type: 'button', action })
+  if (action.disabled) return
+  emit('action', { id: action.id })
 }
 
 const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   if (action.disabled) return
-  emit('action', { area: 'primary', type: 'custom', action, payload })
+  emit('action', { id: action.id, payload })
 }
 </script>
 
@@ -83,7 +79,7 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
       >
         <input
           type="checkbox"
-          :checked="action.enabled"
+          :checked="action.checked"
           :disabled="action.disabled"
           @change="handleToggle(action, $event)"
         />
@@ -94,9 +90,9 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
         v-else-if="action.type === 'add'"
         class="tr-extension-card-primary-actions__add"
         :class="{
-          'is-loading': getAddState(action) === 'loading',
-          'is-added': getAddState(action) === 'added',
-          'is-failed': getAddState(action) === 'failed',
+          'is-loading': getAddState(action) === 'pending',
+          'is-added': getAddState(action) === 'success',
+          'is-failed': getAddState(action) === 'error',
         }"
         type="button"
         :aria-label="action.ariaLabel"
@@ -109,14 +105,13 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
       <button
         v-else-if="action.type === 'button'"
         class="tr-extension-card-primary-actions__button"
-        :class="{ 'is-loading': action.loading }"
         type="button"
         :aria-label="action.ariaLabel"
-        :disabled="action.disabled || action.loading"
+        :disabled="action.disabled"
         @click="handleButton(action)"
       >
         <component v-if="action.icon" :is="action.icon" class="tr-extension-card-primary-actions__button-icon" />
-        <span>{{ action.loading ? `${action.label}中` : action.label }}</span>
+        <span>{{ action.label }}</span>
       </button>
 
       <span v-else class="tr-extension-card-primary-actions__custom-action" :class="{ 'is-disabled': action.disabled }">

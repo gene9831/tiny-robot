@@ -1,93 +1,87 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { IconDelete } from '@opentiny/tiny-robot-svgs'
+import { provideExtensionListContext } from '../composables'
 import type {
-  ExtensionCardActionEvent,
-  ExtensionCardMoreAction,
+  ExtensionCardMoreMenuAction,
   ExtensionCardPrimaryAction,
-  ExtensionItem,
   ExtensionListEmits,
   ExtensionListProps,
+  ExtensionListSlots,
 } from '../index.type'
-import ExtensionCard from './ExtensionCard.vue'
 
 const props = withDefaults(defineProps<ExtensionListProps>(), {
   items: () => [],
+  operationStates: () => ({}),
   loading: false,
   emptyText: '暂无扩展',
+  errorText: '加载失败，请重试',
 })
+
+defineSlots<ExtensionListSlots>()
 
 const emit = defineEmits<ExtensionListEmits>()
 
-const getPrimaryActions = (item: ExtensionItem): ExtensionCardPrimaryAction[] => {
+const hasError = computed(() => props.error !== undefined && props.error !== null)
+
+const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
+  const item = props.items.find((candidate) => candidate.id === id)
+
+  if (!item || !props.source) return []
+
   if (props.source === 'installed') {
+    if (!item.installation) return []
+
     return [
       {
         id: 'toggle',
         type: 'toggle',
-        enabled: Boolean(item.enabled),
-        ariaLabel: item.enabled ? '停用扩展' : '启用扩展',
+        checked: item.installation.enabled,
+        ariaLabel: item.installation.enabled ? '停用扩展' : '启用扩展',
       },
     ]
   }
+
+  if (item.installation) return []
+
+  const installOperation = props.operationStates[item.id]?.install
 
   return [
     {
       id: 'add',
       type: 'add',
-      state: item.addState,
-      progress: item.progress,
+      state: installOperation?.phase,
+      progress: installOperation?.progress,
+      disabled: installOperation?.phase === 'error' && installOperation.retryable === false,
     },
   ]
 }
 
-const getMoreActions = (): ExtensionCardMoreAction[] => {
-  if (props.source !== 'installed') {
-    return []
-  }
+const getDefaultMoreActions = (id: string): ExtensionCardMoreMenuAction[] => {
+  const item = props.items.find((candidate) => candidate.id === id)
 
-  return [
-    {
-      id: 'delete',
-      label: '删除',
-      icon: IconDelete,
-      danger: true,
-    },
-  ]
+  if (!item?.installation || props.source !== 'installed') return []
+
+  return [{ id: 'delete', label: '删除', icon: IconDelete, danger: true }]
 }
 
-const handleAction = (item: ExtensionItem, event: ExtensionCardActionEvent) => {
-  if (event.type === 'more') {
-    if (event.action.id === 'delete') {
-      emit('extension-delete', item)
-    }
-    return
-  }
+provideExtensionListContext({ getDefaultPrimaryActions, getDefaultMoreActions })
 
-  if (event.type === 'toggle') {
-    emit('extension-toggle', item, event.enabled)
-  } else if (event.type === 'add') {
-    emit('extension-add', item)
-  }
-}
+const retry = () => emit('retry')
 </script>
 
 <template>
   <div class="tr-extension-list">
     <div v-if="loading" class="tr-extension-list__state">加载中...</div>
 
-    <template v-else-if="items.length">
-      <ExtensionCard
-        v-for="item in items"
-        :key="item.id"
-        :name="item.name"
-        :description="item.description"
-        :icon="item.icon"
-        :primary-actions="getPrimaryActions(item)"
-        :more-actions="getMoreActions()"
-        @action="(event) => handleAction(item, event)"
-        @name-click="emit('extension-detail-open', item)"
-      />
-    </template>
+    <slot v-else-if="hasError" name="error" :error="error" :retry="retry">
+      <div class="tr-extension-list__state tr-extension-list__state--error">
+        <span>{{ errorText }}</span>
+        <button type="button" class="tr-extension-list__retry" @click="retry">重试</button>
+      </div>
+    </slot>
+
+    <slot v-else-if="items.length" />
 
     <div v-else class="tr-extension-list__state">
       {{ emptyText }}
@@ -109,6 +103,22 @@ const handleAction = (item: ExtensionItem, event: ExtensionCardActionEvent) => {
   color: var(--tr-text-secondary);
   font-size: 13px;
   text-align: center;
+}
+
+.tr-extension-list__state--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tr-extension-list__retry {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tr-color-primary);
+  cursor: pointer;
+  font: inherit;
 }
 
 @media (max-width: 768px) {

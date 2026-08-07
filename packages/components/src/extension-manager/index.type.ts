@@ -5,8 +5,6 @@ export type ExtensionType = 'mcp' | 'skill' | (string & {})
 
 export type ExtensionSource = 'installed' | 'market'
 
-export type ExtensionAddState = 'idle' | 'loading' | 'added' | 'failed'
-
 export interface ExtensionInstallation {
   enabled: boolean
 }
@@ -44,6 +42,9 @@ export interface ExtensionOperationState {
   retryable?: boolean
 }
 
+/** @deprecated Use ExtensionOperationState['phase'] instead. */
+export type ExtensionAddState = ExtensionOperationState['phase']
+
 export type ExtensionOperationStateMap = Record<
   string,
   Partial<Record<ExtensionOperationKind, ExtensionOperationState>>
@@ -63,7 +64,7 @@ export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
 
 export interface ExtensionCardAddAction extends ExtensionCardActionBase {
   type: 'add'
-  state?: ExtensionAddState
+  state?: ExtensionOperationState['phase']
   progress?: number
   label?: string
 }
@@ -136,14 +137,22 @@ export interface ExtensionTagOption {
 }
 
 export interface ExtensionListProps {
-  items?: ExtensionItem[]
+  items?: ExtensionRecord[]
   source?: ExtensionSource
+  operationStates?: ExtensionOperationStateMap
   loading?: boolean
+  error?: unknown
   emptyText?: string
+  errorText?: string
 }
 
 export interface ExtensionListSlots {
   default?: () => VNode[]
+  error?: (props: { error: unknown; retry: () => void }) => VNode[]
+}
+
+export interface ExtensionListEmits {
+  (e: 'retry'): void
 }
 
 export interface ExtensionDisplay {

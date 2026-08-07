@@ -1,51 +1,69 @@
 <script setup lang="ts">
-import { IconMore } from '@opentiny/tiny-robot-svgs'
-import type { CSSProperties } from 'vue'
 import { computed } from 'vue'
-import type {
-  ExtensionCardAddAction,
-  ExtensionCardEmits,
-  ExtensionCardMoreAction,
-  ExtensionCardProps,
-  ExtensionCardSlots,
-} from '../index.type'
-import ExtensionCardPopover from './ExtensionCardPopover.vue'
+import { useExtensionListContext } from '../composables'
+import type { ExtensionCardAddAction, ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
+import ExtensionCardMoreMenu from './ExtensionCardMoreMenu.vue'
 import ExtensionCardPrimaryActions from './ExtensionCardPrimaryActions.vue'
 
 const props = withDefaults(defineProps<ExtensionCardProps>(), {
   nameClickable: true,
-  primaryActions: () => [],
-  moreActions: () => [],
-  moreActionDisabled: false,
-  moreActionAriaLabel: '更多操作',
-  moreActionPlacement: 'bottom-end',
 })
 
 defineSlots<ExtensionCardSlots>()
 
 const emit = defineEmits<ExtensionCardEmits>()
 
-const loadingAddAction = computed(() => {
-  return props.primaryActions.find(
-    (action): action is ExtensionCardAddAction => !action.hidden && action.type === 'add' && action.state === 'loading',
-  )
+const extensionListContext = useExtensionListContext()
+
+/**
+ * 统一解析 Card 的展示字段：显式 props 优先于 item 字段。
+ * name 会回退为空字符串，iconAlt 则进一步回退到解析后的 name。
+ */
+const resolvedCard = computed(() => {
+  const item = props.item
+  const name = props.name ?? item?.name ?? ''
+
+  return {
+    id: props.id ?? item?.id,
+    name,
+    description: props.description ?? item?.description,
+    icon: props.icon ?? item?.icon,
+    iconAlt: props.iconAlt ?? item?.iconAlt ?? name,
+  }
 })
 
-const hasVisiblePrimaryActions = computed(() => props.primaryActions.some((action) => !action.hidden))
+// 显式传入的数组（包括空数组）会覆盖 List 提供的默认操作。
+const resolvedPrimaryActions = computed(() => {
+  const id = resolvedCard.value.id
 
-const shouldShowActions = computed(() => hasVisiblePrimaryActions.value || props.moreActions.length > 0)
+  return props.primaryActions ?? (id ? extensionListContext?.getDefaultPrimaryActions(id) : undefined) ?? []
+})
 
-const isProgressIndeterminate = computed(() => typeof loadingAddAction.value?.progress !== 'number')
+// 次级菜单操作使用相同的优先级规则，并通过 Card 的 id 获取 List 提供的默认操作。
+const resolvedMoreMenuActions = computed(() => {
+  const id = resolvedCard.value.id
 
-const progressStyle = computed<CSSProperties | undefined>(() => {
-  const progress = loadingAddAction.value?.progress
+  return props.moreMenuActions ?? (id ? extensionListContext?.getDefaultMoreActions(id) : undefined) ?? []
+})
 
-  if (typeof progress !== 'number') {
+const hasVisiblePrimaryActions = computed(() => resolvedPrimaryActions.value.some((action) => !action.hidden))
+
+const shouldShowActions = computed(() => hasVisiblePrimaryActions.value || resolvedMoreMenuActions.value.length > 0)
+
+const addProgressState = computed(() => {
+  const action = resolvedPrimaryActions.value.find(
+    (action): action is ExtensionCardAddAction => !action.hidden && action.type === 'add' && action.state === 'pending',
+  )
+
+  if (!action) {
     return undefined
   }
 
+  const progress = action.progress
+
   return {
-    width: `${Math.min(100, Math.max(0, progress))}%`,
+    isIndeterminate: typeof progress !== 'number',
+    style: typeof progress === 'number' ? { width: `${Math.min(100, Math.max(0, progress))}%` } : undefined,
   }
 })
 
@@ -59,21 +77,20 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   event.preventDefault()
   emit('name-click', event)
 }
-
-const handleMoreAction = (action: ExtensionCardMoreAction, close: () => void) => {
-  if (action.disabled) return
-  close()
-  emit('action', { area: 'more', type: 'more', action })
-}
 </script>
 
 <template>
   <div class="tr-extension-card">
     <div class="tr-extension-card__icon-region">
       <slot name="icon">
-        <img v-if="icon" :src="icon" :alt="iconAlt || name" class="tr-extension-card__icon" />
+        <img
+          v-if="resolvedCard.icon"
+          :src="resolvedCard.icon"
+          :alt="resolvedCard.iconAlt"
+          class="tr-extension-card__icon"
+        />
         <div v-else class="tr-extension-card__icon tr-extension-card__icon--placeholder">
-          {{ name.slice(0, 1) }}
+          {{ resolvedCard.name.slice(0, 1) }}
         </div>
       </slot>
     </div>
@@ -84,21 +101,21 @@ const handleMoreAction = (action: ExtensionCardMoreAction, close: () => void) =>
         :class="{ 'is-clickable': nameClickable }"
         :role="nameClickable ? 'button' : undefined"
         :tabindex="nameClickable ? 0 : undefined"
-        :title="name"
+        :title="resolvedCard.name"
         @click="handleNameClick"
         @keydown="handleNameKeydown"
       >
-        {{ name }}
+        {{ resolvedCard.name }}
       </div>
-      <div v-if="description" class="tr-extension-card__description" :title="description">
-        {{ description }}
+      <div v-if="resolvedCard.description" class="tr-extension-card__description" :title="resolvedCard.description">
+        {{ resolvedCard.description }}
       </div>
     </div>
 
     <div v-if="shouldShowActions" class="tr-extension-card__actions" @click.stop @keydown.stop>
       <ExtensionCardPrimaryActions
         v-if="hasVisiblePrimaryActions"
-        :actions="primaryActions"
+        :actions="resolvedPrimaryActions"
         @action="emit('action', $event)"
       >
         <template #custom-action="{ action, trigger }">
@@ -106,58 +123,36 @@ const handleMoreAction = (action: ExtensionCardMoreAction, close: () => void) =>
         </template>
       </ExtensionCardPrimaryActions>
 
-      <div v-if="moreActions.length" class="tr-extension-card__more-action">
-        <ExtensionCardPopover as-child :placement="moreActionPlacement">
-          <template #trigger="{ popoverId, open }">
-            <button
-              class="tr-extension-card__icon-button"
-              type="button"
-              :popovertarget="popoverId"
-              popovertargetaction="toggle"
-              :title="moreActionAriaLabel"
-              :aria-label="moreActionAriaLabel"
-              :aria-expanded="open"
-              :disabled="moreActionDisabled"
-            >
-              <IconMore class="tr-extension-card__action-icon" />
-            </button>
-          </template>
-          <template #content="{ close }">
-            <ul class="tr-extension-card__more-menu">
-              <li v-for="action in moreActions" :key="action.id">
-                <button
-                  class="tr-extension-card__more-menu-item"
-                  :class="{ 'is-danger': action.danger }"
-                  type="button"
-                  :disabled="action.disabled"
-                  @click="handleMoreAction(action, close)"
-                >
-                  <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
-                  <span>{{ action.label }}</span>
-                </button>
-              </li>
-            </ul>
-          </template>
-        </ExtensionCardPopover>
-      </div>
+      <ExtensionCardMoreMenu
+        v-if="resolvedMoreMenuActions.length"
+        :actions="resolvedMoreMenuActions"
+        :trigger-aria-label="moreMenuTriggerAriaLabel"
+        :placement="moreMenuPlacement"
+        @action="emit('action', { id: $event.id })"
+      />
     </div>
 
-    <div v-if="loadingAddAction" class="tr-extension-card__progress">
+    <div v-if="addProgressState" class="tr-extension-card__progress">
       <span
         class="tr-extension-card__progress-bar"
-        :class="{ 'is-indeterminate': isProgressIndeterminate }"
-        :style="progressStyle"
+        :class="{ 'is-indeterminate': addProgressState.isIndeterminate }"
+        :style="addProgressState.style"
       ></span>
     </div>
   </div>
 </template>
 
-<style lang="less" scoped>
-.tr-extension-card {
+<style lang="less">
+:root {
   --tr-extension-card-bg-color: #f8f8f8;
   --tr-extension-card-bg-color-hover: rgba(0, 0, 0, 0.04);
   --tr-extension-card-focus-color: #191919;
   --tr-extension-card-icon-color: #808080;
+}
+</style>
+
+<style lang="less" scoped>
+.tr-extension-card {
   --tr-extension-card-add-button-border-color: var(--tr-border-color-default);
   --tr-extension-card-add-button-text-color: var(--tr-text-primary);
   --tr-extension-card-progress-bg-color: var(--tr-extension-card-bg-color-hover);
@@ -248,83 +243,6 @@ const handleMoreAction = (action: ExtensionCardMoreAction, close: () => void) =>
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-}
-
-.tr-extension-card__more-action {
-  display: inline-flex;
-  align-items: center;
-}
-
-.tr-extension-card__icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.tr-extension-card__icon-button:hover:not(:disabled) {
-  background: var(--tr-extension-card-bg-color-hover);
-}
-
-.tr-extension-card__icon-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.tr-extension-card__action-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--tr-extension-card-icon-color);
-  transform: rotate(90deg);
-}
-
-.tr-extension-card__more-menu {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.tr-extension-card__more-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--tr-dropdown-menu-item-color);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 24px;
-  text-align: left;
-  white-space: nowrap;
-  transition: background-color 0.3s ease;
-}
-
-.tr-extension-card__more-menu-item:hover:not(:disabled) {
-  background-color: var(--tr-dropdown-menu-item-hover-bg-color);
-}
-
-.tr-extension-card__more-menu-item.is-danger {
-  color: var(--tr-error-color, #f23030);
-}
-
-.tr-extension-card__more-menu-item:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.tr-extension-card__more-menu-item-icon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
 }
 
 .tr-extension-card__progress {
