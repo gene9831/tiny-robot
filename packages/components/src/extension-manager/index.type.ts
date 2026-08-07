@@ -26,14 +26,7 @@ export type ExtensionItem<TMetadata = unknown> = ExtensionRecord<TMetadata>
 
 export type ExtensionSearchFn = (query: string, item: ExtensionItem, source: ExtensionSource) => boolean
 
-export type ExtensionOperationKind =
-  | 'install'
-  | 'create'
-  | 'toggle'
-  | 'edit'
-  | 'delete'
-  | 'refresh'
-  | 'tool-toggle'
+export type ExtensionOperationKind = 'install' | 'create' | 'toggle' | 'edit' | 'delete' | 'refresh' | 'tool-toggle'
 
 export interface ExtensionOperationState {
   phase: 'idle' | 'pending' | 'success' | 'error'
@@ -199,6 +192,14 @@ export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   enableTagFilter?: boolean
   searchFn?: ExtensionSearchFn
   visible?: boolean
+  /** Loading state for the installed section in the prebuilt facade. */
+  loading?: boolean
+  /** Loading state for the market section in the prebuilt facade. */
+  marketLoading?: boolean
+  /** Load failure for the installed section in the prebuilt facade. */
+  error?: unknown
+  /** Load failure for the market section in the prebuilt facade. */
+  marketError?: unknown
 }
 
 export interface ExtensionManagerPermissions {

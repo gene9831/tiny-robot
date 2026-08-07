@@ -22,7 +22,13 @@ import ThemeProvider from './theme-provider'
 import Welcome from './welcome'
 import McpServerPicker from './mcp-server-picker'
 import McpAddForm from './mcp-add-form'
-import ExtensionManager from './extension-manager'
+import ExtensionManager, {
+  ExtensionFilter,
+  ExtensionManagerContent,
+  ExtensionManagerRoot,
+  useExtensionManager,
+  useExtensionManagerContext,
+} from './extension-manager'
 import {
   ActionButton,
   SubmitButton,
@@ -72,6 +78,7 @@ export { useTheme } from './theme-provider/useTheme'
 export { useSenderContext } from './sender'
 export { vDropzone } from './drag-overlay/directives/vDropzone'
 export { useAutoScroll, useTouchDevice } from './shared/composables'
+export { useExtensionManager, useExtensionManagerContext }
 
 const components = [
   Attachments,
@@ -101,6 +108,8 @@ const components = [
   McpServerPicker,
   McpAddForm,
   ExtensionManager,
+  ExtensionManagerRoot,
+  ExtensionManagerContent,
   ActionButton,
   SubmitButton,
   ClearButton,
@@ -174,6 +183,12 @@ export {
   McpAddForm as TrMcpAddForm,
   ExtensionManager,
   ExtensionManager as TrExtensionManager,
+  ExtensionFilter,
+  ExtensionFilter as TrExtensionFilter,
+  ExtensionManagerContent,
+  ExtensionManagerContent as TrExtensionManagerContent,
+  ExtensionManagerRoot,
+  ExtensionManagerRoot as TrExtensionManagerRoot,
   ActionButton,
   ActionButton as TrActionButton,
   SubmitButton,

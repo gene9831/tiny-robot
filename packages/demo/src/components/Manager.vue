@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import type { ExtensionItem, ExtensionType } from '@opentiny/tiny-robot'
+import type {
+  ExtensionIntent,
+  ExtensionOperationKind,
+  ExtensionOperationState,
+  ExtensionOperationStateMap,
+  ExtensionRecord,
+  ExtensionToggleIntent,
+  ExtensionType,
+} from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { ref } from 'vue'
+import ExtensionManagerContent from './ExtensionManagerContent.vue'
 
-const installedExtensions = ref<ExtensionItem[]>([
+const extensions = ref<ExtensionRecord[]>([
   {
     id: 'mcp-amap',
     type: 'mcp',
     name: '高德地图 MCP',
     description: '提供地理编码、路线规划、天气查询等地图工具。',
-    enabled: true,
     tags: ['map', 'official'],
+    installation: { enabled: true },
     metadata: {
-      tools: [
-        { id: 'geo-code', name: '地理编码', description: '根据地址查询坐标。', enabled: true },
-        { id: 'route-plan', name: '路径规划', description: '查询步行、骑行或驾车路线。', enabled: false },
-      ],
+      tools: [{ id: 'geo-code', name: '地理编码', enabled: true }],
     },
   },
   {
@@ -23,63 +29,47 @@ const installedExtensions = ref<ExtensionItem[]>([
     type: 'mcp',
     name: '浏览器控制',
     description: '打开页面、读取内容并执行浏览器交互。',
-    enabled: false,
     tags: ['browser', 'local'],
+    installation: { enabled: false },
   },
   {
     id: 'skill-toutiao-search',
     type: 'skill',
     name: '头条搜索',
     description: '使用头条的搜索功能来阅读或搜索 URL。',
-    enabled: true,
     tags: ['search', 'official'],
+    installation: { enabled: true },
   },
   {
     id: 'skill-doc-summary',
     type: 'skill',
     name: '文档总结',
     description: '对长文档进行摘要、提纲整理和重点提取。',
-    enabled: true,
     tags: ['writing'],
+    installation: { enabled: true },
   },
-])
-
-const marketExtensions = ref<ExtensionItem[]>([
-  {
-    id: 'mcp-12306',
-    type: 'mcp',
-    name: '12306 查询',
-    description: '查询车次、余票和站点信息。',
-    tags: ['travel', 'remote'],
-    addState: 'idle',
-  },
-  {
-    id: 'mcp-file-system',
-    type: 'mcp',
-    name: '文件系统',
-    description: '读取、搜索和管理本地文件。',
-    tags: ['system', 'local'],
-    addState: 'loading',
-    progress: 45,
-  },
+  { id: 'mcp-12306', type: 'mcp', name: '12306 查询', description: '查询车次、余票和站点信息。', tags: ['travel'] },
+  { id: 'mcp-file-system', type: 'mcp', name: '文件系统', description: '读取、搜索和管理本地文件。', tags: ['system'] },
   {
     id: 'skill-translate',
     type: 'skill',
     name: '翻译专家',
     description: '提供多语言翻译、润色和术语解释。',
-    tags: ['writing', 'recommended'],
-    addState: 'idle',
+    tags: ['writing'],
   },
   {
     id: 'skill-research',
     type: 'skill',
     name: '资料调研',
     description: '围绕主题收集资料并输出结构化结论。',
-    tags: ['search', 'recommended'],
-    addState: 'failed',
+    tags: ['search'],
   },
 ])
 
+const operationStates = ref<ExtensionOperationStateMap>({
+  'mcp-file-system': { install: { phase: 'pending', progress: 45 } },
+  'skill-research': { install: { phase: 'error' } },
+})
 const events = ref<string[]>([])
 
 const logEvent = (message: string) => {
@@ -87,75 +77,84 @@ const logEvent = (message: string) => {
   events.value = events.value.slice(0, 8)
 }
 
-const updateInstalled = (id: string, updater: (item: ExtensionItem) => void) => {
-  const item = installedExtensions.value.find((extension) => extension.id === id)
-  if (item) updater(item)
-}
+const waitForOperation = () => new Promise<void>((resolve) => setTimeout(resolve, 400))
 
-const updateMarket = (id: string, updater: (item: ExtensionItem) => void) => {
-  const item = marketExtensions.value.find((extension) => extension.id === id)
-  if (item) updater(item)
+const findExtension = (id: string) => extensions.value.find((extension) => extension.id === id)
+
+const setOperation = (id: string, kind: ExtensionOperationKind, state: ExtensionOperationState) => {
+  operationStates.value = {
+    ...operationStates.value,
+    [id]: {
+      ...operationStates.value[id],
+      [kind]: state,
+    },
+  }
 }
 
 const handleCreate = (type: ExtensionType) => logEvent(`自定义添加：${type}`)
 
-const handleAdd = (item: ExtensionItem) => {
-  logEvent(`添加扩展：${item.name}`)
-  updateMarket(item.id, (target) => {
-    target.addState = 'loading'
-    target.progress = 65
-  })
+const handleAdd = async (intent: ExtensionIntent) => {
+  const extension = findExtension(intent.id)
+  if (!extension) return
+
+  logEvent(`添加扩展：${extension.name}`)
+  setOperation(intent.id, 'install', { phase: 'pending', progress: 65 })
+  await waitForOperation()
+  extensions.value = extensions.value.map((item) =>
+    item.id === intent.id ? { ...item, installation: { enabled: true } } : item,
+  )
+  setOperation(intent.id, 'install', { phase: 'success' })
 }
 
-const handleToggle = (item: ExtensionItem, enabled: boolean) => {
-  logEvent(`${enabled ? '启用' : '停用'}扩展：${item.name}`)
-  updateInstalled(item.id, (target) => {
-    target.enabled = enabled
-  })
+const handleToggle = async (intent: ExtensionToggleIntent) => {
+  const extension = findExtension(intent.id)
+  if (!extension?.installation) return
+
+  logEvent(`${intent.enabled ? '启用' : '停用'}扩展：${extension.name}`)
+  setOperation(intent.id, 'toggle', { phase: 'pending' })
+  await waitForOperation()
+  extensions.value = extensions.value.map((item) =>
+    item.id === intent.id && item.installation ? { ...item, installation: { enabled: intent.enabled } } : item,
+  )
+  setOperation(intent.id, 'toggle', { phase: 'success' })
 }
 
-const handleDelete = (item: ExtensionItem) => {
-  logEvent(`删除扩展：${item.name}`)
-  installedExtensions.value = installedExtensions.value.filter((extension) => extension.id !== item.id)
+const handleDelete = (intent: ExtensionIntent) => {
+  const extension = findExtension(intent.id)
+  if (!extension) return
+
+  logEvent(`删除扩展：${extension.name}`)
+  extensions.value = extensions.value.filter((item) => item.id !== intent.id)
 }
 
-const handleDetailOpen = (item: ExtensionItem) => logEvent(`打开详情：${item.name}`)
+const handleDetailOpen = (intent: ExtensionIntent) => {
+  const extension = findExtension(intent.id)
+  if (extension) logEvent(`打开详情：${extension.name}`)
+}
+
 const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${type}`)
-const handleSearchChange = (query: string, type: ExtensionType) => logEvent(`搜索：${type} / ${query || '(空)'}`)
-const handleTagChange = (tag: string, type: ExtensionType) => logEvent(`筛选：${type} / ${tag || '(全部)'}`)
 </script>
 
 <template>
   <div class="extension-manager-demo">
     <header class="extension-manager-demo__header">
       <h2>ExtensionManager</h2>
-      <p>完整扩展管理器示例，包含类型切换、筛选、搜索和扩展操作。</p>
+      <p>宿主保存统一 catalog 与操作状态；Root、Filter 和内容组件只投影状态并发出 intent。</p>
     </header>
 
-    <ExtensionManager
-      :installed-extensions="installedExtensions"
-      :market-extensions="marketExtensions"
-      :tag-options="[
-        { label: '地图', value: 'map' },
-        { label: '浏览器', value: 'browser' },
-        { label: '搜索', value: 'search' },
-        { label: '写作', value: 'writing' },
-        { label: '旅行', value: 'travel' },
-        { label: '系统', value: 'system' },
-        { label: '官方', value: 'official' },
-        { label: '推荐', value: 'recommended' },
-        { label: '本地', value: 'local' },
-        { label: '远程', value: 'remote' },
-      ]"
+    <ExtensionManager.Root
+      :extensions="extensions"
+      :operation-states="operationStates"
       @extension-create="handleCreate"
       @extension-add="handleAdd"
       @extension-toggle="handleToggle"
       @extension-delete="handleDelete"
       @extension-detail-open="handleDetailOpen"
       @type-change="handleTypeChange"
-      @search-change="handleSearchChange"
-      @tag-change="handleTagChange"
-    />
+    >
+      <ExtensionManager.Filter />
+      <ExtensionManagerContent />
+    </ExtensionManager.Root>
 
     <section class="event-panel">
       <h3>事件日志</h3>
