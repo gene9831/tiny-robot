@@ -15,6 +15,7 @@ const extensions: ExtensionRecord[] = [
 
 const filterVisible = ref(false)
 const secondFilterVisible = ref(false)
+const isDevelopment = import.meta.env.DEV
 const query = ref('')
 const tag = ref('')
 const eventLog = ref<string[]>([])
@@ -42,4 +43,5 @@ const logTag = (value: string) => eventLog.value.push(`tag:${value}`)
   </ExtensionManagerRoot>
 
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>
+  <div data-testid="is-development">{{ isDevelopment }}</div>
 </template>

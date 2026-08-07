@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/experimental-ct-vue'
 
+process.env.NODE_ENV = 'development'
+
 export default defineConfig({
   testDir: './component',
   testMatch: '**/*.spec.ts',
@@ -11,6 +13,10 @@ export default defineConfig({
   outputDir: 'component/test-results',
   use: {
     ctPort: 3100,
+    ctCacheDir: 'playwright/.cache-development-mode',
+    ctViteConfig: {
+      mode: 'development',
+    },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

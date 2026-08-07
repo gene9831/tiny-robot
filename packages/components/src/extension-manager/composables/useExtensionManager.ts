@@ -59,7 +59,9 @@ export const useExtensionManager = (
   let activeFilterLease: ExtensionFilterLease | undefined
   const claimFilter = (): ExtensionFilterLease => {
     if (activeFilterLease) {
-      console.error('[ExtensionManager] Only one ExtensionFilter can be mounted at a time.')
+      if (import.meta.env.DEV) {
+        console.error('[ExtensionManager] Only one ExtensionFilter can be mounted at a time.')
+      }
 
       return Object.assign(() => undefined, { active: false })
     }

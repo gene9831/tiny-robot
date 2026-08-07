@@ -75,6 +75,7 @@ test.describe('ExtensionManager.Filter', () => {
 
   test('reports a duplicate Filter in development without replacing the first projection', async ({ mount, page }) => {
     const component = await mount(ExtensionFilterFixture)
+    await expect(component.getByTestId('is-development')).toHaveText('true')
     await component.getByTestId('toggle-filter').click()
     await component.getByRole('textbox').fill('train')
 
