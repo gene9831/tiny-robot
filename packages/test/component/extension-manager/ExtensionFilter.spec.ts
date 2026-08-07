@@ -73,15 +73,23 @@ test.describe('ExtensionManager.Filter', () => {
     await expect(component.getByTestId('display-market')).toHaveText('Train service,Translate skill,Research skill')
   })
 
-  test('keeps the first Filter projection when a second Filter attempts to mount', async ({ mount }) => {
+  test('reports a duplicate Filter in development without replacing the first projection', async ({ mount, page }) => {
     const component = await mount(ExtensionFilterFixture)
     await component.getByTestId('toggle-filter').click()
     await component.getByRole('textbox').fill('train')
 
     await expect(component.getByTestId('display-market')).toHaveText('Train service')
 
+    const duplicateFilterErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error' && message.text().includes('Only one ExtensionFilter')) {
+        duplicateFilterErrors.push(message.text())
+      }
+    })
+
     await component.getByTestId('toggle-second-filter').click()
 
+    await expect.poll(() => duplicateFilterErrors).toHaveLength(1)
     await expect(component.getByTestId('display-installed')).toBeEmpty()
     await expect(component.getByTestId('display-market')).toHaveText('Train service')
   })

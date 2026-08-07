@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type {
   ExtensionOperationStateMap,
   ExtensionRecord,
@@ -26,6 +26,19 @@ const expandedSections = ref({
   installed: true,
   market: true,
 })
+const root = ref<{
+  displayItems?: unknown
+  setActiveType?: (type: ExtensionType) => void
+  installationDisplayItems?: unknown
+  setDisplayItems?: unknown
+  claimFilter?: unknown
+}>()
+
+const exposesInternalFilterWriter = computed(() => {
+  if (!root.value) return false
+
+  return ['installationDisplayItems', 'setDisplayItems', 'claimFilter'].some((key) => key in root.value!)
+})
 
 const logType = (type: ExtensionType) => eventLog.value.push(`type:${type}`)
 const logActiveTypeUpdate = (type: ExtensionType) => eventLog.value.push(`active-type:${type}`)
@@ -49,10 +62,15 @@ const setExternalActiveType = () => {
 const setExternalExpandedSections = () => {
   expandedSections.value = { installed: false, market: false }
 }
+
+const setExposedActiveType = () => {
+  root.value?.setActiveType?.('skill')
+}
 </script>
 
 <template>
   <ExtensionManagerRoot
+    ref="root"
     v-model:active-type="activeType"
     v-model:expanded-sections="expandedSections"
     :extensions="extensions"
@@ -73,5 +91,8 @@ const setExternalExpandedSections = () => {
   <button type="button" data-testid="set-external-expanded-sections" @click="setExternalExpandedSections">
     Set expanded sections
   </button>
+  <button type="button" data-testid="set-exposed-active-type" @click="setExposedActiveType">Set exposed active type</button>
+  <div data-testid="root-public-api">{{ root?.displayItems && root?.setActiveType ? 'available' : 'unavailable' }}</div>
+  <div data-testid="root-internal-filter-writers">{{ exposesInternalFilterWriter ? 'leaked' : 'private' }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>
 </template>

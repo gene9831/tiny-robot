@@ -35,6 +35,15 @@ test.describe('ExtensionManagerRoot catalog composition', () => {
     await expect(component.getByTestId('install-operation-phase')).toHaveText('pending')
   })
 
+  test('exposes public context behavior without Filter writer capabilities to template refs', async ({ mount }) => {
+    const component = await mount(ExtensionManagerRootFixture)
+
+    await expect(component.getByTestId('root-public-api')).toHaveText('available')
+    await component.getByTestId('set-exposed-active-type').click()
+    await expect(component.getByTestId('active-type')).toHaveText('skill')
+    await expect(component.getByTestId('root-internal-filter-writers')).toHaveText('private')
+  })
+
   test('tracks installed and market section expansion independently', async ({ mount }) => {
     const component = await mount(ExtensionManagerRootFixture)
 
