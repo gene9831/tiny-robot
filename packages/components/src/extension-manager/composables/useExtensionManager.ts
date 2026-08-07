@@ -44,10 +44,8 @@ export const useExtensionManager = (
 
   const typeOptions = computed(() => defaultTypeOptions)
 
-  const installedItems = computed(() =>
-    displayItems.value.installed.filter((item) => item.type === activeType.value),
-  )
-  const marketItems = computed(() => displayItems.value.market.filter((item) => item.type === activeType.value))
+  const installedItems = computed(() => displayItems.value.installed)
+  const marketItems = computed(() => displayItems.value.market)
 
   const setDisplayItems = (nextDisplayItems: ExtensionDisplay) => {
     displayItemsSource.value = nextDisplayItems

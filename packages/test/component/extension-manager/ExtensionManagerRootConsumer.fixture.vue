@@ -11,6 +11,11 @@ const train: ExtensionRecord = { id: 'train', type: 'mcp', name: 'Train service'
 <template>
   <div>
     <div data-testid="active-type">{{ manager.activeType.value }}</div>
+    <div data-testid="display-items">
+      {{ manager.displayItems.value.installed.map((item) => item.name).join(',') }}|{{
+        manager.displayItems.value.market.map((item) => item.name).join(',')
+      }}
+    </div>
     <div data-testid="installed-items">{{ manager.installedItems.value.map((item) => item.name).join(',') }}</div>
     <div data-testid="market-items">{{ manager.marketItems.value.map((item) => item.name).join(',') }}</div>
     <div data-testid="install-operation-phase">{{ manager.operationStates.value.train?.install?.phase }}</div>
