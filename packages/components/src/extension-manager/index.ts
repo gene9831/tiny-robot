@@ -1,19 +1,21 @@
 import type { App } from 'vue'
 import ExtensionManager from './index.vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
-import ExtensionCard from './components/ExtensionCard.vue'
-import ExtensionFilter from './components/ExtensionFilter.vue'
-import ExtensionList from './components/ExtensionList.vue'
-import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
-import McpExtensionDetail from './components/McpExtensionDetail.vue'
-import McpExtensionForm from './components/McpExtensionForm.vue'
+import {
+  ExtensionCard,
+  ExtensionFilter,
+  ExtensionList,
+  ExtensionManagerContent,
+  McpExtensionDetail,
+  McpExtensionForm,
+} from './components'
 
 ExtensionManager.name = 'ExtensionManager'
 ExtensionManagerRoot.name = 'ExtensionManagerRoot'
 ExtensionManagerContent.name = 'ExtensionManagerContent'
-ExtensionCard.name = 'ExtensionManagerCard'
-ExtensionFilter.name = 'ExtensionManagerFilter'
-ExtensionList.name = 'ExtensionManagerList'
+ExtensionCard.name = 'ExtensionCard'
+ExtensionFilter.name = 'ExtensionFilter'
+ExtensionList.name = 'ExtensionList'
 McpExtensionDetail.name = 'McpExtensionDetail'
 McpExtensionForm.name = 'McpExtensionForm'
 
@@ -35,9 +37,12 @@ const ExtensionManagerWithSubComponents = Object.assign(ExtensionManager, {
   Card: ExtensionCard,
   Filter: ExtensionFilter,
   List: ExtensionList,
+  McpExtensionDetail,
+  McpExtensionForm,
 })
 
 export {
+  ExtensionManager,
   ExtensionCard,
   ExtensionFilter,
   ExtensionList,
@@ -47,6 +52,7 @@ export {
   McpExtensionForm,
 }
 export { useExtensionManager, useExtensionManagerContext } from './composables'
+export * from './index.type'
 
 export default ExtensionManagerWithSubComponents as typeof ExtensionManager & {
   install: typeof install
@@ -55,4 +61,6 @@ export default ExtensionManagerWithSubComponents as typeof ExtensionManager & {
   Card: typeof ExtensionCard
   Filter: typeof ExtensionFilter
   List: typeof ExtensionList
+  McpExtensionDetail: typeof McpExtensionDetail
+  McpExtensionForm: typeof McpExtensionForm
 }
