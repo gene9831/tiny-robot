@@ -14,8 +14,8 @@ ExtensionManagerContent.name = 'ExtensionManagerContent'
 ExtensionCard.name = 'ExtensionManagerCard'
 ExtensionFilter.name = 'ExtensionManagerFilter'
 ExtensionList.name = 'ExtensionManagerList'
-McpExtensionDetail.name = 'ExtensionManagerMcpDetail'
-McpExtensionForm.name = 'ExtensionManagerMcpForm'
+McpExtensionDetail.name = 'McpExtensionDetail'
+McpExtensionForm.name = 'McpExtensionForm'
 
 const install = function <T>(app: App<T>) {
   app.component(ExtensionManager.name!, ExtensionManager)
