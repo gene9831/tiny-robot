@@ -21,7 +21,9 @@ const defaultTypeOptions = [
 ] satisfies Array<{ value: ExtensionType; label: string }>
 
 const extensionManagerContextKey: InjectionKey<ExtensionManagerContext> = Symbol('ExtensionManagerContext')
-const extensionManagerFilterContextKey: InjectionKey<ExtensionManagerFilterContext> = Symbol('ExtensionManagerFilterContext')
+const extensionManagerFilterContextKey: InjectionKey<ExtensionManagerFilterContext> = Symbol(
+  'ExtensionManagerFilterContext',
+)
 
 interface ExtensionManagerRootContext extends ExtensionManagerContext, ExtensionManagerFilterContext {}
 
@@ -66,11 +68,14 @@ export const useExtensionManager = (
       return Object.assign(() => undefined, { active: false })
     }
 
-    const release: ExtensionFilterLease = Object.assign(() => {
-      if (activeFilterLease !== release) return
-      activeFilterLease = undefined
-      setDisplayItems()
-    }, { active: true })
+    const release: ExtensionFilterLease = Object.assign(
+      () => {
+        if (activeFilterLease !== release) return
+        activeFilterLease = undefined
+        setDisplayItems()
+      },
+      { active: true },
+    )
     activeFilterLease = release
     return release
   }

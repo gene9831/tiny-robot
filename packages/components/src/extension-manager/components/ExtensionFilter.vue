@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
 import { computed, onUnmounted, ref, watch } from 'vue'
-import type { ExtensionDisplay, ExtensionFilterEmits, ExtensionFilterProps, ExtensionItem, ExtensionSource } from '../index.type'
+import type {
+  ExtensionDisplay,
+  ExtensionFilterEmits,
+  ExtensionFilterProps,
+  ExtensionItem,
+  ExtensionSource,
+} from '../index.type'
 import { useExtensionManagerFilterContext } from '../composables/useExtensionManager'
 
 const props = withDefaults(defineProps<ExtensionFilterProps>(), {

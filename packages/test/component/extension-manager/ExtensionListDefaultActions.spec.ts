@@ -28,7 +28,9 @@ test.describe('ExtensionList default card actions', () => {
   test('only supplies installed defaults for records with installation data', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
-    await expect(component.getByTestId('unavailable-installed-card').locator('.tr-extension-card__actions')).toHaveCount(0)
+    await expect(
+      component.getByTestId('unavailable-installed-card').locator('.tr-extension-card__actions'),
+    ).toHaveCount(0)
   })
 
   test('gives an explicit card id priority over item id for list defaults', async ({ mount }) => {

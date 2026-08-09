@@ -2,17 +2,23 @@ import { expect, test } from '@playwright/experimental-ct-vue'
 import ExtensionManagerRootFixture from './ExtensionManagerRoot.fixture.vue'
 
 test.describe('ExtensionManagerRoot catalog composition', () => {
-  test('keeps the complete installation-derived projection while active type remains controlled state', async ({ mount }) => {
+  test('keeps the complete installation-derived projection while active type remains controlled state', async ({
+    mount,
+  }) => {
     const component = await mount(ExtensionManagerRootFixture)
 
     await expect(component.getByTestId('active-type')).toHaveText('mcp')
-    await expect(component.getByTestId('display-items')).toHaveText('Map service,Summary skill|Train service,Translate skill')
+    await expect(component.getByTestId('display-items')).toHaveText(
+      'Map service,Summary skill|Train service,Translate skill',
+    )
     await expect(component.getByTestId('installed-items')).toHaveText('Map service,Summary skill')
     await expect(component.getByTestId('market-items')).toHaveText('Train service,Translate skill')
 
     await component.getByTestId('show-skills').click()
     await expect(component.getByTestId('active-type')).toHaveText('skill')
-    await expect(component.getByTestId('display-items')).toHaveText('Map service,Summary skill|Train service,Translate skill')
+    await expect(component.getByTestId('display-items')).toHaveText(
+      'Map service,Summary skill|Train service,Translate skill',
+    )
     await expect(component.getByTestId('installed-items')).toHaveText('Map service,Summary skill')
     await expect(component.getByTestId('market-items')).toHaveText('Train service,Translate skill')
 
@@ -84,9 +90,7 @@ test.describe('ExtensionManagerRoot catalog composition', () => {
     await component.getByTestId('request-delete').click()
     await component.getByTestId('request-detail-open').click()
 
-    await expect(component.getByTestId('event-log')).toContainText(
-      'add:{"id":"train","type":"mcp","source":"market"}',
-    )
+    await expect(component.getByTestId('event-log')).toContainText('add:{"id":"train","type":"mcp","source":"market"}')
     await expect(component.getByTestId('event-log')).toContainText(
       'toggle:{"id":"map","type":"mcp","source":"installed","enabled":false}',
     )

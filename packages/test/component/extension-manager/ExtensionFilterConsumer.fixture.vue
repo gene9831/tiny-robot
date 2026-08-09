@@ -6,7 +6,9 @@ const manager = useExtensionManagerContext()
 
 <template>
   <div>
-    <div data-testid="display-installed">{{ manager.displayItems.value.installed.map((item) => item.name).join(',') }}</div>
+    <div data-testid="display-installed">
+      {{ manager.displayItems.value.installed.map((item) => item.name).join(',') }}
+    </div>
     <div data-testid="display-market">{{ manager.displayItems.value.market.map((item) => item.name).join(',') }}</div>
     <button type="button" data-testid="show-skills" @click="manager.setActiveType('skill')">Skills</button>
   </div>

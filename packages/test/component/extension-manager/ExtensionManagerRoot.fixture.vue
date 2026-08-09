@@ -91,7 +91,9 @@ const setExposedActiveType = () => {
   <button type="button" data-testid="set-external-expanded-sections" @click="setExternalExpandedSections">
     Set expanded sections
   </button>
-  <button type="button" data-testid="set-exposed-active-type" @click="setExposedActiveType">Set exposed active type</button>
+  <button type="button" data-testid="set-exposed-active-type" @click="setExposedActiveType">
+    Set exposed active type
+  </button>
   <div data-testid="root-public-api">{{ root?.displayItems && root?.setActiveType ? 'available' : 'unavailable' }}</div>
   <div data-testid="root-internal-filter-writers">{{ exposesInternalFilterWriter ? 'leaked' : 'private' }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>
