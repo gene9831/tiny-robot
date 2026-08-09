@@ -1,10 +1,6 @@
 import { App } from 'vue'
 import McpAddForm from './index.vue'
 
-/**
- * @deprecated Use McpExtensionForm within the ExtensionManager composition API instead.
- * This entry point remains available for compatibility and will be removed in a future major release.
- */
 McpAddForm.name = 'TrMcpAddForm'
 
 const install = function <T>(app: App<T>) {
@@ -13,4 +9,8 @@ const install = function <T>(app: App<T>) {
 
 McpAddForm.install = install
 
+/**
+ * @deprecated Use McpExtensionForm within the ExtensionManager composition API instead.
+ * This entry point remains available for compatibility and will be removed in a future major release.
+ */
 export default McpAddForm as typeof McpAddForm & { install: typeof install }

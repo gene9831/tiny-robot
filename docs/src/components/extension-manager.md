@@ -79,26 +79,59 @@ Root 的 `displayItems` 是当前展示投影；`installedItems` 和 `marketItem
 
 ## 宿主负责业务状态
 
-组件只负责展示和发出稳定身份的 intent。宿主业务应持有目录、权限、确认流程、异步请求和操作状态，并在操作完成后更新 `extensions`：
+组件只负责展示和发出稳定身份的 intent。宿主业务应持有目录、权限、确认流程、异步请求和操作状态，并在操作完成后更新 `extensions`。下面的 `displayItems` 来自 Root 的子组件；`useExtensionManagerContext` 必须在 Root 的后代组件中调用，不能在创建 Root 的同一个页面组件中调用：
 
 ```vue
-<ExtensionManager.Root
-  :extensions="extensions"
-  :operation-states="operationStates"
-  @extension-add="installExtension"
-  @extension-toggle="toggleExtension"
-  @extension-delete="deleteExtension"
-  @extension-detail-open="openDetail"
->
-  <ExtensionManager.Filter />
+<!-- ManagementPage.vue -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import type {
+  ExtensionIntent,
+  ExtensionOperationStateMap,
+  ExtensionRecord,
+  ExtensionToggleIntent,
+} from '@opentiny/tiny-robot'
+import { ExtensionManager } from '@opentiny/tiny-robot'
+import TabsAndSections from './TabsAndSections.vue'
+
+const extensions = ref<ExtensionRecord[]>([])
+const operationStates = ref<ExtensionOperationStateMap>({})
+const installExtension = (_intent: ExtensionIntent) => {}
+const toggleExtension = (_intent: ExtensionToggleIntent) => {}
+const deleteExtension = (_intent: ExtensionIntent) => {}
+const openDetail = (_intent: ExtensionIntent) => {}
+</script>
+
+<template>
+  <ExtensionManager.Root
+    :extensions="extensions"
+    :operation-states="operationStates"
+    @extension-add="installExtension"
+    @extension-toggle="toggleExtension"
+    @extension-delete="deleteExtension"
+    @extension-detail-open="openDetail"
+  >
+    <ExtensionManager.Filter />
+    <TabsAndSections />
+  </ExtensionManager.Root>
+</template>
+```
+
+`TabsAndSections.vue` 是 Root 的后代，因此可以安全消费 `displayItems`：
+
+```vue
+<!-- TabsAndSections.vue -->
+<script setup lang="ts">
+import { ExtensionManager, useExtensionManagerContext } from '@opentiny/tiny-robot'
+
+const { displayItems } = useExtensionManagerContext()
+</script>
+
+<template>
   <ExtensionManager.List :items="displayItems.installed" source="installed">
-    <ExtensionManager.Card
-      v-for="item in displayItems.installed"
-      :key="item.id"
-      :item="item"
-    />
+    <ExtensionManager.Card v-for="item in displayItems.installed" :key="item.id" :item="item" />
   </ExtensionManager.List>
-</ExtensionManager.Root>
+</template>
 ```
 
 `operationStates` 是外部传入的短暂操作状态映射，例如安装、启停、删除、刷新和重试；Root 不执行异步操作，也不修改这份映射。详情、编辑/创建表单、Dialog、Drawer、权限判断和确认弹窗同样由宿主拥有。MCP 的详情可以使用 `McpExtensionDetail` 展示工具并发出独立的 `tool-toggle`，创建表单可以使用 `McpExtensionForm` 适配现有 MCP 表单；这两个组件都不拥有弹窗可见状态。
