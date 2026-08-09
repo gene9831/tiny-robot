@@ -7,9 +7,11 @@ import type {
   ExtensionRecord,
   ExtensionToggleIntent,
   ExtensionType,
+  McpExtensionCreatePayload,
+  McpExtensionMetadata,
 } from '@opentiny/tiny-robot'
-import { ExtensionManager } from '@opentiny/tiny-robot'
-import { ref } from 'vue'
+import { ExtensionManager, McpExtensionDetail, McpExtensionForm } from '@opentiny/tiny-robot'
+import { computed, ref } from 'vue'
 import ExtensionManagerContent from './ExtensionManagerContent.vue'
 
 const extensions = ref<ExtensionRecord[]>([
@@ -71,6 +73,8 @@ const operationStates = ref<ExtensionOperationStateMap>({
   'skill-research': { install: { phase: 'error' } },
 })
 const events = ref<string[]>([])
+const selectedExtensionId = ref<string>()
+const showMcpForm = ref(false)
 
 const logEvent = (message: string) => {
   events.value.unshift(`${new Date().toLocaleTimeString()} ${message}`)
@@ -80,6 +84,12 @@ const logEvent = (message: string) => {
 const waitForOperation = () => new Promise<void>((resolve) => setTimeout(resolve, 400))
 
 const findExtension = (id: string) => extensions.value.find((extension) => extension.id === id)
+
+const selectedMcpExtension = computed(() => {
+  const extension = selectedExtensionId.value ? findExtension(selectedExtensionId.value) : undefined
+
+  return extension?.type === 'mcp' ? (extension as ExtensionRecord<McpExtensionMetadata>) : undefined
+})
 
 const setOperation = (id: string, kind: ExtensionOperationKind, state: ExtensionOperationState) => {
   operationStates.value = {
@@ -91,7 +101,14 @@ const setOperation = (id: string, kind: ExtensionOperationKind, state: Extension
   }
 }
 
-const handleCreate = (type: ExtensionType) => logEvent(`自定义添加：${type}`)
+const handleCreate = (type: ExtensionType) => {
+  if (type === 'mcp') {
+    showMcpForm.value = true
+    return
+  }
+
+  logEvent(`自定义添加：${type}`)
+}
 
 const handleAdd = async (intent: ExtensionIntent) => {
   const extension = findExtension(intent.id)
@@ -129,7 +146,50 @@ const handleDelete = (intent: ExtensionIntent) => {
 
 const handleDetailOpen = (intent: ExtensionIntent) => {
   const extension = findExtension(intent.id)
-  if (extension) logEvent(`打开详情：${extension.name}`)
+  if (!extension || extension.type !== 'mcp') return
+
+  selectedExtensionId.value = extension.id
+  logEvent(`打开详情：${extension.name}`)
+}
+
+const handleToolToggle = (toolId: string, enabled: boolean) => {
+  const extension = selectedMcpExtension.value
+  const tools = extension?.metadata?.tools
+  if (!extension || !tools) return
+
+  extensions.value = extensions.value.map((item) => {
+    if (item.id !== extension.id) return item
+
+    const metadata = item.metadata as McpExtensionMetadata
+
+    return {
+      ...item,
+      metadata: {
+        ...metadata,
+        tools: metadata.tools?.map((tool) => (tool.id === toolId ? { ...tool, enabled } : tool)),
+      },
+    }
+  })
+  logEvent(`${extension.name}：${enabled ? '启用' : '停用'}工具 ${toolId}`)
+}
+
+const handleMcpSubmit = (payload: McpExtensionCreatePayload) => {
+  const name = payload.mode === 'form' ? payload.data.name : '自定义 MCP'
+  const description = payload.mode === 'form' ? payload.data.description : '通过 JSON 配置添加的 MCP。'
+
+  extensions.value = [
+    ...extensions.value,
+    {
+      id: `custom-mcp-${Date.now()}`,
+      type: 'mcp',
+      name,
+      description,
+      installation: { enabled: true },
+      metadata: { tools: [] },
+    },
+  ]
+  showMcpForm.value = false
+  logEvent(`创建扩展：${name}`)
 }
 
 const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${type}`)
@@ -155,6 +215,16 @@ const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${typ
       <ExtensionManager.Filter />
       <ExtensionManagerContent />
     </ExtensionManager.Root>
+
+    <section v-if="selectedMcpExtension" class="extension-manager-demo__panel">
+      <h3>{{ selectedMcpExtension.name }} 工具</h3>
+      <McpExtensionDetail :item="selectedMcpExtension" @tool-toggle="handleToolToggle" />
+    </section>
+
+    <section v-if="showMcpForm" class="extension-manager-demo__panel">
+      <h3>添加 MCP</h3>
+      <McpExtensionForm @submit="handleMcpSubmit" @cancel="showMcpForm = false" />
+    </section>
 
     <section class="event-panel">
       <h3>事件日志</h3>
@@ -186,6 +256,19 @@ const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${typ
 .extension-manager-demo__header p {
   margin: 0;
   color: #667085;
+}
+
+.extension-manager-demo__panel {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.extension-manager-demo__panel h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
 }
 
 .event-panel {

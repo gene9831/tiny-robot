@@ -1,4 +1,5 @@
 import type { Component, ComputedRef, Ref, VNode } from 'vue'
+import type { McpAddFormData, McpAddFormProps } from '../mcp-add-form/index.type'
 import type { ExtensionCardPopoverPlacement } from './internal.type'
 
 export type ExtensionType = 'mcp' | 'skill' | (string & {})
@@ -19,6 +20,34 @@ export interface ExtensionRecord<TMetadata = unknown> {
   tags?: string[]
   metadata?: TMetadata
   installation?: ExtensionInstallation
+}
+
+export interface McpExtensionTool {
+  id: string
+  name: string
+  description?: string
+  enabled: boolean
+}
+
+export interface McpExtensionMetadata {
+  tools?: McpExtensionTool[]
+}
+
+export interface McpExtensionDetailProps {
+  item: ExtensionRecord<McpExtensionMetadata>
+}
+
+export interface McpExtensionDetailEmits {
+  (e: 'tool-toggle', toolId: string, enabled: boolean): void
+}
+
+export type McpExtensionCreatePayload = { mode: 'form'; data: McpAddFormData } | { mode: 'code'; data: string }
+
+export type McpExtensionFormProps = McpAddFormProps
+
+export interface McpExtensionFormEmits {
+  (e: 'submit', payload: McpExtensionCreatePayload): void
+  (e: 'cancel'): void
 }
 
 /** @deprecated Use ExtensionRecord instead. */
