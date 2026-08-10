@@ -1,4 +1,4 @@
-import type { Component, ComputedRef, Ref, VNode } from 'vue'
+import type { Component, ComputedRef, VNode } from 'vue'
 import type { McpAddFormData, McpAddFormProps } from '../mcp-add-form/index.type'
 import type { ExtensionCardPopoverPlacement } from './internal.type'
 
@@ -261,7 +261,7 @@ export interface ExtensionToolToggleIntent extends ExtensionIntent {
 }
 
 export interface ExtensionContext {
-  activeKind: Ref<ExtensionKind>
+  activeKind: ComputedRef<ExtensionKind>
   allExtensions: ComputedRef<Extension[]>
   displayItems: ComputedRef<ExtensionDisplay>
   operationStates: ComputedRef<ExtensionOperationStatusMap>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ExtensionRootEmits, ExtensionRootProps } from './index.type'
-import { provideExtensionContext } from './composables/useExtensionContext'
+import { provideExtensionContext } from './composables/internalExtensionContext'
 
 const props = withDefaults(defineProps<ExtensionRootProps>(), {
   extensions: () => [],

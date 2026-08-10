@@ -43,6 +43,16 @@ test.describe('Extension Root canonical context', () => {
     await expect(component.getByTestId('root-internal-filter-writers')).toHaveText('private')
   })
 
+  test('keeps active kind read-only until set through its semantic action', async ({ mount }) => {
+    const component = await mount(ExtensionRootFixture)
+
+    await component.getByTestId('write-active-kind').click()
+    await expect(component.getByTestId('active-kind')).toHaveText('mcp')
+    await expect(component.getByTestId('event-log')).toHaveText('')
+    await component.getByTestId('set-exposed-active-kind').click()
+    await expect(component.getByTestId('active-kind')).toHaveText('skill')
+  })
+
   test('tracks installed and available section expansion independently', async ({ mount }) => {
     const component = await mount(ExtensionRootFixture)
 
@@ -91,5 +101,14 @@ test.describe('Extension Root canonical context', () => {
     await expect(component.getByTestId('all-extensions')).toHaveText(
       'Map service,Summary skill,Plain installed service,Train service,Translate skill',
     )
+  })
+
+  test('does not emit toggle intents with malformed boolean values', async ({ mount }) => {
+    const component = await mount(ExtensionRootFixture)
+
+    await component.getByTestId('request-malformed-toggle').click()
+    await component.getByTestId('request-malformed-tool-toggle').click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('')
   })
 })

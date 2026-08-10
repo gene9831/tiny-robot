@@ -85,6 +85,7 @@ const setExposedActiveKind = () => {
     @delete="logIntent('delete', $event)"
     @detail="logIntent('detail', $event)"
     @create="eventLog.push(`create:${$event}`)"
+    @tool-toggle="logIntent('tool-toggle', $event)"
   >
     <ExtensionManagerRootConsumer />
   </ExtensionManagerRoot>

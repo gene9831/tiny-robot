@@ -12,6 +12,19 @@ const plainInstalled: Extension = {
   installed: true,
 }
 const train: Extension = { id: 'train', kind: 'mcp', name: 'Train service', installed: false }
+
+const requestMalformedToggle = () => {
+  manager.requestToggle(map, 'false' as unknown as boolean)
+}
+
+const requestMalformedToolToggle = () => {
+  manager.requestToolToggle(map, 'map-directions', 'false' as unknown as boolean)
+}
+
+const writeActiveKind = () => {
+  const activeKind = manager.activeKind as unknown as { value: string }
+  activeKind.value = 'skill'
+}
 </script>
 
 <template>
@@ -34,6 +47,7 @@ const train: Extension = { id: 'train', kind: 'mcp', name: 'Train service', inst
 
     <button type="button" data-testid="show-skills" @click="manager.setActiveKind('skill')">Skills</button>
     <button type="button" data-testid="show-mcp" @click="manager.setActiveKind('mcp')">MCP</button>
+    <button type="button" data-testid="write-active-kind" @click="writeActiveKind">Write active kind</button>
     <button type="button" data-testid="toggle-installed-section" @click="manager.toggleSection('installed')">
       Toggle installed section
     </button>
@@ -42,6 +56,12 @@ const train: Extension = { id: 'train', kind: 'mcp', name: 'Train service', inst
     </button>
     <button type="button" data-testid="request-install" @click="manager.requestInstall(train)">Install</button>
     <button type="button" data-testid="request-toggle" @click="manager.requestToggle(map, false)">Toggle</button>
+    <button type="button" data-testid="request-malformed-toggle" @click="requestMalformedToggle">
+      Request malformed toggle
+    </button>
+    <button type="button" data-testid="request-malformed-tool-toggle" @click="requestMalformedToolToggle">
+      Request malformed tool toggle
+    </button>
     <button
       type="button"
       data-testid="request-toggle-without-enabled"

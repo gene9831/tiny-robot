@@ -2,7 +2,7 @@
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExtensionFilterEmits, ExtensionFilterProps, ExtensionScope } from '../index.type'
-import { useInternalExtensionFilterContext } from '../composables/useExtensionContext'
+import { useInternalExtensionFilterContext } from '../composables/internalExtensionContext'
 
 const props = withDefaults(defineProps<ExtensionFilterProps>(), {
   searchPlaceholder: '请输入关键字搜索',
