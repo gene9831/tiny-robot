@@ -223,21 +223,29 @@ export interface ExtensionRootEmits {
   (e: 'refresh', scope: ExtensionScope): void
 }
 
-export interface ExtensionManagerProps extends ExtensionRootProps {
-  activeKind?: ExtensionKind
-  defaultActiveKind?: ExtensionKind
+export interface ExtensionManagerProps
+  extends
+    ExtensionRootProps,
+    Pick<
+      ExtensionFilterProps,
+      | 'activeKind'
+      | 'defaultActiveKind'
+      | 'query'
+      | 'tag'
+      | 'kindLabels'
+      | 'searchPlaceholder'
+      | 'tagPlaceholder'
+      | 'showSearch'
+      | 'showTagFilter'
+      | 'searchFn'
+    > {
   title?: string
-  searchPlaceholder?: string
-  tagPlaceholder?: string
   installedTitle?: string
   availableTitle?: string
   showHeader?: boolean
   showCloseButton?: boolean
   showCustomAddButton?: boolean
   customAddButtonText?: string
-  enableSearch?: boolean
-  enableTagFilter?: boolean
-  searchFn?: ExtensionSearchFn
   visible?: boolean
   /** Loading state for the installed section in the prebuilt facade. */
   loading?: boolean
@@ -252,8 +260,8 @@ export interface ExtensionManagerProps extends ExtensionRootProps {
 export interface ExtensionManagerEmits extends ExtensionRootEmits {
   (e: 'update:visible', visible: boolean): void
   (e: 'update:active-kind', kind: ExtensionKind): void
-  (e: 'search-change', query: string, kind: ExtensionKind): void
-  (e: 'tag-change', tag: string, kind: ExtensionKind): void
+  (e: 'update:query', query: string): void
+  (e: 'update:tag', tag: string): void
 }
 
 export interface ExtensionIntent {

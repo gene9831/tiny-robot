@@ -2,14 +2,13 @@
 import { IconClose, IconPlus } from '@opentiny/tiny-robot-svgs'
 import { computed, ref } from 'vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
-import { ExtensionFilter } from './components'
+import ExtensionFilter from './components/ExtensionFilter.vue'
 import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
-import type { ExtensionContext, ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
+import type { ExtensionContext, ExtensionKind, ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
 
 const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   extensions: () => [],
   operationStates: () => ({}),
-  defaultActiveKind: 'mcp',
   title: '服务列表',
   searchPlaceholder: '请输入关键字搜索',
   tagPlaceholder: '全部标签',
@@ -19,8 +18,8 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   showCloseButton: false,
   showCustomAddButton: true,
   customAddButtonText: '添加自定义服务',
-  enableSearch: true,
-  enableTagFilter: true,
+  showSearch: true,
+  showTagFilter: true,
   loading: false,
   availableLoading: false,
 })
@@ -28,8 +27,18 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 const emit = defineEmits<ExtensionManagerEmits>()
 const visible = defineModel<boolean>('visible', { default: true })
 const managerRoot = ref<Pick<ExtensionContext, 'requestCreate'>>()
+const filterActiveKind = ref<ExtensionKind>()
 
-const activeKind = computed(() => props.activeKind ?? props.defaultActiveKind)
+const activeKind = computed(() => filterActiveKind.value ?? props.activeKind ?? props.defaultActiveKind)
+
+const handleActiveKindUpdate = (kind: ExtensionKind) => {
+  filterActiveKind.value = kind
+  emit('update:active-kind', kind)
+}
+
+const handleCreate = () => {
+  if (activeKind.value) managerRoot.value?.requestCreate(activeKind.value)
+}
 
 const handleClose = () => {
   visible.value = false
@@ -61,7 +70,7 @@ const handleClose = () => {
             v-if="props.showCustomAddButton"
             class="extension-manager__create"
             type="button"
-            @click="managerRoot?.requestCreate(activeKind)"
+            @click="handleCreate"
           >
             <IconPlus class="extension-manager__icon" />
             <span>{{ props.customAddButtonText }}</span>
@@ -73,13 +82,17 @@ const handleClose = () => {
       <ExtensionFilter
         :active-kind="props.activeKind"
         :default-active-kind="props.defaultActiveKind"
+        :query="props.query"
+        :tag="props.tag"
+        :kind-labels="props.kindLabels"
         :search-placeholder="props.searchPlaceholder"
         :tag-placeholder="props.tagPlaceholder"
-        :show-search="props.enableSearch"
-        :show-tag-filter="props.enableTagFilter"
+        :show-search="props.showSearch"
+        :show-tag-filter="props.showTagFilter"
         :search-fn="props.searchFn"
-        @query-change="emit('search-change', $event, activeKind)"
-        @tag-change="emit('tag-change', $event, activeKind)"
+        @update:active-kind="handleActiveKindUpdate"
+        @update:query="emit('update:query', $event)"
+        @update:tag="emit('update:tag', $event)"
       />
 
       <ExtensionManagerContent

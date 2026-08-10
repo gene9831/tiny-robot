@@ -1,7 +1,5 @@
 export { default as ExtensionCard } from './ExtensionCard.vue'
 export { default as ExtensionFilter } from './ExtensionFilter.vue'
 export { default as ExtensionList } from './ExtensionList.vue'
-export { default as ExtensionManagerContent } from './ExtensionManagerContent.vue'
 export { default as McpDetail } from './McpDetail.vue'
 export { default as McpForm } from './McpForm.vue'
-export { default as ExtensionManagerRoot } from '../ExtensionManagerRoot.vue'

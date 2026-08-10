@@ -19,10 +19,16 @@ const operationStates: ExtensionOperationStatusMap = {}
 const eventLog = ref<string[]>([])
 
 const logInstall = (intent: ExtensionIntent) => eventLog.value.push(`install:${JSON.stringify(intent)}`)
+const logCreate = (kind: string) => eventLog.value.push(`create:${kind}`)
 </script>
 
 <template>
-  <ExtensionManager :extensions="extensions" :operation-states="operationStates" @install="logInstall" />
+  <ExtensionManager
+    :extensions="extensions"
+    :operation-states="operationStates"
+    @install="logInstall"
+    @create="logCreate"
+  />
 
   <div data-testid="catalog">{{ extensions.map((extension) => extension.name).join(',') }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>

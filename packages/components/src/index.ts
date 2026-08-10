@@ -22,14 +22,7 @@ import ThemeProvider from './theme-provider'
 import Welcome from './welcome'
 import McpServerPicker from './mcp-server-picker'
 import McpAddForm from './mcp-add-form'
-import ExtensionManager, {
-  ExtensionCard,
-  ExtensionFilter,
-  ExtensionList,
-  ExtensionManagerContent,
-  ExtensionManagerRoot,
-  useExtensionContext,
-} from './extension-manager'
+import ExtensionManager, { useExtensionContext } from './extension-manager'
 import {
   ActionButton,
   SubmitButton,
@@ -108,11 +101,6 @@ const components = [
   McpServerPicker,
   McpAddForm,
   ExtensionManager,
-  ExtensionCard,
-  ExtensionFilter,
-  ExtensionList,
-  ExtensionManagerRoot,
-  ExtensionManagerContent,
   ActionButton,
   SubmitButton,
   ClearButton,
@@ -186,16 +174,6 @@ export {
   McpAddForm as TrMcpAddForm,
   ExtensionManager,
   ExtensionManager as TrExtensionManager,
-  ExtensionCard,
-  ExtensionCard as TrExtensionCard,
-  ExtensionFilter,
-  ExtensionFilter as TrExtensionFilter,
-  ExtensionList,
-  ExtensionList as TrExtensionList,
-  ExtensionManagerContent,
-  ExtensionManagerContent as TrExtensionManagerContent,
-  ExtensionManagerRoot,
-  ExtensionManagerRoot as TrExtensionManagerRoot,
   ActionButton,
   ActionButton as TrActionButton,
   SubmitButton,

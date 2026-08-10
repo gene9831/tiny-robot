@@ -27,4 +27,13 @@ test.describe('ExtensionManager facade', () => {
       'Map service,Browser connector,Summary skill,Train service,File connector,Translate skill',
     )
   })
+
+  test('creates an extension using the Filter-owned active kind', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+
+    await component.getByLabel('Extension kind').selectOption('skill')
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+  })
 })
