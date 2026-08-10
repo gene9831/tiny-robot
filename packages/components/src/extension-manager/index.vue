@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { IconClose, IconPlus } from '@opentiny/tiny-robot-svgs'
 import { computed, ref } from 'vue'
-import type { Ref } from 'vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
 import { ExtensionFilter } from './components'
 import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
-import type { ExtensionKind, ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
+import type { ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
+import type { LegacyExtensionManagerContext } from './internal.type'
 
 const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   extensions: () => [],
@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   searchPlaceholder: '请输入关键字搜索',
   tagPlaceholder: '全部标签',
   installedTitle: '已添加',
-  marketTitle: '市场',
+  availableTitle: '市场',
   showHeader: true,
   showCloseButton: false,
   showCustomAddButton: true,
@@ -23,15 +23,13 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   enableSearch: true,
   enableTagFilter: true,
   loading: false,
-  marketLoading: false,
+  availableLoading: false,
 })
 
 const emit = defineEmits<ExtensionManagerEmits>()
+const legacyEmit = emit as unknown as (...args: unknown[]) => void
 const visible = defineModel<boolean>('visible', { default: true })
-const managerRoot = ref<{
-  activeType: Ref<ExtensionKind>
-  requestCreate: () => void
-}>()
+const managerRoot = ref<Pick<LegacyExtensionManagerContext, 'activeType' | 'requestCreate'>>()
 
 const activeType = computed(() => managerRoot.value?.activeType.value ?? props.activeType ?? props.defaultActiveType)
 
@@ -49,17 +47,17 @@ const handleClose = () => {
       :active-type="props.activeType"
       :default-active-type="props.defaultActiveType"
       :expanded-sections="props.expandedSections"
-      @update:active-type="emit('update:active-type', $event)"
-      @update:expanded-sections="emit('update:expanded-sections', $event)"
-      @type-change="emit('type-change', $event)"
-      @extension-add="emit('extension-add', $event)"
-      @extension-create="emit('extension-create', $event)"
-      @extension-detail-open="emit('extension-detail-open', $event)"
-      @extension-toggle="emit('extension-toggle', $event)"
-      @extension-edit="emit('extension-edit', $event)"
-      @extension-delete="emit('extension-delete', $event)"
-      @tool-toggle="emit('tool-toggle', $event)"
-      @refresh="(type, source) => emit('refresh', type, source)"
+      @update:active-type="legacyEmit('update:active-type', $event)"
+      @update:expanded-sections="legacyEmit('update:expanded-sections', $event)"
+      @type-change="legacyEmit('type-change', $event)"
+      @extension-add="legacyEmit('extension-add', $event)"
+      @extension-create="legacyEmit('extension-create', $event)"
+      @extension-detail-open="legacyEmit('extension-detail-open', $event)"
+      @extension-toggle="legacyEmit('extension-toggle', $event)"
+      @extension-edit="legacyEmit('extension-edit', $event)"
+      @extension-delete="legacyEmit('extension-delete', $event)"
+      @tool-toggle="legacyEmit('tool-toggle', $event)"
+      @refresh="(...args) => legacyEmit('refresh', ...args)"
     >
       <div v-if="props.showHeader" class="extension-manager__header">
         <div class="extension-manager__title">{{ props.title }}</div>
@@ -90,11 +88,11 @@ const handleClose = () => {
 
       <ExtensionManagerContent
         :installed-title="props.installedTitle"
-        :market-title="props.marketTitle"
+        :available-title="props.availableTitle"
         :loading="props.loading"
-        :market-loading="props.marketLoading"
+        :available-loading="props.availableLoading"
         :error="props.error"
-        :market-error="props.marketError"
+        :available-error="props.availableError"
       />
     </ExtensionManagerRoot>
   </div>

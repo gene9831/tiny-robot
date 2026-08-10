@@ -31,25 +31,6 @@ export interface ExtensionDisplay {
   available: Extension[]
 }
 
-type LegacyExtensionRuntimeRecord<TMetadata = unknown> = {
-  id: string
-  type: ExtensionKind
-  name: string
-  version?: string
-  icon?: string
-  description?: string
-  tags?: string[]
-  metadata?: TMetadata
-  installation?: { enabled: boolean }
-}
-
-type LegacyExtensionRuntimeScope = 'installed' | 'market'
-
-type LegacyExtensionRuntimeDisplay = {
-  installed: LegacyExtensionRuntimeRecord[]
-  market: LegacyExtensionRuntimeRecord[]
-}
-
 export interface McpExtensionTool {
   id: string
   name: string
@@ -78,11 +59,7 @@ export interface McpExtensionFormEmits {
   (e: 'cancel'): void
 }
 
-export type ExtensionSearchFn = (
-  query: string,
-  item: LegacyExtensionRuntimeRecord,
-  source: LegacyExtensionRuntimeScope,
-) => boolean
+export type ExtensionSearchFn = (query: string, item: Extension, scope: ExtensionScope) => boolean
 
 export type ExtensionOperationKind = 'install' | 'create' | 'toggle' | 'edit' | 'delete' | 'refresh' | 'tool-toggle'
 
@@ -185,8 +162,8 @@ export interface ExtensionTagOption {
 }
 
 export interface ExtensionListProps {
-  items?: LegacyExtensionRuntimeRecord[]
-  source?: LegacyExtensionRuntimeScope
+  items?: Extension[]
+  scope?: ExtensionScope
   operationStates?: ExtensionOperationStateMap
   loading?: boolean
   error?: unknown
@@ -221,11 +198,11 @@ export interface ExtensionFilterEmits {
 }
 
 export interface ExtensionManagerRootProps {
-  extensions?: LegacyExtensionRuntimeRecord[]
+  extensions?: ExtensionInput[]
   operationStates?: ExtensionOperationStateMap
   activeType?: ExtensionKind
   defaultActiveType?: ExtensionKind
-  expandedSections?: Record<LegacyExtensionRuntimeScope, boolean>
+  expandedSections?: Record<ExtensionScope, boolean>
 }
 
 export interface ExtensionManagerProps extends ExtensionManagerRootProps {
@@ -233,7 +210,7 @@ export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   searchPlaceholder?: string
   tagPlaceholder?: string
   installedTitle?: string
-  marketTitle?: string
+  availableTitle?: string
   showHeader?: boolean
   showCloseButton?: boolean
   showCustomAddButton?: boolean
@@ -244,36 +221,34 @@ export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   visible?: boolean
   /** Loading state for the installed section in the prebuilt facade. */
   loading?: boolean
-  /** Loading state for the market section in the prebuilt facade. */
-  marketLoading?: boolean
+  /** Loading state for the available section in the prebuilt facade. */
+  availableLoading?: boolean
   /** Load failure for the installed section in the prebuilt facade. */
   error?: unknown
-  /** Load failure for the market section in the prebuilt facade. */
-  marketError?: unknown
+  /** Load failure for the available section in the prebuilt facade. */
+  availableError?: unknown
 }
 
 export interface ExtensionManagerEmits {
   (e: 'update:visible', visible: boolean): void
-  (e: 'update:active-type', type: ExtensionKind): void
-  (e: 'update:expanded-sections', expandedSections: Record<LegacyExtensionRuntimeScope, boolean>): void
-  (e: 'type-change', type: ExtensionKind): void
-  (e: 'search-change', query: string, type: ExtensionKind): void
-  (e: 'tag-change', tag: string, type: ExtensionKind): void
-  (e: 'extension-add', intent: ExtensionIntent): void
-  (e: 'extension-create', type: ExtensionKind): void
-  (e: 'extension-detail-open', intent: ExtensionIntent): void
-  (e: 'extension-toggle', intent: ExtensionToggleIntent): void
-  (e: 'extension-edit', intent: ExtensionIntent): void
-  (e: 'extension-delete', intent: ExtensionIntent): void
+  (e: 'update:active-kind', kind: ExtensionKind): void
+  (e: 'update:expanded-sections', expandedSections: Record<ExtensionScope, boolean>): void
+  (e: 'kind-change', kind: ExtensionKind): void
+  (e: 'search-change', query: string, kind: ExtensionKind): void
+  (e: 'tag-change', tag: string, kind: ExtensionKind): void
+  (e: 'install', intent: ExtensionIntent): void
+  (e: 'create', kind: ExtensionKind): void
+  (e: 'detail', intent: ExtensionIntent): void
+  (e: 'toggle', intent: ExtensionToggleIntent): void
+  (e: 'edit', intent: ExtensionIntent): void
+  (e: 'delete', intent: ExtensionIntent): void
   (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
-  (e: 'refresh', type: ExtensionKind, source: LegacyExtensionRuntimeScope): void
+  (e: 'refresh', scope: ExtensionScope): void
 }
 
 export interface ExtensionIntent {
   id: string
-  type: ExtensionKind
-  source?: LegacyExtensionRuntimeScope
-  item?: LegacyExtensionRuntimeRecord
+  kind: ExtensionKind
 }
 
 export interface ExtensionToggleIntent extends ExtensionIntent {
@@ -286,39 +261,26 @@ export interface ExtensionToolToggleIntent extends ExtensionIntent {
 }
 
 export interface ExtensionManagerContext {
-  activeType: Ref<ExtensionKind>
-  catalog: ComputedRef<LegacyExtensionRuntimeRecord[]>
-  displayItems: ComputedRef<LegacyExtensionRuntimeDisplay>
+  activeKind: Ref<ExtensionKind>
+  allExtensions: ComputedRef<Extension[]>
+  displayItems: ComputedRef<ExtensionDisplay>
   operationStates: ComputedRef<ExtensionOperationStateMap>
   typeOptions: ComputedRef<ExtensionTypeOption[]>
-  installedItems: ComputedRef<LegacyExtensionRuntimeRecord[]>
-  marketItems: ComputedRef<LegacyExtensionRuntimeRecord[]>
-  setActiveType: (type: ExtensionKind) => void
-  isSectionExpanded: (source: LegacyExtensionRuntimeScope) => boolean
-  toggleSection: (source: LegacyExtensionRuntimeScope) => void
-  requestAdd: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
-  requestCreate: () => void
-  requestToggle: (item: LegacyExtensionRuntimeRecord, enabled: boolean, source?: LegacyExtensionRuntimeScope) => void
-  requestDetailOpen: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
-  requestEdit: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
-  requestDelete: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
-  requestToolToggle: (
-    item: LegacyExtensionRuntimeRecord,
-    toolId: string,
-    enabled: boolean,
-    source?: LegacyExtensionRuntimeScope,
-  ) => void
-  requestRefresh: (source: LegacyExtensionRuntimeScope) => void
+  installedItems: ComputedRef<Extension[]>
+  availableItems: ComputedRef<Extension[]>
+  setActiveKind: (kind: ExtensionKind) => void
+  isSectionExpanded: (scope: ExtensionScope) => boolean
+  toggleSection: (scope: ExtensionScope) => void
+  requestInstall: (item: Extension) => void
+  requestCreate: (kind: ExtensionKind) => void
+  requestToggle: (item: Extension, enabled: boolean) => void
+  requestDetail: (item: Extension) => void
+  requestEdit: (item: Extension) => void
+  requestDelete: (item: Extension) => void
+  requestToolToggle: (item: Extension, toolId: string, enabled: boolean) => void
+  requestRefresh: (scope: ExtensionScope) => void
 }
 
 export type ExtensionFilterLease = (() => void) & {
   readonly active: boolean
-}
-
-export interface ExtensionManagerFilterContext {
-  activeType: Ref<ExtensionKind>
-  catalog: ComputedRef<LegacyExtensionRuntimeRecord[]>
-  installationDisplayItems: ComputedRef<LegacyExtensionRuntimeDisplay>
-  setDisplayItems: (displayItems?: LegacyExtensionRuntimeDisplay) => void
-  claimFilter: () => ExtensionFilterLease
 }

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
 import { IconDelete } from '@opentiny/tiny-robot-svgs'
 import { provideExtensionListContext } from '../composables/useExtensionListContext'
+import type { LegacyExtensionRuntimeRecord, LegacyExtensionRuntimeScope } from '../internal.type'
 import type {
   ExtensionCardMoreMenuAction,
   ExtensionCardPrimaryAction,
@@ -21,15 +22,18 @@ const props = withDefaults(defineProps<ExtensionListProps>(), {
 defineSlots<ExtensionListSlots>()
 
 const emit = defineEmits<ExtensionListEmits>()
+const attrs = useAttrs()
 
 const hasError = computed(() => props.error !== undefined && props.error !== null)
+const runtimeItems = computed(() => props.items as unknown as LegacyExtensionRuntimeRecord[])
+const runtimeScope = computed(() => (props.scope ?? attrs.source) as LegacyExtensionRuntimeScope | undefined)
 
 const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
-  const item = props.items.find((candidate) => candidate.id === id)
+  const item = runtimeItems.value.find((candidate) => candidate.id === id)
 
-  if (!item || !props.source) return []
+  if (!item || !runtimeScope.value) return []
 
-  if (props.source === 'installed') {
+  if (runtimeScope.value === 'installed') {
     if (!item.installation) return []
 
     return [
@@ -58,9 +62,9 @@ const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
 }
 
 const getDefaultMoreActions = (id: string): ExtensionCardMoreMenuAction[] => {
-  const item = props.items.find((candidate) => candidate.id === id)
+  const item = runtimeItems.value.find((candidate) => candidate.id === id)
 
-  if (!item?.installation || props.source !== 'installed') return []
+  if (!item?.installation || runtimeScope.value !== 'installed') return []
 
   return [{ id: 'delete', label: '删除', icon: IconDelete, danger: true }]
 }

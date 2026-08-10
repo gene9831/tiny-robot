@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
 import { computed } from 'vue'
-import type { ExtensionCardActionEvent, ExtensionManagerProps } from '../index.type'
+import type { Extension, ExtensionCardActionEvent, ExtensionManagerProps, ExtensionScope } from '../index.type'
+import type { LegacyExtensionManagerContext } from '../internal.type'
 import { useExtensionManagerContext } from '../composables'
 import ExtensionCard from './ExtensionCard.vue'
 import ExtensionList from './ExtensionList.vue'
@@ -10,18 +11,18 @@ const props = withDefaults(
   defineProps<
     Pick<
       ExtensionManagerProps,
-      'installedTitle' | 'marketTitle' | 'loading' | 'marketLoading' | 'error' | 'marketError'
+      'installedTitle' | 'availableTitle' | 'loading' | 'availableLoading' | 'error' | 'availableError'
     >
   >(),
   {
     installedTitle: '已添加',
-    marketTitle: '市场',
+    availableTitle: '市场',
     loading: false,
-    marketLoading: false,
+    availableLoading: false,
   },
 )
 
-const manager = useExtensionManagerContext()
+const manager = useExtensionManagerContext() as unknown as LegacyExtensionManagerContext
 const sections = computed(() => [
   { source: 'installed' as const, items: manager.displayItems.value.installed },
   { source: 'market' as const, items: manager.displayItems.value.market },
@@ -30,16 +31,16 @@ type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
 type ExtensionRuntimeScope = (typeof sections.value)[number]['source']
 
 const getSectionTitle = (source: ExtensionRuntimeScope) => {
-  const prefix = source === 'installed' ? props.installedTitle : props.marketTitle
+  const prefix = source === 'installed' ? props.installedTitle : props.availableTitle
   const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeType.value)?.label
   return `${prefix}${typeLabel ?? manager.activeType.value}`
 }
 
 const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无市场扩展')
 
-const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.marketLoading)
+const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.availableLoading)
 
-const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.marketError)
+const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.availableError)
 
 const handleCardAction = (
   item: ExtensionRuntimeItem,
@@ -88,8 +89,8 @@ const handleCardAction = (
 
         <div v-show="manager.isSectionExpanded(section.source)" class="extension-manager__section-body">
           <ExtensionList
-            :source="section.source"
-            :items="section.items"
+            :scope="section.source as unknown as ExtensionScope"
+            :items="section.items as unknown as Extension[]"
             :operation-states="manager.operationStates.value"
             :loading="getLoading(section.source)"
             :error="getError(section.source)"

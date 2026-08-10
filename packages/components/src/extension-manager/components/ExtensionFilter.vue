@@ -2,6 +2,7 @@
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExtensionFilterEmits, ExtensionFilterProps } from '../index.type'
+import type { LegacyExtensionManagerFilterContext, LegacyExtensionRuntimeRecord } from '../internal.type'
 import { useExtensionManagerFilterContext } from '../composables/useExtensionManager'
 
 const props = withDefaults(defineProps<ExtensionFilterProps>(), {
@@ -12,7 +13,7 @@ const props = withDefaults(defineProps<ExtensionFilterProps>(), {
 })
 const emit = defineEmits<ExtensionFilterEmits>()
 
-const manager = useExtensionManagerFilterContext()
+const manager = useExtensionManagerFilterContext() as unknown as LegacyExtensionManagerFilterContext
 type ExtensionRuntimeItem = (typeof manager.catalog.value)[number]
 type ExtensionRuntimeScope = keyof typeof manager.installationDisplayItems.value
 const filterLease = manager.claimFilter()
@@ -52,8 +53,9 @@ const filterItem = (item: ExtensionRuntimeItem, source: ExtensionRuntimeScope) =
   if (item.type !== manager.activeType.value) return false
 
   const matchesTag = !activeTag.value || item.tags?.includes(activeTag.value)
-  const search = props.searchFn ?? defaultSearch
-  return Boolean(matchesTag && search(searchQuery.value, item, source))
+  const search = props.searchFn as
+    ((query: string, item: LegacyExtensionRuntimeRecord, scope: ExtensionRuntimeScope) => boolean) | undefined
+  return Boolean(matchesTag && (search ?? defaultSearch)(searchQuery.value, item, source))
 }
 
 const display = computed(() => ({
