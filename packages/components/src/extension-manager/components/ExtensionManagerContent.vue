@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
 import { computed } from 'vue'
-import type { ExtensionCardActionEvent, ExtensionManagerProps, ExtensionRecord, ExtensionSource } from '../index.type'
+import type { ExtensionCardActionEvent, ExtensionManagerProps } from '../index.type'
 import { useExtensionManagerContext } from '../composables'
 import ExtensionCard from './ExtensionCard.vue'
 import ExtensionList from './ExtensionList.vue'
@@ -26,20 +26,26 @@ const sections = computed(() => [
   { source: 'installed' as const, items: manager.displayItems.value.installed },
   { source: 'market' as const, items: manager.displayItems.value.market },
 ])
+type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
+type ExtensionRuntimeScope = (typeof sections.value)[number]['source']
 
-const getSectionTitle = (source: ExtensionSource) => {
+const getSectionTitle = (source: ExtensionRuntimeScope) => {
   const prefix = source === 'installed' ? props.installedTitle : props.marketTitle
   const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeType.value)?.label
   return `${prefix}${typeLabel ?? manager.activeType.value}`
 }
 
-const getEmptyText = (source: ExtensionSource) => (source === 'installed' ? '暂无已添加扩展' : '暂无市场扩展')
+const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无市场扩展')
 
-const getLoading = (source: ExtensionSource) => (source === 'installed' ? props.loading : props.marketLoading)
+const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.marketLoading)
 
-const getError = (source: ExtensionSource) => (source === 'installed' ? props.error : props.marketError)
+const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.marketError)
 
-const handleCardAction = (item: ExtensionRecord, source: ExtensionSource, event: ExtensionCardActionEvent) => {
+const handleCardAction = (
+  item: ExtensionRuntimeItem,
+  source: ExtensionRuntimeScope,
+  event: ExtensionCardActionEvent,
+) => {
   if (event.id === 'toggle' && typeof event.checked === 'boolean') {
     manager.requestToggle(item, event.checked, source)
   } else if (event.id === 'add') {

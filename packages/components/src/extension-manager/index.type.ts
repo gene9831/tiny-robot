@@ -2,24 +2,52 @@ import type { Component, ComputedRef, Ref, VNode } from 'vue'
 import type { McpAddFormData, McpAddFormProps } from '../mcp-add-form/index.type'
 import type { ExtensionCardPopoverPlacement } from './internal.type'
 
-export type ExtensionType = 'mcp' | 'skill' | (string & {})
+export type ExtensionKind = string & {}
+export type ExtensionScope = 'installed' | 'available'
 
-export type ExtensionSource = 'installed' | 'market'
-
-export interface ExtensionInstallation {
-  enabled: boolean
+export interface ExtensionInput<TConfig = unknown, TMetadata = unknown> {
+  id: string
+  kind: ExtensionKind
+  name: string
+  version?: string
+  icon?: string
+  description?: string
+  tags?: string[]
+  installed?: boolean
+  config?: TConfig
+  metadata?: TMetadata
 }
 
-export interface ExtensionRecord<TMetadata = unknown> {
+export interface Extension<TConfig = unknown, TMetadata = unknown> extends Omit<
+  ExtensionInput<TConfig, TMetadata>,
+  'installed' | 'config'
+> {
+  installed: boolean
+  config?: TConfig
+}
+
+export interface ExtensionDisplay {
+  installed: Extension[]
+  available: Extension[]
+}
+
+type LegacyExtensionRuntimeRecord<TMetadata = unknown> = {
   id: string
-  type: ExtensionType
+  type: ExtensionKind
   name: string
   version?: string
   icon?: string
   description?: string
   tags?: string[]
   metadata?: TMetadata
-  installation?: ExtensionInstallation
+  installation?: { enabled: boolean }
+}
+
+type LegacyExtensionRuntimeScope = 'installed' | 'market'
+
+type LegacyExtensionRuntimeDisplay = {
+  installed: LegacyExtensionRuntimeRecord[]
+  market: LegacyExtensionRuntimeRecord[]
 }
 
 export interface McpExtensionTool {
@@ -34,7 +62,7 @@ export interface McpExtensionMetadata {
 }
 
 export interface McpExtensionDetailProps {
-  item: ExtensionRecord<McpExtensionMetadata>
+  item: Extension<unknown, McpExtensionMetadata>
 }
 
 export interface McpExtensionDetailEmits {
@@ -50,10 +78,11 @@ export interface McpExtensionFormEmits {
   (e: 'cancel'): void
 }
 
-/** @deprecated Use ExtensionRecord instead. */
-export type ExtensionItem<TMetadata = unknown> = ExtensionRecord<TMetadata>
-
-export type ExtensionSearchFn = (query: string, item: ExtensionItem, source: ExtensionSource) => boolean
+export type ExtensionSearchFn = (
+  query: string,
+  item: LegacyExtensionRuntimeRecord,
+  source: LegacyExtensionRuntimeScope,
+) => boolean
 
 export type ExtensionOperationKind = 'install' | 'create' | 'toggle' | 'edit' | 'delete' | 'refresh' | 'tool-toggle'
 
@@ -63,9 +92,6 @@ export interface ExtensionOperationState {
   error?: unknown
   retryable?: boolean
 }
-
-/** @deprecated Use ExtensionOperationState['phase'] instead. */
-export type ExtensionAddState = ExtensionOperationState['phase']
 
 export type ExtensionOperationStateMap = Record<
   string,
@@ -149,7 +175,7 @@ export interface ExtensionCardEmits {
 }
 
 export interface ExtensionTypeOption {
-  value: ExtensionType
+  value: ExtensionKind
   label: string
 }
 
@@ -159,8 +185,8 @@ export interface ExtensionTagOption {
 }
 
 export interface ExtensionListProps {
-  items?: ExtensionRecord[]
-  source?: ExtensionSource
+  items?: LegacyExtensionRuntimeRecord[]
+  source?: LegacyExtensionRuntimeScope
   operationStates?: ExtensionOperationStateMap
   loading?: boolean
   error?: unknown
@@ -175,11 +201,6 @@ export interface ExtensionListSlots {
 
 export interface ExtensionListEmits {
   (e: 'retry'): void
-}
-
-export interface ExtensionDisplay {
-  installed: ExtensionRecord[]
-  market: ExtensionRecord[]
 }
 
 export interface ExtensionFilterProps {
@@ -200,11 +221,11 @@ export interface ExtensionFilterEmits {
 }
 
 export interface ExtensionManagerRootProps {
-  extensions?: ExtensionRecord[]
+  extensions?: LegacyExtensionRuntimeRecord[]
   operationStates?: ExtensionOperationStateMap
-  activeType?: ExtensionType
-  defaultActiveType?: ExtensionType
-  expandedSections?: Record<ExtensionSource, boolean>
+  activeType?: ExtensionKind
+  defaultActiveType?: ExtensionKind
+  expandedSections?: Record<LegacyExtensionRuntimeScope, boolean>
 }
 
 export interface ExtensionManagerProps extends ExtensionManagerRootProps {
@@ -231,38 +252,28 @@ export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   marketError?: unknown
 }
 
-export interface ExtensionManagerPermissions {
-  allowExtensionAdd: boolean
-  allowExtensionCreate: boolean
-  allowExtensionEdit: boolean
-  allowExtensionDelete: boolean
-  allowExtensionDetail: boolean
-  allowExtensionToggle: boolean
-  allowToolToggle: boolean
-}
-
 export interface ExtensionManagerEmits {
   (e: 'update:visible', visible: boolean): void
-  (e: 'update:active-type', type: ExtensionType): void
-  (e: 'update:expanded-sections', expandedSections: Record<ExtensionSource, boolean>): void
-  (e: 'type-change', type: ExtensionType): void
-  (e: 'search-change', query: string, type: ExtensionType): void
-  (e: 'tag-change', tag: string, type: ExtensionType): void
+  (e: 'update:active-type', type: ExtensionKind): void
+  (e: 'update:expanded-sections', expandedSections: Record<LegacyExtensionRuntimeScope, boolean>): void
+  (e: 'type-change', type: ExtensionKind): void
+  (e: 'search-change', query: string, type: ExtensionKind): void
+  (e: 'tag-change', tag: string, type: ExtensionKind): void
   (e: 'extension-add', intent: ExtensionIntent): void
-  (e: 'extension-create', type: ExtensionType): void
+  (e: 'extension-create', type: ExtensionKind): void
   (e: 'extension-detail-open', intent: ExtensionIntent): void
   (e: 'extension-toggle', intent: ExtensionToggleIntent): void
   (e: 'extension-edit', intent: ExtensionIntent): void
   (e: 'extension-delete', intent: ExtensionIntent): void
   (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
-  (e: 'refresh', type: ExtensionType, source: ExtensionSource): void
+  (e: 'refresh', type: ExtensionKind, source: LegacyExtensionRuntimeScope): void
 }
 
 export interface ExtensionIntent {
   id: string
-  type: ExtensionType
-  source?: ExtensionSource
-  item?: ExtensionRecord
+  type: ExtensionKind
+  source?: LegacyExtensionRuntimeScope
+  item?: LegacyExtensionRuntimeRecord
 }
 
 export interface ExtensionToggleIntent extends ExtensionIntent {
@@ -275,24 +286,29 @@ export interface ExtensionToolToggleIntent extends ExtensionIntent {
 }
 
 export interface ExtensionManagerContext {
-  activeType: Ref<ExtensionType>
-  catalog: ComputedRef<ExtensionRecord[]>
-  displayItems: ComputedRef<ExtensionDisplay>
+  activeType: Ref<ExtensionKind>
+  catalog: ComputedRef<LegacyExtensionRuntimeRecord[]>
+  displayItems: ComputedRef<LegacyExtensionRuntimeDisplay>
   operationStates: ComputedRef<ExtensionOperationStateMap>
   typeOptions: ComputedRef<ExtensionTypeOption[]>
-  installedItems: ComputedRef<ExtensionRecord[]>
-  marketItems: ComputedRef<ExtensionRecord[]>
-  setActiveType: (type: ExtensionType) => void
-  isSectionExpanded: (source: ExtensionSource) => boolean
-  toggleSection: (source: ExtensionSource) => void
-  requestAdd: (item: ExtensionRecord, source?: ExtensionSource) => void
+  installedItems: ComputedRef<LegacyExtensionRuntimeRecord[]>
+  marketItems: ComputedRef<LegacyExtensionRuntimeRecord[]>
+  setActiveType: (type: ExtensionKind) => void
+  isSectionExpanded: (source: LegacyExtensionRuntimeScope) => boolean
+  toggleSection: (source: LegacyExtensionRuntimeScope) => void
+  requestAdd: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
   requestCreate: () => void
-  requestToggle: (item: ExtensionRecord, enabled: boolean, source?: ExtensionSource) => void
-  requestDetailOpen: (item: ExtensionRecord, source?: ExtensionSource) => void
-  requestEdit: (item: ExtensionRecord, source?: ExtensionSource) => void
-  requestDelete: (item: ExtensionRecord, source?: ExtensionSource) => void
-  requestToolToggle: (item: ExtensionRecord, toolId: string, enabled: boolean, source?: ExtensionSource) => void
-  requestRefresh: (source: ExtensionSource) => void
+  requestToggle: (item: LegacyExtensionRuntimeRecord, enabled: boolean, source?: LegacyExtensionRuntimeScope) => void
+  requestDetailOpen: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
+  requestEdit: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
+  requestDelete: (item: LegacyExtensionRuntimeRecord, source?: LegacyExtensionRuntimeScope) => void
+  requestToolToggle: (
+    item: LegacyExtensionRuntimeRecord,
+    toolId: string,
+    enabled: boolean,
+    source?: LegacyExtensionRuntimeScope,
+  ) => void
+  requestRefresh: (source: LegacyExtensionRuntimeScope) => void
 }
 
 export type ExtensionFilterLease = (() => void) & {
@@ -300,9 +316,9 @@ export type ExtensionFilterLease = (() => void) & {
 }
 
 export interface ExtensionManagerFilterContext {
-  activeType: Ref<ExtensionType>
-  catalog: ComputedRef<ExtensionRecord[]>
-  installationDisplayItems: ComputedRef<ExtensionDisplay>
-  setDisplayItems: (displayItems?: ExtensionDisplay) => void
+  activeType: Ref<ExtensionKind>
+  catalog: ComputedRef<LegacyExtensionRuntimeRecord[]>
+  installationDisplayItems: ComputedRef<LegacyExtensionRuntimeDisplay>
+  setDisplayItems: (displayItems?: LegacyExtensionRuntimeDisplay) => void
   claimFilter: () => ExtensionFilterLease
 }

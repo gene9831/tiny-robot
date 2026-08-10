@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
 import { computed, onUnmounted, ref, watch } from 'vue'
-import type {
-  ExtensionDisplay,
-  ExtensionFilterEmits,
-  ExtensionFilterProps,
-  ExtensionItem,
-  ExtensionSource,
-} from '../index.type'
+import type { ExtensionFilterEmits, ExtensionFilterProps } from '../index.type'
 import { useExtensionManagerFilterContext } from '../composables/useExtensionManager'
 
 const props = withDefaults(defineProps<ExtensionFilterProps>(), {
@@ -19,6 +13,8 @@ const props = withDefaults(defineProps<ExtensionFilterProps>(), {
 const emit = defineEmits<ExtensionFilterEmits>()
 
 const manager = useExtensionManagerFilterContext()
+type ExtensionRuntimeItem = (typeof manager.catalog.value)[number]
+type ExtensionRuntimeScope = keyof typeof manager.installationDisplayItems.value
 const filterLease = manager.claimFilter()
 const uncontrolledQuery = ref('')
 const uncontrolledTag = ref('')
@@ -45,14 +41,14 @@ const tagOptions = computed(() =>
   [...new Set(manager.catalog.value.flatMap((item) => item.tags ?? []))].map((value) => ({ value, label: value })),
 )
 
-const defaultSearch = (query: string, item: ExtensionItem) => {
+const defaultSearch = (query: string, item: ExtensionRuntimeItem) => {
   if (!query) return true
 
   const keyword = query.toLowerCase()
   return item.name.toLowerCase().includes(keyword) || (item.description || '').toLowerCase().includes(keyword)
 }
 
-const filterItem = (item: ExtensionItem, source: ExtensionSource) => {
+const filterItem = (item: ExtensionRuntimeItem, source: ExtensionRuntimeScope) => {
   if (item.type !== manager.activeType.value) return false
 
   const matchesTag = !activeTag.value || item.tags?.includes(activeTag.value)
@@ -60,7 +56,7 @@ const filterItem = (item: ExtensionItem, source: ExtensionSource) => {
   return Boolean(matchesTag && search(searchQuery.value, item, source))
 }
 
-const display = computed<ExtensionDisplay>(() => ({
+const display = computed(() => ({
   installed: manager.installationDisplayItems.value.installed.filter((item) => filterItem(item, 'installed')),
   market: manager.installationDisplayItems.value.market.filter((item) => filterItem(item, 'market')),
 }))

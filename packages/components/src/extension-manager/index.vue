@@ -5,7 +5,7 @@ import type { Ref } from 'vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
 import { ExtensionFilter } from './components'
 import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
-import type { ExtensionManagerEmits, ExtensionManagerProps, ExtensionType } from './index.type'
+import type { ExtensionKind, ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
 
 const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   extensions: () => [],
@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 const emit = defineEmits<ExtensionManagerEmits>()
 const visible = defineModel<boolean>('visible', { default: true })
 const managerRoot = ref<{
-  activeType: Ref<ExtensionType>
+  activeType: Ref<ExtensionKind>
   requestCreate: () => void
 }>()
 

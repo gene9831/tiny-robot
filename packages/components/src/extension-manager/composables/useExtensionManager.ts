@@ -1,24 +1,28 @@
 import { computed, inject, provide, ref, watch } from 'vue'
 import type { InjectionKey } from 'vue'
 import type {
-  ExtensionDisplay,
   ExtensionFilterLease,
   ExtensionIntent,
+  ExtensionKind,
   ExtensionManagerFilterContext,
   ExtensionManagerContext,
   ExtensionManagerEmits,
   ExtensionManagerRootProps,
   ExtensionOperationStateMap,
-  ExtensionRecord,
-  ExtensionSource,
   ExtensionToggleIntent,
-  ExtensionType,
 } from '../index.type'
+
+type ExtensionRuntimeItem = NonNullable<ExtensionManagerRootProps['extensions']>[number]
+type ExtensionRuntimeScope = keyof NonNullable<ExtensionManagerRootProps['expandedSections']>
+type ExtensionRuntimeDisplay = {
+  installed: ExtensionRuntimeItem[]
+  market: ExtensionRuntimeItem[]
+}
 
 const defaultTypeOptions = [
   { value: 'mcp', label: 'MCP' },
   { value: 'skill', label: 'Skills' },
-] satisfies Array<{ value: ExtensionType; label: string }>
+] satisfies Array<{ value: ExtensionKind; label: string }>
 
 const extensionManagerContextKey: InjectionKey<ExtensionManagerContext> = Symbol('ExtensionManagerContext')
 const extensionManagerFilterContextKey: InjectionKey<ExtensionManagerFilterContext> = Symbol(
@@ -31,22 +35,24 @@ export const useExtensionManager = (
   props: Readonly<ExtensionManagerRootProps>,
   emit: ExtensionManagerEmits,
 ): ExtensionManagerRootContext => {
-  const defaultExpandedSections: Record<ExtensionSource, boolean> = {
+  const defaultExpandedSections: Record<ExtensionRuntimeScope, boolean> = {
     installed: true,
     market: true,
   }
-  const activeType = ref<ExtensionType>(props.activeType ?? props.defaultActiveType ?? 'mcp')
-  const expandedSections = ref<Record<ExtensionSource, boolean>>({
+  const activeType = ref<ExtensionKind>(props.activeType ?? props.defaultActiveType ?? 'mcp')
+  const expandedSections = ref<Record<ExtensionRuntimeScope, boolean>>({
     ...defaultExpandedSections,
     ...props.expandedSections,
   })
   const catalog = computed(() => props.extensions ?? [])
-  const installationDisplayItems = computed<ExtensionDisplay>(() => ({
+  const installationDisplayItems = computed<ExtensionRuntimeDisplay>(() => ({
     installed: catalog.value.filter((item) => item.installation !== undefined),
     market: catalog.value.filter((item) => item.installation === undefined),
   }))
-  const displayItemsSource = ref<ExtensionDisplay>()
-  const displayItems = computed<ExtensionDisplay>(() => displayItemsSource.value ?? installationDisplayItems.value)
+  const displayItemsSource = ref<ExtensionRuntimeDisplay>()
+  const displayItems = computed<ExtensionRuntimeDisplay>(
+    () => displayItemsSource.value ?? installationDisplayItems.value,
+  )
   const operationStates = computed<ExtensionOperationStateMap>(() => props.operationStates ?? {})
 
   const typeOptions = computed(() => defaultTypeOptions)
@@ -54,7 +60,7 @@ export const useExtensionManager = (
   const installedItems = computed(() => displayItems.value.installed)
   const marketItems = computed(() => displayItems.value.market)
 
-  const setDisplayItems = (nextDisplayItems?: ExtensionDisplay) => {
+  const setDisplayItems = (nextDisplayItems?: ExtensionRuntimeDisplay) => {
     displayItemsSource.value = nextDisplayItems
   }
 
@@ -80,16 +86,16 @@ export const useExtensionManager = (
     return release
   }
 
-  const setActiveType = (type: ExtensionType) => {
+  const setActiveType = (type: ExtensionKind) => {
     if (activeType.value === type) return
     activeType.value = type
     emit('update:active-type', type)
     emit('type-change', type)
   }
 
-  const isSectionExpanded = (source: ExtensionSource) => expandedSections.value[source]
+  const isSectionExpanded = (source: ExtensionRuntimeScope) => expandedSections.value[source]
 
-  const toggleSection = (source: ExtensionSource) => {
+  const toggleSection = (source: ExtensionRuntimeScope) => {
     const nextExpandedSections = {
       ...expandedSections.value,
       [source]: !expandedSections.value[source],
@@ -99,13 +105,13 @@ export const useExtensionManager = (
     emit('update:expanded-sections', nextExpandedSections)
   }
 
-  const createIntent = (item: ExtensionRecord, source?: ExtensionSource): ExtensionIntent => ({
+  const createIntent = (item: ExtensionRuntimeItem, source?: ExtensionRuntimeScope): ExtensionIntent => ({
     id: item.id,
     type: item.type,
     ...(source === undefined ? {} : { source }),
   })
 
-  const requestAdd = (item: ExtensionRecord, source?: ExtensionSource) => {
+  const requestAdd = (item: ExtensionRuntimeItem, source?: ExtensionRuntimeScope) => {
     emit('extension-add', createIntent(item, source))
   }
 
@@ -113,7 +119,7 @@ export const useExtensionManager = (
     emit('extension-create', activeType.value)
   }
 
-  const requestToggle = (item: ExtensionRecord, enabled: boolean, source?: ExtensionSource) => {
+  const requestToggle = (item: ExtensionRuntimeItem, enabled: boolean, source?: ExtensionRuntimeScope) => {
     const intent: ExtensionToggleIntent = {
       ...createIntent(item, source),
       enabled,
@@ -121,19 +127,24 @@ export const useExtensionManager = (
     emit('extension-toggle', intent)
   }
 
-  const requestDetailOpen = (item: ExtensionRecord, source?: ExtensionSource) => {
+  const requestDetailOpen = (item: ExtensionRuntimeItem, source?: ExtensionRuntimeScope) => {
     emit('extension-detail-open', createIntent(item, source))
   }
 
-  const requestEdit = (item: ExtensionRecord, source?: ExtensionSource) => {
+  const requestEdit = (item: ExtensionRuntimeItem, source?: ExtensionRuntimeScope) => {
     emit('extension-edit', createIntent(item, source))
   }
 
-  const requestDelete = (item: ExtensionRecord, source?: ExtensionSource) => {
+  const requestDelete = (item: ExtensionRuntimeItem, source?: ExtensionRuntimeScope) => {
     emit('extension-delete', createIntent(item, source))
   }
 
-  const requestToolToggle = (item: ExtensionRecord, toolId: string, enabled: boolean, source?: ExtensionSource) => {
+  const requestToolToggle = (
+    item: ExtensionRuntimeItem,
+    toolId: string,
+    enabled: boolean,
+    source?: ExtensionRuntimeScope,
+  ) => {
     emit('tool-toggle', {
       ...createIntent(item, source),
       toolId,
@@ -141,7 +152,7 @@ export const useExtensionManager = (
     })
   }
 
-  const requestRefresh = (source: ExtensionSource) => {
+  const requestRefresh = (source: ExtensionRuntimeScope) => {
     emit('refresh', activeType.value, source)
   }
 
