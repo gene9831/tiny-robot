@@ -3,15 +3,15 @@ import type {
   ExtensionAddState,
   ExtensionCardActionEvent,
   ExtensionCardCustomAction,
-  ExtensionCardMoreAction,
-  ExtensionCardMoreActionPlacement,
+  ExtensionCardMoreMenuAction,
+  ExtensionCardMoreMenuPlacement,
   ExtensionCardPrimaryAction,
 } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { IconDelete, IconEditPen, IconRefresh } from '@opentiny/tiny-robot-svgs'
 import { computed, ref } from 'vue'
 
-const enabled = ref(true)
+const checked = ref(true)
 const toggleDisabled = ref(false)
 const showToggleAction = ref(true)
 const addState = ref<ExtensionAddState>('idle')
@@ -19,13 +19,11 @@ const progress = ref(45)
 const showProgressValue = ref(true)
 const addDisabled = ref(false)
 const showAddAction = ref(false)
-const buttonLoading = ref(false)
 const buttonDisabled = ref(false)
 const showButtonAction = ref(false)
 const customDisabled = ref(false)
 const showCustomAction = ref(false)
-const moreActionDisabled = ref(false)
-const moreActionPlacement = ref<ExtensionCardMoreActionPlacement>('bottom-end')
+const moreMenuPlacement = ref<ExtensionCardMoreMenuPlacement>('bottom-end')
 const editDisabled = ref(false)
 const nameClickable = ref(true)
 const events = ref<string[]>([])
@@ -35,10 +33,10 @@ const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
     {
       id: 'switch',
       type: 'toggle',
-      enabled: enabled.value,
+      checked: checked.value,
       hidden: !showToggleAction.value,
       disabled: toggleDisabled.value,
-      ariaLabel: enabled.value ? '停用扩展' : '启用扩展',
+      ariaLabel: checked.value ? '停用扩展' : '启用扩展',
     },
     {
       id: 'install',
@@ -56,7 +54,6 @@ const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
       label: '配置',
       icon: IconEditPen,
       hidden: !showButtonAction.value,
-      loading: buttonLoading.value,
       disabled: buttonDisabled.value,
       ariaLabel: '配置扩展',
     },
@@ -73,7 +70,7 @@ const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
   ]
 })
 
-const moreActions = computed<ExtensionCardMoreAction[]>(() => {
+const moreMenuActions = computed<ExtensionCardMoreMenuAction[]>(() => {
   return [
     {
       id: 'edit',
@@ -105,18 +102,13 @@ const getCustomActionLabel = (action: ExtensionCardCustomAction) => {
 }
 
 const handleAction = (event: ExtensionCardActionEvent) => {
-  if (event.type === 'more') {
-    logEvent(`more：${event.action.id}`)
-    return
-  }
-
-  if (event.type === 'toggle') {
-    enabled.value = event.enabled
-    logEvent(`primary/toggle：${event.action.id} → ${event.enabled}`)
-  } else if (event.type === 'custom') {
-    logEvent(`primary/custom：${event.action.id} → ${JSON.stringify(event.payload)}`)
+  if (event.id === 'switch' && typeof event.checked === 'boolean') {
+    checked.value = event.checked
+    logEvent(`${event.id} → ${event.checked}`)
+  } else if (event.id === 'status') {
+    logEvent(`${event.id} → ${JSON.stringify(event.payload)}`)
   } else {
-    logEvent(`primary/${event.type}：${event.action.id}`)
+    logEvent(event.id)
   }
 }
 </script>
@@ -125,7 +117,7 @@ const handleAction = (event: ExtensionCardActionEvent) => {
   <div class="extension-card-demo">
     <header class="extension-card-demo__header">
       <h2>ExtensionCard</h2>
-      <p>primaryActions 支持多个内置或自定义操作，moreActions 通过统一菜单承载次级操作。</p>
+      <p>primaryActions 支持多个内置或自定义操作，moreMenuActions 通过统一菜单承载次级操作。</p>
     </header>
 
     <section class="card-playground">
@@ -136,8 +128,8 @@ const handleAction = (event: ExtensionCardActionEvent) => {
           show action
         </label>
         <label class="card-playground__checkbox">
-          <input v-model="enabled" type="checkbox" />
-          enabled
+          <input v-model="checked" type="checkbox" />
+          checked
         </label>
         <label class="card-playground__checkbox">
           <input v-model="toggleDisabled" type="checkbox" />
@@ -177,10 +169,6 @@ const handleAction = (event: ExtensionCardActionEvent) => {
           show action
         </label>
         <label class="card-playground__checkbox">
-          <input v-model="buttonLoading" type="checkbox" />
-          loading
-        </label>
-        <label class="card-playground__checkbox">
           <input v-model="buttonDisabled" type="checkbox" />
           disabled
         </label>
@@ -198,14 +186,10 @@ const handleAction = (event: ExtensionCardActionEvent) => {
         <strong>more action</strong>
         <label>
           placement
-          <select v-model="moreActionPlacement">
+          <select v-model="moreMenuPlacement">
             <option value="bottom-end">bottom-end</option>
             <option value="top-end">top-end</option>
           </select>
-        </label>
-        <label class="card-playground__checkbox">
-          <input v-model="moreActionDisabled" type="checkbox" />
-          trigger disabled
         </label>
         <label class="card-playground__checkbox">
           <input v-model="editDisabled" type="checkbox" />
@@ -229,10 +213,9 @@ const handleAction = (event: ExtensionCardActionEvent) => {
             description="提供地理编码、路线规划、天气查询等地图工具。"
             icon="https://img.alicdn.com/imgextra/i4/O1CN01iPPabT1EGRN6uatHP_!!6000000000324-0-tps-512-512.jpg"
             :primary-actions="primaryActions"
-            :more-actions="moreActions"
-            :more-action-disabled="moreActionDisabled"
-            :more-action-placement="moreActionPlacement"
-            more-action-aria-label="更多扩展操作"
+            :more-menu-actions="moreMenuActions"
+            :more-menu-placement="moreMenuPlacement"
+            more-menu-trigger-aria-label="更多扩展操作"
             :name-clickable="nameClickable"
             @name-click="logEvent('打开详情：高德地图 MCP')"
             @action="handleAction"

@@ -50,7 +50,7 @@ const setTriggerRef = (target: Element | ComponentPublicInstance | null) => {
 
 const { renderAsChild } = useAsChild({
   getSlot: () => slots.trigger,
-  debugName: 'ExtensionCardPopover',
+  componentName: 'ExtensionCardPopover',
 })
 
 const renderAsChildTrigger = () =>

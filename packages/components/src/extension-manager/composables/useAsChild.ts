@@ -3,7 +3,7 @@ import { cloneVNode, Comment, Fragment, isVNode, Suspense, Teleport, Text } from
 
 interface UseAsChildOptions<TSlotProps> {
   getSlot: () => ((props: TSlotProps) => VNode[]) | undefined
-  debugName?: string
+  componentName?: string
 }
 
 type AsChildInjectedProps = VNodeProps & Record<string, unknown>
@@ -24,8 +24,8 @@ const isSupportedAsChildVNode = (node: VNode) => {
   return typeof node.type === 'string' || typeof node.type === 'object' || typeof node.type === 'function'
 }
 
-export function useAsChild<TSlotProps>({ getSlot, debugName }: UseAsChildOptions<TSlotProps>) {
-  const warningPrefix = debugName ? `[TinyRobot] ${debugName} with asChild` : '[TinyRobot] asChild'
+export function useAsChild<TSlotProps>({ getSlot, componentName }: UseAsChildOptions<TSlotProps>) {
+  const warningPrefix = componentName ? `[TinyRobot] ${componentName} with asChild` : '[TinyRobot] asChild'
 
   const renderAsChild = (slotProps: TSlotProps, injectedProps: AsChildInjectedProps = {}): VNode | null => {
     const children = flattenAsChildVNodes(getSlot()?.(slotProps) ?? [])

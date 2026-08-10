@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ExtensionItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardActionEvent, ExtensionItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { ref } from 'vue'
 
@@ -114,13 +114,23 @@ const handleDelete = (item: ExtensionItem) => {
 const handleDetailOpen = (item: ExtensionItem) => {
   logEvent(`打开详情：${item.name}`)
 }
+
+const handleCardAction = (item: ExtensionItem, event: ExtensionCardActionEvent) => {
+  if (event.id === 'toggle' && typeof event.checked === 'boolean') {
+    handleToggle(item, event.checked)
+  } else if (event.id === 'add') {
+    handleAdd(item)
+  } else if (event.id === 'delete') {
+    handleDelete(item)
+  }
+}
 </script>
 
 <template>
   <div class="extension-list-demo">
     <header class="extension-list-demo__header">
       <h2>ExtensionList</h2>
-      <p>单独预览列表级状态、source 差异和 Card 事件映射。</p>
+      <p>List 提供布局、列表状态和默认 Card 操作，页面结构与事件处理由外部组合。</p>
     </header>
 
     <section class="extension-list-demo__controls">
@@ -137,26 +147,37 @@ const handleDetailOpen = (item: ExtensionItem) => {
     <section class="extension-list-demo__section">
       <h3>Installed source</h3>
       <ExtensionManager.List
-        :items="installedItems"
         source="installed"
+        :items="installedItems"
         :loading="showInstalledLoading"
         empty-text="暂无已安装扩展"
-        @extension-toggle="handleToggle"
-        @extension-delete="handleDelete"
-        @extension-detail-open="handleDetailOpen"
-      />
+      >
+        <ExtensionManager.Card
+          v-for="item in installedItems"
+          :key="item.id"
+          :item="item"
+          @name-click="handleDetailOpen(item)"
+          @action="handleCardAction(item, $event)"
+        />
+      </ExtensionManager.List>
     </section>
 
     <section class="extension-list-demo__section">
       <h3>Market source</h3>
       <ExtensionManager.List
-        :items="marketItems"
         source="market"
+        :items="marketItems"
         :loading="showMarketLoading"
         empty-text="暂无市场扩展"
-        @extension-add="handleAdd"
-        @extension-detail-open="handleDetailOpen"
-      />
+      >
+        <ExtensionManager.Card
+          v-for="item in marketItems"
+          :key="item.id"
+          :item="item"
+          @name-click="handleDetailOpen(item)"
+          @action="handleCardAction(item, $event)"
+        />
+      </ExtensionManager.List>
     </section>
 
     <section class="event-panel">
