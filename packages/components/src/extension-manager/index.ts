@@ -6,8 +6,8 @@ import {
   ExtensionFilter,
   ExtensionList,
   ExtensionManagerContent,
-  McpExtensionDetail,
-  McpExtensionForm,
+  McpDetail,
+  McpForm,
 } from './components'
 
 ExtensionManager.name = 'ExtensionManager'
@@ -16,8 +16,8 @@ ExtensionManagerContent.name = 'ExtensionManagerContent'
 ExtensionCard.name = 'ExtensionCard'
 ExtensionFilter.name = 'ExtensionFilter'
 ExtensionList.name = 'ExtensionList'
-McpExtensionDetail.name = 'McpExtensionDetail'
-McpExtensionForm.name = 'McpExtensionForm'
+McpDetail.name = 'McpDetail'
+McpForm.name = 'McpForm'
 
 const install = function <T>(app: App<T>) {
   app.component(ExtensionManager.name!, ExtensionManager)
@@ -26,8 +26,8 @@ const install = function <T>(app: App<T>) {
   app.component(ExtensionCard.name!, ExtensionCard)
   app.component(ExtensionFilter.name!, ExtensionFilter)
   app.component(ExtensionList.name!, ExtensionList)
-  app.component(McpExtensionDetail.name!, McpExtensionDetail)
-  app.component(McpExtensionForm.name!, McpExtensionForm)
+  app.component(McpDetail.name!, McpDetail)
+  app.component(McpForm.name!, McpForm)
 }
 
 const ExtensionManagerWithSubComponents = Object.assign(ExtensionManager, {
@@ -37,8 +37,8 @@ const ExtensionManagerWithSubComponents = Object.assign(ExtensionManager, {
   Card: ExtensionCard,
   Filter: ExtensionFilter,
   List: ExtensionList,
-  McpExtensionDetail,
-  McpExtensionForm,
+  McpDetail,
+  McpForm,
 })
 
 export {
@@ -48,8 +48,6 @@ export {
   ExtensionList,
   ExtensionManagerContent,
   ExtensionManagerRoot,
-  McpExtensionDetail,
-  McpExtensionForm,
 }
 export { useExtensionContext } from './composables'
 export * from './index.type'
@@ -61,6 +59,6 @@ export default ExtensionManagerWithSubComponents as typeof ExtensionManager & {
   Card: typeof ExtensionCard
   Filter: typeof ExtensionFilter
   List: typeof ExtensionList
-  McpExtensionDetail: typeof McpExtensionDetail
-  McpExtensionForm: typeof McpExtensionForm
+  McpDetail: typeof McpDetail
+  McpForm: typeof McpForm
 }

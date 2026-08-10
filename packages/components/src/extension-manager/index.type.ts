@@ -1,5 +1,4 @@
 import type { Component, ComputedRef, VNode } from 'vue'
-import type { McpAddFormData, McpAddFormProps } from '../mcp-add-form/index.type'
 import type { ExtensionCardPopoverPlacement } from './internal.type'
 
 export type ExtensionKind = string & {}
@@ -31,31 +30,50 @@ export interface ExtensionDisplay {
   available: Extension[]
 }
 
-export interface McpExtensionTool {
+export interface McpTool {
   id: string
   name: string
   description?: string
-  enabled: boolean
 }
 
-export interface McpExtensionMetadata {
-  tools?: McpExtensionTool[]
+export interface McpMetadata {
+  tools?: McpTool[]
 }
 
-export interface McpExtensionDetailProps {
-  item: Extension<unknown, McpExtensionMetadata>
+export interface McpConfig {
+  enabled?: boolean
+  tools?: Record<string, { enabled: boolean }>
 }
 
-export interface McpExtensionDetailEmits {
-  (e: 'tool-toggle', toolId: string, enabled: boolean): void
+export interface McpDetailProps {
+  item: Extension<McpConfig, McpMetadata>
 }
 
-export type McpExtensionCreatePayload = { mode: 'form'; data: McpAddFormData } | { mode: 'code'; data: string }
+export interface McpDetailEmits {
+  (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
+}
 
-export type McpExtensionFormProps = McpAddFormProps
+export interface McpDefinition {
+  name: string
+  description: string
+  transport: 'sse' | 'streamableHttp'
+  url: string
+  headers: Record<string, string>
+}
 
-export interface McpExtensionFormEmits {
-  (e: 'submit', payload: McpExtensionCreatePayload): void
+export type McpFormMode = 'form' | 'code'
+
+export type McpFormPayload = { mode: 'form'; data: McpDefinition } | { mode: 'code'; data: string }
+
+export interface McpFormProps {
+  mode?: McpFormMode
+  definition?: McpDefinition
+  code?: string
+}
+
+export interface McpFormEmits {
+  (e: 'update:mode', mode: McpFormMode): void
+  (e: 'submit', payload: McpFormPayload): void
   (e: 'cancel'): void
 }
 

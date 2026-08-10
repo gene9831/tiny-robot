@@ -28,8 +28,6 @@ import ExtensionManager, {
   ExtensionList,
   ExtensionManagerContent,
   ExtensionManagerRoot,
-  McpExtensionDetail,
-  McpExtensionForm,
   useExtensionContext,
 } from './extension-manager'
 import {
@@ -115,8 +113,6 @@ const components = [
   ExtensionList,
   ExtensionManagerRoot,
   ExtensionManagerContent,
-  McpExtensionDetail,
-  McpExtensionForm,
   ActionButton,
   SubmitButton,
   ClearButton,
@@ -200,10 +196,6 @@ export {
   ExtensionManagerContent as TrExtensionManagerContent,
   ExtensionManagerRoot,
   ExtensionManagerRoot as TrExtensionManagerRoot,
-  McpExtensionDetail,
-  McpExtensionDetail as TrMcpExtensionDetail,
-  McpExtensionForm,
-  McpExtensionForm as TrMcpExtensionForm,
   ActionButton,
   ActionButton as TrActionButton,
   SubmitButton,

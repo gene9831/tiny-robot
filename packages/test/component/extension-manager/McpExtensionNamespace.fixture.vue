@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { App, Component } from 'vue'
-import ExtensionManager, { McpExtensionDetail, McpExtensionForm } from '../../../components/src/extension-manager'
+import ExtensionManager from '../../../components/src/extension-manager'
+
+const McpDetail = ExtensionManager.McpDetail
+const McpForm = ExtensionManager.McpForm
 
 const registrations = new Map<string, Component>()
 const app = {
@@ -14,10 +17,8 @@ ExtensionManager.install(app)
 </script>
 
 <template>
-  <output data-testid="detail-name">{{ McpExtensionDetail.name }}</output>
-  <output data-testid="form-name">{{ McpExtensionForm.name }}</output>
-  <output data-testid="detail-registration">{{
-    registrations.get('McpExtensionDetail') === McpExtensionDetail
-  }}</output>
-  <output data-testid="form-registration">{{ registrations.get('McpExtensionForm') === McpExtensionForm }}</output>
+  <output data-testid="detail-name">{{ McpDetail.name }}</output>
+  <output data-testid="form-name">{{ McpForm.name }}</output>
+  <output data-testid="detail-registration">{{ registrations.get('McpDetail') === McpDetail }}</output>
+  <output data-testid="form-registration">{{ registrations.get('McpForm') === McpForm }}</output>
 </template>
