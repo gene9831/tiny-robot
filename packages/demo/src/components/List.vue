@@ -109,6 +109,22 @@ const setOperation = (id: string, operation: ExtensionOperation, status: Extensi
   }
 }
 
+const clearOperation = (id: string, operation: ExtensionOperation) => {
+  const currentOperations = operationStates.value[id]
+  if (!currentOperations || !(operation in currentOperations)) return
+
+  const nextOperations = { ...currentOperations }
+  delete nextOperations[operation]
+
+  const nextOperationStates = { ...operationStates.value }
+  if (Object.keys(nextOperations).length) {
+    nextOperationStates[id] = nextOperations
+  } else {
+    delete nextOperationStates[id]
+  }
+  operationStates.value = nextOperationStates
+}
+
 const handleInstall = async (item: DemoExtension) => {
   logEvent(`安装：${item.name}`)
 
@@ -134,6 +150,7 @@ const handleToggle = (item: DemoExtension, enabled: boolean) => {
 
 const handleDelete = (item: DemoExtension) => {
   logEvent(`删除：${item.name}`)
+  clearOperation(item.id, 'install')
   extensions.value = extensions.value.map((extension) =>
     extension.id === item.id ? { ...extension, installed: false, config: undefined } : extension,
   )
