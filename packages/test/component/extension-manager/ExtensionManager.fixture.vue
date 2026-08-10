@@ -27,9 +27,11 @@ const eventLog = ref<string[]>([])
 
 const logInstall = (intent: ExtensionIntent) => eventLog.value.push(`install:${JSON.stringify(intent)}`)
 const logCreate = (kind: string) => eventLog.value.push(`create:${kind}`)
-const removeSkillExtensions = () => {
-  extensions.value = extensions.value.filter((extension) => extension.kind !== 'skill')
+const removeExtensionsOfKind = (kind: string) => {
+  extensions.value = extensions.value.filter((extension) => extension.kind !== kind)
 }
+const removeSkillExtensions = () => removeExtensionsOfKind('skill')
+const removeMcpExtensions = () => removeExtensionsOfKind('mcp')
 const clearExtensions = () => {
   extensions.value = []
 }
@@ -48,5 +50,6 @@ const clearExtensions = () => {
   <div data-testid="catalog">{{ extensions.map((extension) => extension.name).join(',') }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>
   <button data-testid="remove-skill" type="button" @click="removeSkillExtensions">Remove skill</button>
+  <button data-testid="remove-mcp" type="button" @click="removeMcpExtensions">Remove MCP</button>
   <button data-testid="clear-catalog" type="button" @click="clearExtensions">Clear catalog</button>
 </template>

@@ -52,20 +52,49 @@ test.describe('ExtensionManager facade', () => {
     await expect(component.getByTestId('event-log')).toHaveText('create:skill')
   })
 
-  test('creates with a controlled active kind', async ({ mount }) => {
+  test('keeps controlled active kind through user selection and follows parent updates and catalog fallback', async ({
+    mount,
+  }) => {
     const component = await mount(ExtensionManagerFixture, { props: { activeKind: 'skill' } })
+    const kindSelect = component.getByLabel('Extension kind')
+
+    await expect(kindSelect).toHaveValue('skill')
+    await kindSelect.selectOption('mcp')
 
     await component.getByRole('button', { name: '添加自定义服务' }).click()
 
     await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+
+    await component.update({ props: { activeKind: 'mcp' } })
+    await expect(kindSelect).toHaveValue('mcp')
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill|create:mcp')
+
+    await component.getByTestId('remove-mcp').click()
+    await expect(kindSelect).toHaveValue('skill')
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill|create:mcp|create:skill')
   })
 
-  test('creates with the controlled default active kind', async ({ mount }) => {
+  test('uses the default active kind, then follows user selection and catalog fallback', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture, { props: { defaultActiveKind: 'skill' } })
+    const kindSelect = component.getByLabel('Extension kind')
+
+    await expect(kindSelect).toHaveValue('skill')
+    await kindSelect.selectOption('mcp')
+    await expect(kindSelect).toHaveValue('mcp')
 
     await component.getByRole('button', { name: '添加自定义服务' }).click()
 
-    await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+    await expect(component.getByTestId('event-log')).toHaveText('create:mcp')
+
+    await component.getByTestId('remove-mcp').click()
+    await expect(kindSelect).toHaveValue('skill')
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+    await expect(component.getByTestId('event-log')).toHaveText('create:mcp|create:skill')
   })
 
   test('creates with the Filter fallback after the selected kind is removed', async ({ mount }) => {
@@ -79,8 +108,13 @@ test.describe('ExtensionManager facade', () => {
 
   test('does not create when the Filter resolves no kind for an empty catalog', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
+    const kindSelect = component.getByLabel('Extension kind')
+
+    await kindSelect.selectOption('skill')
+    await expect(kindSelect).toHaveValue('skill')
 
     await component.getByTestId('clear-catalog').click()
+    await expect(kindSelect).toHaveValue('')
     await component.getByRole('button', { name: '添加自定义服务' }).click()
 
     await expect(component.getByTestId('event-log')).toHaveText('')
