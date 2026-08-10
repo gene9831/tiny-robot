@@ -1,24 +1,20 @@
 <script setup lang="ts">
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
 import { computed, onUnmounted, ref, watch } from 'vue'
-import type {
-  LegacyExtensionFilterEmits,
-  LegacyExtensionFilterProps,
-  LegacyExtensionManagerFilterContext,
-} from '../internal.type'
-import { useExtensionManagerFilterContext } from '../composables/useExtensionManager'
+import type { ExtensionFilterEmits, ExtensionFilterProps, ExtensionScope } from '../index.type'
+import { useInternalExtensionFilterContext } from '../composables/useExtensionContext'
 
-const props = withDefaults(defineProps<LegacyExtensionFilterProps>(), {
+const props = withDefaults(defineProps<ExtensionFilterProps>(), {
   searchPlaceholder: '请输入关键字搜索',
   tagPlaceholder: '全部标签',
   showSearch: true,
   showTagFilter: true,
 })
-const emit = defineEmits<LegacyExtensionFilterEmits>()
+const emit = defineEmits<ExtensionFilterEmits>()
 
-const manager: LegacyExtensionManagerFilterContext = useExtensionManagerFilterContext()
-type ExtensionRuntimeItem = (typeof manager.catalog.value)[number]
-type ExtensionRuntimeScope = keyof typeof manager.installationDisplayItems.value
+const manager = useInternalExtensionFilterContext()
+type ExtensionRuntimeItem = (typeof manager.allExtensions.value)[number]
+type ExtensionRuntimeScope = ExtensionScope
 const filterLease = manager.claimFilter()
 const uncontrolledQuery = ref('')
 const uncontrolledTag = ref('')
@@ -42,7 +38,10 @@ const activeTag = computed({
 })
 
 const tagOptions = computed(() =>
-  [...new Set(manager.catalog.value.flatMap((item) => item.tags ?? []))].map((value) => ({ value, label: value })),
+  [...new Set(manager.allExtensions.value.flatMap((item) => item.tags ?? []))].map((value) => ({
+    value,
+    label: value,
+  })),
 )
 
 const defaultSearch = (query: string, item: ExtensionRuntimeItem) => {
@@ -53,15 +52,15 @@ const defaultSearch = (query: string, item: ExtensionRuntimeItem) => {
 }
 
 const filterItem = (item: ExtensionRuntimeItem, source: ExtensionRuntimeScope) => {
-  if (item.type !== manager.activeType.value) return false
+  if (item.kind !== manager.activeKind.value) return false
 
   const matchesTag = !activeTag.value || item.tags?.includes(activeTag.value)
   return Boolean(matchesTag && (props.searchFn ?? defaultSearch)(searchQuery.value, item, source))
 }
 
 const display = computed(() => ({
-  installed: manager.installationDisplayItems.value.installed.filter((item) => filterItem(item, 'installed')),
-  market: manager.installationDisplayItems.value.market.filter((item) => filterItem(item, 'market')),
+  installed: manager.unfilteredDisplayItems.value.installed.filter((item) => filterItem(item, 'installed')),
+  available: manager.unfilteredDisplayItems.value.available.filter((item) => filterItem(item, 'available')),
 }))
 
 if (filterLease.active) {
@@ -73,7 +72,7 @@ if (filterLease.active) {
     { immediate: true },
   )
 
-  watch(manager.activeType, () => {
+  watch(manager.activeKind, () => {
     searchQuery.value = ''
     activeTag.value = ''
   })

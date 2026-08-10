@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/experimental-ct-vue'
 import ExtensionManagerFixture from './ExtensionManager.fixture.vue'
 
 test.describe('ExtensionManager facade', () => {
-  test('composes catalog sections, Filter projection, and add intents without mutating the catalog', async ({
+  test('composes canonical sections, Filter projection, and install intents without mutating the catalog', async ({
     mount,
   }) => {
     const component = await mount(ExtensionManagerFixture)
@@ -19,10 +19,10 @@ test.describe('ExtensionManager facade', () => {
 
     await component.getByPlaceholder('请输入关键字搜索').fill('')
 
-    const marketCard = component.locator('.tr-extension-card').filter({ hasText: 'Train service' })
-    await marketCard.getByRole('button', { name: '添加' }).click()
+    const availableCard = component.locator('.tr-extension-card').filter({ hasText: 'Train service' })
+    await availableCard.getByRole('button', { name: '添加' }).click()
 
-    await expect(component.getByTestId('event-log')).toHaveText('add:{"id":"train","type":"mcp","source":"market"}')
+    await expect(component.getByTestId('event-log')).toHaveText('install:{"id":"train","kind":"mcp"}')
     await expect(component.getByTestId('catalog')).toHaveText(
       'Map service,Browser connector,Summary skill,Train service,File connector,Translate skill',
     )

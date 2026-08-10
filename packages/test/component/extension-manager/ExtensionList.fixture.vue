@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { ExtensionItem } from '../../../components/src/extension-manager/index.type'
+import type { Extension } from '../../../components/src/extension-manager/index.type'
 import ExtensionList from '../../../components/src/extension-manager/components/ExtensionList.vue'
 
 const mode = ref<'content' | 'loading' | 'empty' | 'error'>('content')
 const retryCount = ref(0)
-const allItems: ExtensionItem[] = [
-  { id: 'first', type: 'mcp', name: 'First item' },
-  { id: 'second', type: 'skill', name: 'Second item' },
+const allItems: Extension[] = [
+  { id: 'first', kind: 'mcp', name: 'First item', installed: false },
+  { id: 'second', kind: 'skill', name: 'Second item', installed: false },
 ]
 const items = computed(() => (mode.value === 'empty' ? [] : allItems))
 </script>

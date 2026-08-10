@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { ExtensionRecord } from '../../../components/src/extension-manager/index.type'
+import type { ExtensionInput } from '../../../components/src/extension-manager/index.type'
 import ExtensionManagerRoot from '../../../components/src/extension-manager/ExtensionManagerRoot.vue'
 import ExtensionFilter from '../../../components/src/extension-manager/components/ExtensionFilter.vue'
 import ExtensionFilterConsumer from './ExtensionFilterConsumer.fixture.vue'
 
-const extensions: ExtensionRecord[] = [
-  { id: 'map', type: 'mcp', name: 'Map service', tags: ['travel', 'maps'], installation: { enabled: true } },
-  { id: 'summary', type: 'skill', name: 'Summary skill', tags: ['writing'], installation: { enabled: true } },
-  { id: 'train', type: 'mcp', name: 'Train service', tags: ['travel'] },
-  { id: 'translate', type: 'skill', name: 'Translate skill', tags: ['recommended'] },
-  { id: 'research', type: 'skill', name: 'Research skill', tags: ['search', 'recommended'] },
+const extensions: ExtensionInput[] = [
+  { id: 'map', kind: 'mcp', name: 'Map service', tags: ['travel', 'maps'], installed: true, config: { enabled: true } },
+  {
+    id: 'summary',
+    kind: 'skill',
+    name: 'Summary skill',
+    tags: ['writing'],
+    installed: true,
+    config: { enabled: true },
+  },
+  { id: 'train', kind: 'mcp', name: 'Train service', tags: ['travel'] },
+  { id: 'translate', kind: 'skill', name: 'Translate skill', tags: ['recommended'] },
+  { id: 'research', kind: 'skill', name: 'Research skill', tags: ['search', 'recommended'] },
 ]
 
 const filterVisible = ref(false)

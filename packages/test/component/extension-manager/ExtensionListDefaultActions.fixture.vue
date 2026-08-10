@@ -1,58 +1,64 @@
 <script setup lang="ts">
 import type {
   ExtensionCardPrimaryAction,
-  ExtensionOperationStateMap,
-  ExtensionRecord,
+  Extension,
+  ExtensionOperationStatusMap,
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionCard from '../../../components/src/extension-manager/components/ExtensionCard.vue'
 import ExtensionList from '../../../components/src/extension-manager/components/ExtensionList.vue'
 
-const installedItem: ExtensionRecord = {
+const installedItem: Extension = {
   id: 'installed-extension',
-  type: 'mcp',
+  kind: 'mcp',
   name: 'Installed extension',
-  installation: { enabled: true },
+  installed: true,
+  config: { enabled: true },
 }
 
-const unavailableInstalledItem: ExtensionRecord = {
+const unavailableInstalledItem: Extension = {
   id: 'unavailable-installed-extension',
-  type: 'mcp',
+  kind: 'mcp',
   name: 'Unavailable installed extension',
+  installed: true,
 }
 
-const marketItem: ExtensionRecord = {
+const marketItem: Extension = {
   id: 'market-extension',
-  type: 'skill',
+  kind: 'skill',
   name: 'Market extension',
+  installed: false,
 }
 
-const pendingMarketItem: ExtensionRecord = {
+const pendingMarketItem: Extension = {
   id: 'pending-market-extension',
-  type: 'skill',
+  kind: 'skill',
   name: 'Pending market extension',
+  installed: false,
 }
 
-const successfulMarketItem: ExtensionRecord = {
+const successfulMarketItem: Extension = {
   id: 'successful-market-extension',
-  type: 'skill',
+  kind: 'skill',
   name: 'Successful market extension',
+  installed: false,
 }
 
-const idleMarketItem: ExtensionRecord = {
+const idleMarketItem: Extension = {
   id: 'idle-market-extension',
-  type: 'skill',
+  kind: 'skill',
   name: 'Idle market extension',
+  installed: false,
 }
 
-const operationStates: ExtensionOperationStateMap = {
+const operationStates: ExtensionOperationStatusMap = {
   'market-extension': {
-    install: { phase: 'error', retryable: true },
+    install: { status: 'error', retryable: true },
   },
   'pending-market-extension': {
-    install: { phase: 'pending', progress: 50 },
+    install: { status: 'pending', progress: 50 },
   },
   'successful-market-extension': {
-    install: { phase: 'success' },
+    install: { status: 'success' },
   },
 }
 
@@ -66,7 +72,7 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
 </script>
 
 <template>
-  <ExtensionList source="installed" :items="[installedItem]">
+  <ExtensionList scope="installed" :items="[installedItem]">
     <ExtensionCard data-testid="installed-card" :item="installedItem" />
     <ExtensionCard
       id="installed-extension"
@@ -88,12 +94,12 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
     />
   </ExtensionList>
 
-  <ExtensionList source="installed" :items="[unavailableInstalledItem]">
+  <ExtensionList scope="installed" :items="[unavailableInstalledItem]">
     <ExtensionCard data-testid="unavailable-installed-card" :item="unavailableInstalledItem" />
   </ExtensionList>
 
   <ExtensionList
-    source="market"
+    scope="available"
     :items="[marketItem, pendingMarketItem, successfulMarketItem, idleMarketItem]"
     :operation-states="operationStates"
   >

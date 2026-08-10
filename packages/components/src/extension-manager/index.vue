@@ -4,21 +4,17 @@ import { computed, ref } from 'vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
 import { ExtensionFilter } from './components'
 import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
-import type {
-  LegacyExtensionManagerContext,
-  LegacyExtensionManagerEmits,
-  LegacyExtensionManagerProps,
-} from './internal.type'
+import type { ExtensionContext, ExtensionManagerEmits, ExtensionManagerProps } from './index.type'
 
-const props = withDefaults(defineProps<LegacyExtensionManagerProps>(), {
+const props = withDefaults(defineProps<ExtensionManagerProps>(), {
   extensions: () => [],
   operationStates: () => ({}),
-  defaultActiveType: 'mcp',
+  defaultActiveKind: 'mcp',
   title: '服务列表',
   searchPlaceholder: '请输入关键字搜索',
   tagPlaceholder: '全部标签',
   installedTitle: '已添加',
-  marketTitle: '市场',
+  availableTitle: '市场',
   showHeader: true,
   showCloseButton: false,
   showCustomAddButton: true,
@@ -26,14 +22,14 @@ const props = withDefaults(defineProps<LegacyExtensionManagerProps>(), {
   enableSearch: true,
   enableTagFilter: true,
   loading: false,
-  marketLoading: false,
+  availableLoading: false,
 })
 
-const emit = defineEmits<LegacyExtensionManagerEmits>()
+const emit = defineEmits<ExtensionManagerEmits>()
 const visible = defineModel<boolean>('visible', { default: true })
-const managerRoot = ref<Pick<LegacyExtensionManagerContext, 'activeType' | 'requestCreate'>>()
+const managerRoot = ref<Pick<ExtensionContext, 'activeKind' | 'requestCreate'>>()
 
-const activeType = computed(() => managerRoot.value?.activeType.value ?? props.activeType ?? props.defaultActiveType)
+const activeKind = computed(() => managerRoot.value?.activeKind.value ?? props.activeKind ?? props.defaultActiveKind)
 
 const handleClose = () => {
   visible.value = false
@@ -46,30 +42,30 @@ const handleClose = () => {
       ref="managerRoot"
       :extensions="props.extensions"
       :operation-states="props.operationStates"
-      :active-type="props.activeType"
-      :default-active-type="props.defaultActiveType"
+      :active-kind="props.activeKind"
+      :default-active-kind="props.defaultActiveKind"
       :expanded-sections="props.expandedSections"
-      @update:active-type="emit('update:active-type', $event)"
+      @update:active-kind="emit('update:active-kind', $event)"
       @update:expanded-sections="emit('update:expanded-sections', $event)"
-      @type-change="emit('type-change', $event)"
-      @extension-add="emit('extension-add', $event)"
-      @extension-create="emit('extension-create', $event)"
-      @extension-detail-open="emit('extension-detail-open', $event)"
-      @extension-toggle="emit('extension-toggle', $event)"
-      @extension-edit="emit('extension-edit', $event)"
-      @extension-delete="emit('extension-delete', $event)"
+      @kind-change="emit('kind-change', $event)"
+      @install="emit('install', $event)"
+      @create="emit('create', $event)"
+      @detail="emit('detail', $event)"
+      @toggle="emit('toggle', $event)"
+      @edit="emit('edit', $event)"
+      @delete="emit('delete', $event)"
       @tool-toggle="emit('tool-toggle', $event)"
-      @refresh="(type, source) => emit('refresh', type, source)"
+      @refresh="emit('refresh', $event)"
     >
       <div v-if="props.showHeader" class="extension-manager__header">
         <div class="extension-manager__title">{{ props.title }}</div>
         <div class="extension-manager__header-actions">
-          <slot name="header-actions" :active-type="activeType" />
+          <slot name="header-actions" :active-kind="activeKind" />
           <button
             v-if="props.showCustomAddButton"
             class="extension-manager__create"
             type="button"
-            @click="managerRoot?.requestCreate()"
+            @click="managerRoot?.requestCreate(activeKind)"
           >
             <IconPlus class="extension-manager__icon" />
             <span>{{ props.customAddButtonText }}</span>
@@ -84,17 +80,17 @@ const handleClose = () => {
         :show-search="props.enableSearch"
         :show-tag-filter="props.enableTagFilter"
         :search-fn="props.searchFn"
-        @query-change="emit('search-change', $event, activeType)"
-        @tag-change="emit('tag-change', $event, activeType)"
+        @query-change="emit('search-change', $event, activeKind)"
+        @tag-change="emit('tag-change', $event, activeKind)"
       />
 
       <ExtensionManagerContent
         :installed-title="props.installedTitle"
-        :market-title="props.marketTitle"
+        :available-title="props.availableTitle"
         :loading="props.loading"
-        :market-loading="props.marketLoading"
+        :available-loading="props.availableLoading"
         :error="props.error"
-        :market-error="props.marketError"
+        :available-error="props.availableError"
       />
     </ExtensionManagerRoot>
   </div>

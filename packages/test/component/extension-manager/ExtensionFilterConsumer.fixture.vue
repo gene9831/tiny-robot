@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useExtensionManagerContext } from '../../../components/src/extension-manager/composables'
+import { useExtensionContext } from '../../../components/src/extension-manager/composables'
 
-const manager = useExtensionManagerContext()
+const manager = useExtensionContext()
 </script>
 
 <template>
@@ -9,7 +9,9 @@ const manager = useExtensionManagerContext()
     <div data-testid="display-installed">
       {{ manager.displayItems.value.installed.map((item) => item.name).join(',') }}
     </div>
-    <div data-testid="display-market">{{ manager.displayItems.value.market.map((item) => item.name).join(',') }}</div>
-    <button type="button" data-testid="show-skills" @click="manager.setActiveType('skill')">Skills</button>
+    <div data-testid="display-available">
+      {{ manager.displayItems.value.available.map((item) => item.name).join(',') }}
+    </div>
+    <button type="button" data-testid="show-skills" @click="manager.setActiveKind('skill')">Skills</button>
   </div>
 </template>

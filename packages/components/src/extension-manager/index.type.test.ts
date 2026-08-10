@@ -1,9 +1,9 @@
 import type {
   Extension,
+  ExtensionContext,
   ExtensionIntent,
   ExtensionListProps,
-  ExtensionManagerContext,
-  ExtensionManagerRootProps,
+  ExtensionRootProps,
   ExtensionScope,
   ExtensionSearchFn,
 } from './index.type'
@@ -11,7 +11,7 @@ import type {
 const input = { id: 'available', kind: 'skill', name: 'Available skill' }
 const extension: Extension = { ...input, installed: false }
 
-const rootProps: ExtensionManagerRootProps = {
+const rootProps: ExtensionRootProps = {
   extensions: [input],
   expandedSections: { installed: true, available: true },
 }
@@ -25,7 +25,7 @@ const search: ExtensionSearchFn = (_query, item, scope) => item.kind === 'skill'
 
 const intent: ExtensionIntent = { id: 'available', kind: 'skill' }
 
-declare const context: ExtensionManagerContext
+declare const context: ExtensionContext
 const scope: ExtensionScope = 'available'
 const availableItems: Extension[] = context.availableItems.value
 

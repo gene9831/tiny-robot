@@ -30,6 +30,7 @@ import ExtensionManager, {
   ExtensionManagerRoot,
   McpExtensionDetail,
   McpExtensionForm,
+  useExtensionContext,
 } from './extension-manager'
 import {
   ActionButton,
@@ -80,6 +81,7 @@ export { useTheme } from './theme-provider/useTheme'
 export { useSenderContext } from './sender'
 export { vDropzone } from './drag-overlay/directives/vDropzone'
 export { useAutoScroll, useTouchDevice } from './shared/composables'
+export { useExtensionContext }
 const components = [
   Attachments,
   Bubble,

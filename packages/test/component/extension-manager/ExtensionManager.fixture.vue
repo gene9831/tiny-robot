@@ -2,29 +2,27 @@
 import { ref } from 'vue'
 import type {
   ExtensionIntent,
-  ExtensionOperationStateMap,
-  ExtensionRecord,
+  ExtensionInput,
+  ExtensionOperationStatusMap,
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionManager from '../../../components/src/extension-manager/index.vue'
 
-const extensions = ref<ExtensionRecord[]>([
-  { id: 'map', type: 'mcp', name: 'Map service', installation: { enabled: true } },
-  { id: 'browser', type: 'mcp', name: 'Browser connector', installation: { enabled: true } },
-  { id: 'summary', type: 'skill', name: 'Summary skill', installation: { enabled: true } },
-  { id: 'train', type: 'mcp', name: 'Train service' },
-  { id: 'file', type: 'mcp', name: 'File connector' },
-  { id: 'translate', type: 'skill', name: 'Translate skill' },
+const extensions = ref<ExtensionInput[]>([
+  { id: 'map', kind: 'mcp', name: 'Map service', installed: true, config: { enabled: true } },
+  { id: 'browser', kind: 'mcp', name: 'Browser connector', installed: true, config: { enabled: true } },
+  { id: 'summary', kind: 'skill', name: 'Summary skill', installed: true, config: { enabled: true } },
+  { id: 'train', kind: 'mcp', name: 'Train service' },
+  { id: 'file', kind: 'mcp', name: 'File connector' },
+  { id: 'translate', kind: 'skill', name: 'Translate skill' },
 ])
-const operationStates: ExtensionOperationStateMap = {
-  train: { install: { phase: 'idle' } },
-}
+const operationStates: ExtensionOperationStatusMap = {}
 const eventLog = ref<string[]>([])
 
-const logAdd = (intent: ExtensionIntent) => eventLog.value.push(`add:${JSON.stringify(intent)}`)
+const logInstall = (intent: ExtensionIntent) => eventLog.value.push(`install:${JSON.stringify(intent)}`)
 </script>
 
 <template>
-  <ExtensionManager :extensions="extensions" :operation-states="operationStates" @extension-add="logAdd" />
+  <ExtensionManager :extensions="extensions" :operation-states="operationStates" @install="logInstall" />
 
   <div data-testid="catalog">{{ extensions.map((extension) => extension.name).join(',') }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>

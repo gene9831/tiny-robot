@@ -1,58 +1,53 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
 import { computed } from 'vue'
-import type { ExtensionCardActionEvent } from '../index.type'
-import type { LegacyExtensionManagerContext, LegacyExtensionManagerProps } from '../internal.type'
-import { useExtensionManagerContext } from '../composables'
+import type { ExtensionCardActionEvent, ExtensionContext, ExtensionManagerProps } from '../index.type'
+import { useExtensionContext } from '../composables'
 import ExtensionCard from './ExtensionCard.vue'
 import ExtensionList from './ExtensionList.vue'
 
 const props = withDefaults(
   defineProps<
     Pick<
-      LegacyExtensionManagerProps,
-      'installedTitle' | 'marketTitle' | 'loading' | 'marketLoading' | 'error' | 'marketError'
+      ExtensionManagerProps,
+      'installedTitle' | 'availableTitle' | 'loading' | 'availableLoading' | 'error' | 'availableError'
     >
   >(),
   {
     installedTitle: '已添加',
-    marketTitle: '市场',
+    availableTitle: '市场',
     loading: false,
-    marketLoading: false,
+    availableLoading: false,
   },
 )
 
-const manager: LegacyExtensionManagerContext = useExtensionManagerContext()
+const manager: ExtensionContext = useExtensionContext()
 const sections = computed(() => [
   { source: 'installed' as const, items: manager.displayItems.value.installed },
-  { source: 'market' as const, items: manager.displayItems.value.market },
+  { source: 'available' as const, items: manager.displayItems.value.available },
 ])
 type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
 type ExtensionRuntimeScope = (typeof sections.value)[number]['source']
 
 const getSectionTitle = (source: ExtensionRuntimeScope) => {
-  const prefix = source === 'installed' ? props.installedTitle : props.marketTitle
-  const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeType.value)?.label
-  return `${prefix}${typeLabel ?? manager.activeType.value}`
+  const prefix = source === 'installed' ? props.installedTitle : props.availableTitle
+  const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeKind.value)?.label
+  return `${prefix}${typeLabel ?? manager.activeKind.value}`
 }
 
-const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无市场扩展')
+const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无可用扩展')
 
-const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.marketLoading)
+const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.availableLoading)
 
-const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.marketError)
+const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.availableError)
 
-const handleCardAction = (
-  item: ExtensionRuntimeItem,
-  source: ExtensionRuntimeScope,
-  event: ExtensionCardActionEvent,
-) => {
+const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardActionEvent) => {
   if (event.id === 'toggle' && typeof event.checked === 'boolean') {
-    manager.requestToggle(item, event.checked, source)
+    manager.requestToggle(item, event.checked)
   } else if (event.id === 'add') {
-    manager.requestAdd(item, source)
+    manager.requestInstall(item)
   } else if (event.id === 'delete') {
-    manager.requestDelete(item, source)
+    manager.requestDelete(item)
   }
 }
 </script>
@@ -64,9 +59,9 @@ const handleCardAction = (
         v-for="option in manager.typeOptions.value"
         :key="option.value"
         class="extension-manager__tab"
-        :class="{ 'is-active': manager.activeType.value === option.value }"
+        :class="{ 'is-active': manager.activeKind.value === option.value }"
         type="button"
-        @click="manager.setActiveType(option.value)"
+        @click="manager.setActiveKind(option.value)"
       >
         {{ option.label }}
       </button>
@@ -89,7 +84,7 @@ const handleCardAction = (
 
         <div v-show="manager.isSectionExpanded(section.source)" class="extension-manager__section-body">
           <ExtensionList
-            :source="section.source"
+            :scope="section.source"
             :items="section.items"
             :operation-states="manager.operationStates.value"
             :loading="getLoading(section.source)"
@@ -101,8 +96,8 @@ const handleCardAction = (
               v-for="item in section.items"
               :key="item.id"
               :item="item"
-              @name-click="manager.requestDetailOpen(item, section.source)"
-              @action="handleCardAction(item, section.source, $event)"
+              @name-click="manager.requestDetail(item)"
+              @action="handleCardAction(item, $event)"
             />
           </ExtensionList>
         </div>

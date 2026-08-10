@@ -61,19 +61,16 @@ export interface McpExtensionFormEmits {
 
 export type ExtensionSearchFn = (query: string, item: Extension, scope: ExtensionScope) => boolean
 
-export type ExtensionOperationKind = 'install' | 'create' | 'toggle' | 'edit' | 'delete' | 'refresh' | 'tool-toggle'
+export type ExtensionOperation = 'install' | 'create' | 'toggle' | 'edit' | 'delete' | 'refresh' | 'tool-toggle'
 
-export interface ExtensionOperationState {
-  phase: 'idle' | 'pending' | 'success' | 'error'
+export interface ExtensionOperationStatus {
+  status: 'pending' | 'success' | 'error'
   progress?: number
   error?: unknown
   retryable?: boolean
 }
 
-export type ExtensionOperationStateMap = Record<
-  string,
-  Partial<Record<ExtensionOperationKind, ExtensionOperationState>>
->
+export type ExtensionOperationStatusMap = Record<string, Partial<Record<ExtensionOperation, ExtensionOperationStatus>>>
 
 export interface ExtensionCardActionBase {
   id: string
@@ -89,7 +86,7 @@ export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
 
 export interface ExtensionCardAddAction extends ExtensionCardActionBase {
   type: 'add'
-  state?: ExtensionOperationState['phase']
+  state?: ExtensionOperationStatus['status']
   progress?: number
   label?: string
 }
@@ -164,7 +161,7 @@ export interface ExtensionTagOption {
 export interface ExtensionListProps {
   items?: Extension[]
   scope?: ExtensionScope
-  operationStates?: ExtensionOperationStateMap
+  operationStates?: ExtensionOperationStatusMap
   loading?: boolean
   error?: unknown
   emptyText?: string
@@ -197,15 +194,29 @@ export interface ExtensionFilterEmits {
   (e: 'tag-change', tag: string): void
 }
 
-export interface ExtensionManagerRootProps {
+export interface ExtensionRootProps {
   extensions?: ExtensionInput[]
-  operationStates?: ExtensionOperationStateMap
-  activeType?: ExtensionKind
-  defaultActiveType?: ExtensionKind
+  operationStates?: ExtensionOperationStatusMap
+  activeKind?: ExtensionKind
+  defaultActiveKind?: ExtensionKind
   expandedSections?: Record<ExtensionScope, boolean>
 }
 
-export interface ExtensionManagerProps extends ExtensionManagerRootProps {
+export interface ExtensionRootEmits {
+  (e: 'update:active-kind', kind: ExtensionKind): void
+  (e: 'update:expanded-sections', expandedSections: Record<ExtensionScope, boolean>): void
+  (e: 'kind-change', kind: ExtensionKind): void
+  (e: 'install', intent: ExtensionIntent): void
+  (e: 'create', kind: ExtensionKind): void
+  (e: 'detail', intent: ExtensionIntent): void
+  (e: 'toggle', intent: ExtensionToggleIntent): void
+  (e: 'edit', intent: ExtensionIntent): void
+  (e: 'delete', intent: ExtensionIntent): void
+  (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
+  (e: 'refresh', scope: ExtensionScope): void
+}
+
+export interface ExtensionManagerProps extends ExtensionRootProps {
   title?: string
   searchPlaceholder?: string
   tagPlaceholder?: string
@@ -229,21 +240,10 @@ export interface ExtensionManagerProps extends ExtensionManagerRootProps {
   availableError?: unknown
 }
 
-export interface ExtensionManagerEmits {
+export interface ExtensionManagerEmits extends ExtensionRootEmits {
   (e: 'update:visible', visible: boolean): void
-  (e: 'update:active-kind', kind: ExtensionKind): void
-  (e: 'update:expanded-sections', expandedSections: Record<ExtensionScope, boolean>): void
-  (e: 'kind-change', kind: ExtensionKind): void
   (e: 'search-change', query: string, kind: ExtensionKind): void
   (e: 'tag-change', tag: string, kind: ExtensionKind): void
-  (e: 'install', intent: ExtensionIntent): void
-  (e: 'create', kind: ExtensionKind): void
-  (e: 'detail', intent: ExtensionIntent): void
-  (e: 'toggle', intent: ExtensionToggleIntent): void
-  (e: 'edit', intent: ExtensionIntent): void
-  (e: 'delete', intent: ExtensionIntent): void
-  (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
-  (e: 'refresh', scope: ExtensionScope): void
 }
 
 export interface ExtensionIntent {
@@ -260,11 +260,11 @@ export interface ExtensionToolToggleIntent extends ExtensionIntent {
   enabled: boolean
 }
 
-export interface ExtensionManagerContext {
+export interface ExtensionContext {
   activeKind: Ref<ExtensionKind>
   allExtensions: ComputedRef<Extension[]>
   displayItems: ComputedRef<ExtensionDisplay>
-  operationStates: ComputedRef<ExtensionOperationStateMap>
+  operationStates: ComputedRef<ExtensionOperationStatusMap>
   typeOptions: ComputedRef<ExtensionTypeOption[]>
   installedItems: ComputedRef<Extension[]>
   availableItems: ComputedRef<Extension[]>
@@ -279,8 +279,4 @@ export interface ExtensionManagerContext {
   requestDelete: (item: Extension) => void
   requestToolToggle: (item: Extension, toolId: string, enabled: boolean) => void
   requestRefresh: (scope: ExtensionScope) => void
-}
-
-export type ExtensionFilterLease = (() => void) & {
-  readonly active: boolean
 }
