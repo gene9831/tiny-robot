@@ -51,7 +51,6 @@ export {
   McpExtensionDetail,
   McpExtensionForm,
 }
-export { useExtensionManager, useExtensionManagerContext } from './composables'
 export * from './index.type'
 
 export default ExtensionManagerWithSubComponents as typeof ExtensionManager & {

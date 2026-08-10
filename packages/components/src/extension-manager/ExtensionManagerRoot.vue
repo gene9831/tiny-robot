@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import type { ExtensionManagerContext, ExtensionManagerEmits, ExtensionManagerRootProps } from './index.type'
-import type { LegacyExtensionManagerContext } from './internal.type'
+import type { LegacyExtensionManagerEmits, LegacyExtensionManagerRootProps } from './internal.type'
 import { provideExtensionManagerContext, useExtensionManager } from './composables'
 
-const props = withDefaults(defineProps<ExtensionManagerRootProps>(), {
+const props = withDefaults(defineProps<LegacyExtensionManagerRootProps>(), {
   extensions: () => [],
   defaultActiveType: 'mcp',
 })
 
-const emit = defineEmits<ExtensionManagerEmits>()
-const manager = useExtensionManager(props, emit) as unknown as LegacyExtensionManagerContext
+const emit = defineEmits<LegacyExtensionManagerEmits>()
+const manager = useExtensionManager(props, emit)
 const publicManager = {
   activeType: manager.activeType,
   catalog: manager.catalog,
@@ -29,9 +28,9 @@ const publicManager = {
   requestDelete: manager.requestDelete,
   requestToolToggle: manager.requestToolToggle,
   requestRefresh: manager.requestRefresh,
-} as unknown as ExtensionManagerContext
+}
 
-provideExtensionManagerContext(manager as unknown as ExtensionManagerContext)
+provideExtensionManagerContext(manager)
 defineExpose(publicManager)
 </script>
 

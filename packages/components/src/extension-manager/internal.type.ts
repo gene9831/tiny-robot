@@ -30,6 +30,63 @@ export interface LegacyExtensionManagerRootProps {
   expandedSections?: Record<LegacyExtensionRuntimeScope, boolean>
 }
 
+export type LegacyExtensionSearchFn = (
+  query: string,
+  item: LegacyExtensionRuntimeRecord,
+  scope: LegacyExtensionRuntimeScope,
+) => boolean
+
+export interface LegacyExtensionListProps {
+  items?: LegacyExtensionRuntimeRecord[]
+  source?: LegacyExtensionRuntimeScope
+  operationStates?: ExtensionOperationStateMap
+  loading?: boolean
+  error?: unknown
+  emptyText?: string
+  errorText?: string
+}
+
+export interface LegacyExtensionListEmits {
+  (e: 'retry'): void
+}
+
+export interface LegacyExtensionFilterProps {
+  query?: string
+  tag?: string
+  searchPlaceholder?: string
+  tagPlaceholder?: string
+  showSearch?: boolean
+  showTagFilter?: boolean
+  searchFn?: LegacyExtensionSearchFn
+}
+
+export interface LegacyExtensionFilterEmits {
+  (e: 'update:query', query: string): void
+  (e: 'update:tag', tag: string): void
+  (e: 'query-change', query: string): void
+  (e: 'tag-change', tag: string): void
+}
+
+export interface LegacyExtensionManagerProps extends LegacyExtensionManagerRootProps {
+  title?: string
+  searchPlaceholder?: string
+  tagPlaceholder?: string
+  installedTitle?: string
+  marketTitle?: string
+  showHeader?: boolean
+  showCloseButton?: boolean
+  showCustomAddButton?: boolean
+  customAddButtonText?: string
+  enableSearch?: boolean
+  enableTagFilter?: boolean
+  searchFn?: LegacyExtensionSearchFn
+  visible?: boolean
+  loading?: boolean
+  marketLoading?: boolean
+  error?: unknown
+  marketError?: unknown
+}
+
 export interface LegacyExtensionIntent {
   id: string
   type: ExtensionKind
@@ -46,9 +103,12 @@ export interface LegacyExtensionToolToggleIntent extends LegacyExtensionIntent {
 }
 
 export interface LegacyExtensionManagerEmits {
+  (e: 'update:visible', visible: boolean): void
   (e: 'update:active-type', type: ExtensionKind): void
   (e: 'update:expanded-sections', expandedSections: Record<LegacyExtensionRuntimeScope, boolean>): void
   (e: 'type-change', type: ExtensionKind): void
+  (e: 'search-change', query: string, type: ExtensionKind): void
+  (e: 'tag-change', tag: string, type: ExtensionKind): void
   (e: 'extension-add', intent: LegacyExtensionIntent): void
   (e: 'extension-create', type: ExtensionKind): void
   (e: 'extension-detail-open', intent: LegacyExtensionIntent): void
@@ -90,5 +150,12 @@ export interface LegacyExtensionManagerFilterContext {
   catalog: ComputedRef<LegacyExtensionRuntimeRecord[]>
   installationDisplayItems: ComputedRef<LegacyExtensionRuntimeDisplay>
   setDisplayItems: (displayItems?: LegacyExtensionRuntimeDisplay) => void
-  claimFilter: () => (() => void) & { readonly active: boolean }
+  claimFilter: () => LegacyExtensionFilterLease
 }
+
+export type LegacyExtensionFilterLease = (() => void) & {
+  readonly active: boolean
+}
+
+export interface LegacyExtensionManagerRootContext
+  extends LegacyExtensionManagerContext, LegacyExtensionManagerFilterContext {}

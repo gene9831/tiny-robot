@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
+import { computed } from 'vue'
 import { IconDelete } from '@opentiny/tiny-robot-svgs'
 import { provideExtensionListContext } from '../composables/useExtensionListContext'
-import type { LegacyExtensionRuntimeRecord, LegacyExtensionRuntimeScope } from '../internal.type'
-import type {
-  ExtensionCardMoreMenuAction,
-  ExtensionCardPrimaryAction,
-  ExtensionListEmits,
-  ExtensionListProps,
-  ExtensionListSlots,
-} from '../index.type'
+import type { LegacyExtensionListEmits, LegacyExtensionListProps } from '../internal.type'
+import type { ExtensionCardMoreMenuAction, ExtensionCardPrimaryAction, ExtensionListSlots } from '../index.type'
 
-const props = withDefaults(defineProps<ExtensionListProps>(), {
+const props = withDefaults(defineProps<LegacyExtensionListProps>(), {
   items: () => [],
   operationStates: () => ({}),
   loading: false,
@@ -21,12 +15,11 @@ const props = withDefaults(defineProps<ExtensionListProps>(), {
 
 defineSlots<ExtensionListSlots>()
 
-const emit = defineEmits<ExtensionListEmits>()
-const attrs = useAttrs()
+const emit = defineEmits<LegacyExtensionListEmits>()
 
 const hasError = computed(() => props.error !== undefined && props.error !== null)
-const runtimeItems = computed(() => props.items as unknown as LegacyExtensionRuntimeRecord[])
-const runtimeScope = computed(() => (props.scope ?? attrs.source) as LegacyExtensionRuntimeScope | undefined)
+const runtimeItems = computed(() => props.items ?? [])
+const runtimeScope = computed(() => props.source)
 
 const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
   const item = runtimeItems.value.find((candidate) => candidate.id === id)
