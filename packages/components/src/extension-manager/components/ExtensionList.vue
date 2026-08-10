@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IconDelete } from '@opentiny/tiny-robot-svgs'
+import { useExtensionContext } from '../composables'
 import { provideExtensionListContext } from '../composables/useExtensionListContext'
 import type {
   ExtensionCardMoreMenuAction,
-  ExtensionCardPrimaryAction,
   ExtensionListEmits,
   ExtensionListProps,
   ExtensionListSlots,
 } from '../index.type'
+import type { ExtensionCardRenderAction } from '../internal.type'
 
 const props = withDefaults(defineProps<ExtensionListProps>(), {
   items: () => [],
-  operationStates: () => ({}),
   loading: false,
   emptyText: '暂无扩展',
   errorText: '加载失败，请重试',
@@ -21,22 +21,23 @@ const props = withDefaults(defineProps<ExtensionListProps>(), {
 defineSlots<ExtensionListSlots>()
 
 const emit = defineEmits<ExtensionListEmits>()
+const extensionContext = useExtensionContext(false)
 
 const hasError = computed(() => props.error !== undefined && props.error !== null)
 const runtimeItems = computed(() => props.items ?? [])
-const runtimeScope = computed(() => props.scope)
+const operationStates = computed(() => extensionContext?.operationStates.value ?? {})
 
 const getEnabled = (item: (typeof runtimeItems.value)[number]) => {
   if (typeof item.config !== 'object' || item.config === null || !('enabled' in item.config)) return undefined
   return typeof item.config.enabled === 'boolean' ? item.config.enabled : undefined
 }
 
-const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
+const getDefaultPrimaryActions = (id: string): ExtensionCardRenderAction[] => {
   const item = runtimeItems.value.find((candidate) => candidate.id === id)
 
-  if (!item || !runtimeScope.value) return []
+  if (!item) return []
 
-  if (runtimeScope.value === 'installed') {
+  if (props.scope === 'installed') {
     const enabled = getEnabled(item)
     if (enabled === undefined) return []
 
@@ -50,14 +51,12 @@ const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
     ]
   }
 
-  if (item.installed) return []
-
-  const installOperation = props.operationStates[item.id]?.install
+  const installOperation = operationStates.value[item.id]?.install
 
   return [
     {
-      id: 'add',
-      type: 'add',
+      id: 'install',
+      type: 'install',
       state: installOperation?.status,
       progress: installOperation?.progress,
       disabled: installOperation?.status === 'error' && installOperation.retryable === false,
@@ -68,7 +67,7 @@ const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
 const getDefaultMoreActions = (id: string): ExtensionCardMoreMenuAction[] => {
   const item = runtimeItems.value.find((candidate) => candidate.id === id)
 
-  if (!item?.installed || runtimeScope.value !== 'installed') return []
+  if (!item || props.scope !== 'installed') return []
 
   return [{ id: 'delete', label: '删除', icon: IconDelete, danger: true }]
 }

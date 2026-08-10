@@ -41,7 +41,7 @@ const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? pr
 const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardActionEvent) => {
   if (event.id === 'toggle' && typeof event.checked === 'boolean') {
     manager.requestToggle(item, event.checked)
-  } else if (event.id === 'add') {
+  } else if (event.id === 'install') {
     manager.requestInstall(item)
   } else if (event.id === 'delete') {
     manager.requestDelete(item)
@@ -70,7 +70,6 @@ const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardAction
           <ExtensionList
             :scope="section.source"
             :items="section.items"
-            :operation-states="manager.operationStates.value"
             :loading="getLoading(section.source)"
             :error="getError(section.source)"
             :empty-text="getEmptyText(section.source)"

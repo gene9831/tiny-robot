@@ -20,9 +20,21 @@ test.describe('ExtensionList default card actions', () => {
   test('maps install phases to stable action labels and disabled states', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
-    await expect(component.getByTestId('idle-market-card').getByRole('button', { name: '添加' })).toBeEnabled()
-    await expect(component.getByTestId('pending-market-card').getByRole('button', { name: '添加中' })).toBeDisabled()
-    await expect(component.getByTestId('successful-market-card').getByRole('button', { name: '已添加' })).toBeDisabled()
+    await expect(component.getByTestId('idle-market-card').getByRole('button', { name: '安装' })).toBeEnabled()
+    await expect(component.getByTestId('pending-market-card').getByRole('button', { name: '安装中' })).toBeDisabled()
+    await expect(component.getByTestId('successful-market-card').getByRole('button', { name: '已安装' })).toBeDisabled()
+  })
+
+  test('projects root operation state without mutating available items or the status map', async ({ mount }) => {
+    const component = await mount(ExtensionListDefaultActionsFixture)
+
+    await expect(
+      component.getByTestId('pending-market-card').locator('.tr-extension-card__progress-bar'),
+    ).toHaveAttribute('style', /width: 50%/)
+    await expect(component.getByTestId('available-input-state')).toHaveText(
+      '{"marketInstalled":false,"pendingInstalled":false}',
+    )
+    await expect(component.getByTestId('operation-state')).toHaveText('pending')
   })
 
   test('provides delete but no toggle for a passive installed extension', async ({ mount }) => {
@@ -34,10 +46,19 @@ test.describe('ExtensionList default card actions', () => {
     await expect(card.getByRole('button', { name: '删除' })).toBeVisible()
   })
 
-  test('gives an explicit card id priority over item id for list defaults', async ({ mount }) => {
+  test('uses the canonical item id to find installed defaults', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
-    await expect(component.getByTestId('explicit-id-card').getByRole('checkbox', { name: '停用扩展' })).toBeChecked()
+    await expect(component.getByTestId('installed-card').getByRole('checkbox', { name: '停用扩展' })).toBeChecked()
+  })
+
+  test('gives available items install without delete or toggle actions', async ({ mount }) => {
+    const component = await mount(ExtensionListDefaultActionsFixture)
+    const card = component.getByTestId('available-installed-card')
+
+    await expect(card.getByRole('button', { name: '安装' })).toBeVisible()
+    await expect(card.getByRole('checkbox')).toHaveCount(0)
+    await expect(card.getByRole('button', { name: '更多操作' })).toHaveCount(0)
   })
 
   test('gives explicitly supplied action arrays priority over list defaults', async ({ mount }) => {

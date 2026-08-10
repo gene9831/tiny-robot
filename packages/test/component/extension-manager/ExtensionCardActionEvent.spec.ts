@@ -13,10 +13,10 @@ test.describe('ExtensionCard action event', () => {
     await expect(component.getByTestId('event-checked')).toHaveText('false')
   })
 
-  test('emits retry and button action ids without exposing presentation type', async ({ mount }) => {
+  test('emits install and button action ids without exposing presentation type', async ({ mount }) => {
     const component = await mount(ExtensionCardActionEventFixture)
 
-    await component.getByRole('button', { name: '重试' }).click()
+    await component.getByRole('button', { name: '安装' }).click()
     await expect(component.getByTestId('event-id')).toHaveText('install-extension')
 
     await component.getByRole('button', { name: '配置' }).click()

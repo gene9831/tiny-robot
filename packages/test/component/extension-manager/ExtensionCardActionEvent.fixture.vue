@@ -16,8 +16,7 @@ const primaryActions: ExtensionCardPrimaryAction[] = [
   },
   {
     id: 'install-extension',
-    type: 'add',
-    state: 'error',
+    type: 'install',
   },
   {
     id: 'configure-extension',
@@ -45,7 +44,7 @@ const eventPayload = computed(() => JSON.stringify(lastEvent.value?.payload ?? n
   <div>
     <ExtensionCard
       data-testid="action-event-card"
-      name="Action event card"
+      :item="{ id: 'action-event-card', kind: 'mcp', name: 'Action event card', installed: false }"
       :primary-actions="primaryActions"
       :more-menu-actions="moreMenuActions"
       more-menu-trigger-aria-label="扩展操作菜单"

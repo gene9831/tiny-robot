@@ -1,9 +1,10 @@
 import type { InjectionKey } from 'vue'
 import { inject, provide } from 'vue'
-import type { ExtensionCardMoreMenuAction, ExtensionCardPrimaryAction } from '../index.type'
+import type { ExtensionCardMoreMenuAction } from '../index.type'
+import type { ExtensionCardRenderAction } from '../internal.type'
 
 interface ExtensionListContext {
-  getDefaultPrimaryActions: (id: string) => ExtensionCardPrimaryAction[]
+  getDefaultPrimaryActions: (id: string) => ExtensionCardRenderAction[]
   getDefaultMoreActions: (id: string) => ExtensionCardMoreMenuAction[]
 }
 

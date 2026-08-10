@@ -3,16 +3,15 @@ import type { VNode } from 'vue'
 import { computed } from 'vue'
 import type {
   ExtensionCardActionEvent,
-  ExtensionCardAddAction,
   ExtensionCardButtonAction,
   ExtensionCardCustomAction,
-  ExtensionCardPrimaryAction,
   ExtensionCardToggleAction,
 } from '../index.type'
+import type { ExtensionCardRenderAction } from '../internal.type'
 
 const props = withDefaults(
   defineProps<{
-    actions?: ExtensionCardPrimaryAction[]
+    actions?: ExtensionCardRenderAction[]
   }>(),
   {
     actions: () => [],
@@ -29,23 +28,26 @@ const emit = defineEmits<{
 
 const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
 
-const getAddState = (action: ExtensionCardAddAction) => action.state ?? 'idle'
+type ExtensionCardRuntimeInstallAction = Extract<ExtensionCardRenderAction, { type: 'install' }>
 
-const getAddText = (action: ExtensionCardAddAction) => {
-  const state = getAddState(action)
-  if (state === 'pending') return '添加中'
-  if (state === 'success') return '已添加'
+const getInstallState = (action: ExtensionCardRuntimeInstallAction) =>
+  ('state' in action ? action.state : undefined) ?? 'idle'
+
+const getInstallText = (action: ExtensionCardRuntimeInstallAction) => {
+  const state = getInstallState(action)
+  if (state === 'pending') return '安装中'
+  if (state === 'success') return '已安装'
   if (state === 'error') return '重试'
-  return action.label ?? '添加'
+  return action.label ?? '安装'
 }
 
-const isAddDisabled = (action: ExtensionCardAddAction) => {
-  const state = getAddState(action)
+const isInstallDisabled = (action: ExtensionCardRuntimeInstallAction) => {
+  const state = getInstallState(action)
   return action.disabled || state === 'pending' || state === 'success'
 }
 
-const handleAdd = (action: ExtensionCardAddAction) => {
-  if (isAddDisabled(action)) return
+const handleInstall = (action: ExtensionCardRuntimeInstallAction) => {
+  if (isInstallDisabled(action)) return
   emit('action', { id: action.id })
 }
 
@@ -87,19 +89,19 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
       </label>
 
       <button
-        v-else-if="action.type === 'add'"
-        class="tr-extension-card-primary-actions__add"
+        v-else-if="action.type === 'install'"
+        class="tr-extension-card-primary-actions__install"
         :class="{
-          'is-loading': getAddState(action) === 'pending',
-          'is-added': getAddState(action) === 'success',
-          'is-failed': getAddState(action) === 'error',
+          'is-loading': getInstallState(action) === 'pending',
+          'is-installed': getInstallState(action) === 'success',
+          'is-failed': getInstallState(action) === 'error',
         }"
         type="button"
         :aria-label="action.ariaLabel"
-        :disabled="isAddDisabled(action)"
-        @click="handleAdd(action)"
+        :disabled="isInstallDisabled(action)"
+        @click="handleInstall(action)"
       >
-        {{ getAddText(action) }}
+        {{ getInstallText(action) }}
       </button>
 
       <button
@@ -181,11 +183,11 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   transition: transform 0.2s ease;
 }
 
-.tr-extension-card-primary-actions__add {
+.tr-extension-card-primary-actions__install {
   min-width: 64px;
   height: 30px;
   padding: 0 16px;
-  border: 1px solid var(--tr-extension-card-add-button-border-color);
+  border: 1px solid var(--tr-extension-card-install-button-border-color);
   border-radius: 999px;
   background: transparent;
   color: var(--tr-text-primary);
@@ -193,20 +195,20 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   font-size: 13px;
 }
 
-.tr-extension-card-primary-actions__add:disabled {
+.tr-extension-card-primary-actions__install:disabled {
   cursor: not-allowed;
   opacity: 0.75;
 }
 
-.tr-extension-card-primary-actions__add.is-loading {
-  color: var(--tr-extension-card-add-button-text-color);
+.tr-extension-card-primary-actions__install.is-loading {
+  color: var(--tr-extension-card-install-button-text-color);
 }
 
-.tr-extension-card-primary-actions__add.is-added {
+.tr-extension-card-primary-actions__install.is-installed {
   color: var(--tr-text-secondary);
 }
 
-.tr-extension-card-primary-actions__add.is-failed {
+.tr-extension-card-primary-actions__install.is-failed {
   color: var(--tr-error-color, #f23030);
 }
 

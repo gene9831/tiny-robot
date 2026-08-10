@@ -20,7 +20,7 @@ test.describe('ExtensionManager facade', () => {
     await component.getByPlaceholder('请输入关键字搜索').fill('')
 
     const availableCard = component.locator('.tr-extension-card').filter({ hasText: 'Train service' })
-    await availableCard.getByRole('button', { name: '添加' }).click()
+    await availableCard.getByRole('button', { name: '安装' }).click()
 
     await expect(component.getByTestId('event-log')).toHaveText('install:{"id":"train","kind":"mcp"}')
     await expect(component.getByTestId('catalog')).toHaveText(

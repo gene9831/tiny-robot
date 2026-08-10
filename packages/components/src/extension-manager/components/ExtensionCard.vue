@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useExtensionListContext } from '../composables'
-import type { ExtensionCardAddAction, ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
+import type { ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
+import type { ExtensionCardRenderAction } from '../internal.type'
 import ExtensionCardMoreMenu from './ExtensionCardMoreMenu.vue'
 import ExtensionCardPrimaryActions from './ExtensionCardPrimaryActions.vue'
 
@@ -15,51 +16,30 @@ const emit = defineEmits<ExtensionCardEmits>()
 
 const extensionListContext = useExtensionListContext()
 
-/**
- * 统一解析 Card 的展示字段：显式 props 优先于 item 字段。
- * name 会回退为空字符串，iconAlt 则进一步回退到解析后的 name。
- */
-const resolvedCard = computed(() => {
-  const item = props.item
-  const name = props.name ?? item?.name ?? ''
-
-  return {
-    id: props.id ?? item?.id,
-    name,
-    description: props.description ?? item?.description,
-    icon: props.icon ?? item?.icon,
-    iconAlt: props.iconAlt ?? item?.iconAlt ?? name,
-  }
-})
-
 // 显式传入的数组（包括空数组）会覆盖 List 提供的默认操作。
-const resolvedPrimaryActions = computed(() => {
-  const id = resolvedCard.value.id
-
-  return props.primaryActions ?? (id ? extensionListContext?.getDefaultPrimaryActions(id) : undefined) ?? []
-})
+const resolvedPrimaryActions = computed<ExtensionCardRenderAction[]>(
+  () => props.primaryActions ?? extensionListContext?.getDefaultPrimaryActions(props.item.id) ?? [],
+)
 
 // 次级菜单操作使用相同的优先级规则，并通过 Card 的 id 获取 List 提供的默认操作。
 const resolvedMoreMenuActions = computed(() => {
-  const id = resolvedCard.value.id
-
-  return props.moreMenuActions ?? (id ? extensionListContext?.getDefaultMoreActions(id) : undefined) ?? []
+  return props.moreMenuActions ?? extensionListContext?.getDefaultMoreActions(props.item.id) ?? []
 })
 
 const hasVisiblePrimaryActions = computed(() => resolvedPrimaryActions.value.some((action) => !action.hidden))
 
 const shouldShowActions = computed(() => hasVisiblePrimaryActions.value || resolvedMoreMenuActions.value.length > 0)
 
-const addProgressState = computed(() => {
+const installProgressState = computed(() => {
   const action = resolvedPrimaryActions.value.find(
-    (action): action is ExtensionCardAddAction => !action.hidden && action.type === 'add' && action.state === 'pending',
+    (action) => !action.hidden && action.type === 'install' && 'state' in action && action.state === 'pending',
   )
 
   if (!action) {
     return undefined
   }
 
-  const progress = action.progress
+  const progress = 'progress' in action ? action.progress : undefined
 
   return {
     isIndeterminate: typeof progress !== 'number',
@@ -83,14 +63,9 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   <div class="tr-extension-card">
     <div class="tr-extension-card__icon-region">
       <slot name="icon">
-        <img
-          v-if="resolvedCard.icon"
-          :src="resolvedCard.icon"
-          :alt="resolvedCard.iconAlt"
-          class="tr-extension-card__icon"
-        />
+        <img v-if="item.icon" :src="item.icon" :alt="item.name" class="tr-extension-card__icon" />
         <div v-else class="tr-extension-card__icon tr-extension-card__icon--placeholder">
-          {{ resolvedCard.name.slice(0, 1) }}
+          {{ item.name.slice(0, 1) }}
         </div>
       </slot>
     </div>
@@ -101,14 +76,14 @@ const handleNameKeydown = (event: KeyboardEvent) => {
         :class="{ 'is-clickable': nameClickable }"
         :role="nameClickable ? 'button' : undefined"
         :tabindex="nameClickable ? 0 : undefined"
-        :title="resolvedCard.name"
+        :title="item.name"
         @click="handleNameClick"
         @keydown="handleNameKeydown"
       >
-        {{ resolvedCard.name }}
+        {{ item.name }}
       </div>
-      <div v-if="resolvedCard.description" class="tr-extension-card__description" :title="resolvedCard.description">
-        {{ resolvedCard.description }}
+      <div v-if="item.description" class="tr-extension-card__description" :title="item.description">
+        {{ item.description }}
       </div>
     </div>
 
@@ -132,11 +107,11 @@ const handleNameKeydown = (event: KeyboardEvent) => {
       />
     </div>
 
-    <div v-if="addProgressState" class="tr-extension-card__progress">
+    <div v-if="installProgressState" class="tr-extension-card__progress">
       <span
         class="tr-extension-card__progress-bar"
-        :class="{ 'is-indeterminate': addProgressState.isIndeterminate }"
-        :style="addProgressState.style"
+        :class="{ 'is-indeterminate': installProgressState.isIndeterminate }"
+        :style="installProgressState.style"
       ></span>
     </div>
   </div>
@@ -153,8 +128,8 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 
 <style lang="less" scoped>
 .tr-extension-card {
-  --tr-extension-card-add-button-border-color: var(--tr-border-color-default);
-  --tr-extension-card-add-button-text-color: var(--tr-text-primary);
+  --tr-extension-card-install-button-border-color: var(--tr-border-color-default);
+  --tr-extension-card-install-button-text-color: var(--tr-text-primary);
   --tr-extension-card-progress-bg-color: var(--tr-extension-card-bg-color-hover);
   --tr-extension-card-progress-bar-color: var(--tr-success-color, #52c41a);
   --tr-extension-card-switch-bg-color: var(--tr-extension-card-bg-color-hover);

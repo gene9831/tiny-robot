@@ -20,6 +20,7 @@ const items = computed(() => (mode.value === 'empty' ? [] : allItems))
 
   <ExtensionList
     :items="items"
+    scope="available"
     :loading="mode === 'loading'"
     :error="mode === 'error' ? new Error('Request failed') : undefined"
     empty-text="Nothing here"

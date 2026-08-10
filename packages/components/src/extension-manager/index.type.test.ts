@@ -1,6 +1,8 @@
 import type {
   Extension,
   ExtensionContext,
+  ExtensionCardPrimaryAction,
+  ExtensionCardProps,
   ExtensionIntent,
   ExtensionListProps,
   ExtensionRootProps,
@@ -21,6 +23,17 @@ const listProps: ExtensionListProps = {
   scope: 'available',
 }
 
+const cardProps: ExtensionCardProps = { item: extension }
+
+// Card presentation is canonicalized through the required Extension item.
+// @ts-expect-error ExtensionCardProps requires an item
+const cardWithoutItem: ExtensionCardProps = {}
+
+// Operation state is projected privately by List, not accepted from public actions.
+const installAction: ExtensionCardPrimaryAction = { id: 'install', type: 'install' }
+// @ts-expect-error public install actions do not expose operation status
+const installActionWithState: ExtensionCardPrimaryAction = { id: 'install', type: 'install', state: 'pending' }
+
 const search: ExtensionSearchFn = (_query, item, scope) => item.kind === 'skill' && scope === 'available'
 
 const intent: ExtensionIntent = { id: 'available', kind: 'skill' }
@@ -37,3 +50,7 @@ void listProps
 void search
 void intent
 void availableItems
+void cardProps
+void cardWithoutItem
+void installAction
+void installActionWithState

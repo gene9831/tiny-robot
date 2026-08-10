@@ -1,8 +1,11 @@
 import { inject } from 'vue'
 import { extensionContextKey } from './internalExtensionContext'
+import type { ExtensionContext } from '../index.type'
 
-export const useExtensionContext = () => {
+export function useExtensionContext(): ExtensionContext
+export function useExtensionContext(required: false): ExtensionContext | undefined
+export function useExtensionContext(required = true) {
   const context = inject(extensionContextKey)
-  if (!context) throw new Error('useExtensionContext must be used inside ExtensionManagerRoot')
+  if (!context && required) throw new Error('useExtensionContext must be used inside ExtensionManagerRoot')
   return context
 }

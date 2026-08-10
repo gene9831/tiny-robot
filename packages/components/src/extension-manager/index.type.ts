@@ -84,10 +84,8 @@ export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
   checked?: boolean
 }
 
-export interface ExtensionCardAddAction extends ExtensionCardActionBase {
-  type: 'add'
-  state?: ExtensionOperationStatus['status']
-  progress?: number
+export interface ExtensionCardInstallAction extends ExtensionCardActionBase {
+  type: 'install'
   label?: string
 }
 
@@ -103,7 +101,7 @@ export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
 }
 
 export type ExtensionCardPrimaryAction =
-  ExtensionCardToggleAction | ExtensionCardAddAction | ExtensionCardButtonAction | ExtensionCardCustomAction
+  ExtensionCardToggleAction | ExtensionCardInstallAction | ExtensionCardButtonAction | ExtensionCardCustomAction
 
 export interface ExtensionCardMoreMenuAction {
   id: string
@@ -121,16 +119,8 @@ export interface ExtensionCardActionEvent {
   payload?: unknown
 }
 
-export interface ExtensionCardItem {
-  id?: string
-  name: string
-  description?: string
-  icon?: string
-  iconAlt?: string
-}
-
-export type ExtensionCardProps = Partial<ExtensionCardItem> & {
-  item?: ExtensionCardItem
+export interface ExtensionCardProps {
+  item: Extension
   nameClickable?: boolean
   primaryActions?: ExtensionCardPrimaryAction[]
   moreMenuActions?: ExtensionCardMoreMenuAction[]
@@ -160,8 +150,7 @@ export interface ExtensionTagOption {
 
 export interface ExtensionListProps {
   items?: Extension[]
-  scope?: ExtensionScope
-  operationStates?: ExtensionOperationStatusMap
+  scope: ExtensionScope
   loading?: boolean
   error?: unknown
   emptyText?: string

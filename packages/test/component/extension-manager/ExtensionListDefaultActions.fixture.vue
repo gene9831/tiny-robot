@@ -6,6 +6,7 @@ import type {
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionCard from '../../../components/src/extension-manager/components/ExtensionCard.vue'
 import ExtensionList from '../../../components/src/extension-manager/components/ExtensionList.vue'
+import ExtensionManagerRoot from '../../../components/src/extension-manager/ExtensionManagerRoot.vue'
 
 const installedItem: Extension = {
   id: 'installed-extension',
@@ -50,6 +51,14 @@ const idleMarketItem: Extension = {
   installed: false,
 }
 
+const availableInstalledItem: Extension = {
+  id: 'available-installed-extension',
+  kind: 'mcp',
+  name: 'Available installed extension',
+  installed: true,
+  config: { enabled: true },
+}
+
 const operationStates: ExtensionOperationStatusMap = {
   'market-extension': {
     install: { status: 'error', retryable: true },
@@ -72,42 +81,43 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
 </script>
 
 <template>
-  <ExtensionList scope="installed" :items="[installedItem]">
-    <ExtensionCard data-testid="installed-card" :item="installedItem" />
-    <ExtensionCard
-      id="installed-extension"
-      data-testid="explicit-id-card"
-      :item="{ ...installedItem, id: 'unmatched-extension' }"
-      :more-menu-actions="[]"
-    />
-    <ExtensionCard
-      data-testid="override-card"
-      :item="installedItem"
-      :primary-actions="overridePrimaryActions"
-      :more-menu-actions="[]"
-    />
-    <ExtensionCard
-      data-testid="empty-actions-card"
-      :item="installedItem"
-      :primary-actions="[]"
-      :more-menu-actions="[]"
-    />
-  </ExtensionList>
+  <ExtensionManagerRoot :operation-states="operationStates">
+    <ExtensionList scope="installed" :items="[installedItem]">
+      <ExtensionCard data-testid="installed-card" :item="installedItem" />
+      <ExtensionCard
+        data-testid="override-card"
+        :item="installedItem"
+        :primary-actions="overridePrimaryActions"
+        :more-menu-actions="[]"
+      />
+      <ExtensionCard
+        data-testid="empty-actions-card"
+        :item="installedItem"
+        :primary-actions="[]"
+        :more-menu-actions="[]"
+      />
+    </ExtensionList>
 
-  <ExtensionList scope="installed" :items="[passiveInstalledItem]">
-    <ExtensionCard data-testid="passive-installed-card" :item="passiveInstalledItem" />
-  </ExtensionList>
+    <ExtensionList scope="installed" :items="[passiveInstalledItem]">
+      <ExtensionCard data-testid="passive-installed-card" :item="passiveInstalledItem" />
+    </ExtensionList>
 
-  <ExtensionList
-    scope="available"
-    :items="[marketItem, pendingMarketItem, successfulMarketItem, idleMarketItem]"
-    :operation-states="operationStates"
-  >
-    <ExtensionCard data-testid="market-card" :item="marketItem" />
-    <ExtensionCard data-testid="pending-market-card" :item="pendingMarketItem" />
-    <ExtensionCard data-testid="successful-market-card" :item="successfulMarketItem" />
-    <ExtensionCard data-testid="idle-market-card" :item="idleMarketItem" />
-  </ExtensionList>
+    <ExtensionList
+      scope="available"
+      :items="[marketItem, pendingMarketItem, successfulMarketItem, idleMarketItem, availableInstalledItem]"
+    >
+      <ExtensionCard data-testid="market-card" :item="marketItem" />
+      <ExtensionCard data-testid="pending-market-card" :item="pendingMarketItem" />
+      <ExtensionCard data-testid="successful-market-card" :item="successfulMarketItem" />
+      <ExtensionCard data-testid="idle-market-card" :item="idleMarketItem" />
+      <ExtensionCard data-testid="available-installed-card" :item="availableInstalledItem" />
+    </ExtensionList>
+  </ExtensionManagerRoot>
 
   <ExtensionCard data-testid="standalone-card" :item="installedItem" />
+
+  <output data-testid="available-input-state">
+    {{ JSON.stringify({ marketInstalled: marketItem.installed, pendingInstalled: pendingMarketItem.installed }) }}
+  </output>
+  <output data-testid="operation-state">{{ operationStates['pending-market-extension'].install?.status }}</output>
 </template>
