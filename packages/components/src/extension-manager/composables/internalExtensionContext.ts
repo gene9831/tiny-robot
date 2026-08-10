@@ -17,17 +17,11 @@ import type {
 type ExtensionFilterLease = (() => void) & { readonly active: boolean }
 
 interface ExtensionFilterContext {
-  activeKind: ExtensionContext['activeKind']
   allExtensions: ExtensionContext['allExtensions']
   unfilteredDisplayItems: ComputedRef<ExtensionDisplay>
   setDisplayItems: (displayItems?: ExtensionDisplay) => void
   claimFilter: () => ExtensionFilterLease
 }
-
-const defaultTypeOptions = [
-  { value: 'mcp', label: 'MCP' },
-  { value: 'skill', label: 'Skills' },
-] satisfies Array<{ value: ExtensionKind; label: string }>
 
 export const extensionContextKey: InjectionKey<ExtensionContext> = Symbol('ExtensionContext')
 const extensionFilterContextKey: InjectionKey<ExtensionFilterContext> = Symbol('ExtensionFilterContext')
@@ -45,7 +39,6 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
     installed: true,
     available: true,
   }
-  const activeKind = ref<ExtensionKind>(props.activeKind ?? props.defaultActiveKind ?? 'mcp')
   const expandedSections = ref<Record<ExtensionScope, boolean>>({
     ...defaultExpandedSections,
     ...props.expandedSections,
@@ -58,7 +51,6 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
   const displayItemsSource = ref<ExtensionDisplay>()
   const displayItems = computed<ExtensionDisplay>(() => displayItemsSource.value ?? unfilteredDisplayItems.value)
   const operationStates = computed(() => props.operationStates ?? {})
-  const typeOptions = computed(() => defaultTypeOptions)
   const installedItems = computed(() => displayItems.value.installed)
   const availableItems = computed(() => displayItems.value.available)
 
@@ -91,12 +83,6 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
     return release
   }
 
-  const setActiveKind = (kind: ExtensionKind) => {
-    if (activeKind.value === kind) return
-    activeKind.value = kind
-    emit('update:active-kind', kind)
-    emit('kind-change', kind)
-  }
   const isSectionExpanded = (scope: ExtensionScope) => expandedSections.value[scope]
   const toggleSection = (scope: ExtensionScope) => {
     const nextExpandedSections = { ...expandedSections.value, [scope]: !expandedSections.value[scope] }
@@ -145,12 +131,6 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
   }
 
   watch(
-    () => props.activeKind,
-    (kind) => {
-      if (kind !== undefined) activeKind.value = kind
-    },
-  )
-  watch(
     () => props.expandedSections,
     (sections) => {
       if (sections === undefined) return
@@ -160,14 +140,11 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
   )
 
   const context: ExtensionContext = {
-    activeKind: computed(() => activeKind.value),
     allExtensions,
     displayItems,
     operationStates,
-    typeOptions,
     installedItems,
     availableItems,
-    setActiveKind,
     isSectionExpanded,
     toggleSection,
     requestInstall,
@@ -180,7 +157,6 @@ export const provideExtensionContext = (props: Readonly<ExtensionRootProps>, emi
     requestRefresh,
   }
   const filterContext: ExtensionFilterContext = {
-    activeKind: computed(() => activeKind.value),
     allExtensions,
     unfilteredDisplayItems,
     setDisplayItems,

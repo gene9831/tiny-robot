@@ -29,11 +29,8 @@ const sections = computed(() => [
 type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
 type ExtensionRuntimeScope = (typeof sections.value)[number]['source']
 
-const getSectionTitle = (source: ExtensionRuntimeScope) => {
-  const prefix = source === 'installed' ? props.installedTitle : props.availableTitle
-  const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeKind.value)?.label
-  return `${prefix}${typeLabel ?? manager.activeKind.value}`
-}
+const getSectionTitle = (source: ExtensionRuntimeScope) =>
+  source === 'installed' ? props.installedTitle : props.availableTitle
 
 const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无可用扩展')
 
@@ -54,19 +51,6 @@ const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardAction
 
 <template>
   <div class="extension-manager__content">
-    <nav class="extension-manager__tabs" aria-label="扩展类型">
-      <button
-        v-for="option in manager.typeOptions.value"
-        :key="option.value"
-        class="extension-manager__tab"
-        :class="{ 'is-active': manager.activeKind.value === option.value }"
-        type="button"
-        @click="manager.setActiveKind(option.value)"
-      >
-        {{ option.label }}
-      </button>
-    </nav>
-
     <div class="extension-manager__sections">
       <section v-for="section in sections" :key="section.source" class="extension-manager__section">
         <button
@@ -107,41 +91,6 @@ const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardAction
 </template>
 
 <style lang="less" scoped>
-.extension-manager__tabs {
-  display: flex;
-  gap: 28px;
-  border-bottom: 1px solid var(--tr-mcp-server-picker-tabs-divider-color);
-}
-
-.extension-manager__tab {
-  position: relative;
-  padding: 0 0 10px;
-  border: 0;
-  background: transparent;
-  color: var(--tr-text-primary);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 22px;
-}
-
-.extension-manager__tab::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: transparent;
-  content: '';
-}
-
-.extension-manager__tab.is-active {
-  font-weight: 600;
-}
-
-.extension-manager__tab.is-active::after {
-  background: var(--tr-mcp-server-picker-tabs-border-color-active);
-}
-
 .extension-manager__sections {
   display: flex;
   flex-direction: column;

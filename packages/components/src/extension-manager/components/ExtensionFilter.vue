@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { IconSearch } from '@opentiny/tiny-robot-svgs'
-import { computed, onUnmounted, ref, watch } from 'vue'
-import type { ExtensionFilterEmits, ExtensionFilterProps, ExtensionScope } from '../index.type'
-import { useInternalExtensionFilterContext } from '../composables/internalExtensionContext'
+import type { ExtensionFilterEmits, ExtensionFilterProps } from '../index.type'
+import { useExtensionFilter } from '../composables/useExtensionFilter'
 
 const props = withDefaults(defineProps<ExtensionFilterProps>(), {
   searchPlaceholder: '请输入关键字搜索',
@@ -12,79 +11,20 @@ const props = withDefaults(defineProps<ExtensionFilterProps>(), {
 })
 const emit = defineEmits<ExtensionFilterEmits>()
 
-const manager = useInternalExtensionFilterContext()
-type ExtensionRuntimeItem = (typeof manager.allExtensions.value)[number]
-type ExtensionRuntimeScope = ExtensionScope
-const filterLease = manager.claimFilter()
-const uncontrolledQuery = ref('')
-const uncontrolledTag = ref('')
-
-const searchQuery = computed({
-  get: () => props.query ?? uncontrolledQuery.value,
-  set: (query: string) => {
-    if (props.query === undefined) uncontrolledQuery.value = query
-    emit('update:query', query)
-    emit('query-change', query)
-  },
-})
-
-const activeTag = computed({
-  get: () => props.tag ?? uncontrolledTag.value,
-  set: (tag: string) => {
-    if (props.tag === undefined) uncontrolledTag.value = tag
-    emit('update:tag', tag)
-    emit('tag-change', tag)
-  },
-})
-
-const tagOptions = computed(() =>
-  [...new Set(manager.allExtensions.value.flatMap((item) => item.tags ?? []))].map((value) => ({
-    value,
-    label: value,
-  })),
-)
-
-const defaultSearch = (query: string, item: ExtensionRuntimeItem) => {
-  if (!query) return true
-
-  const keyword = query.toLowerCase()
-  return item.name.toLowerCase().includes(keyword) || (item.description || '').toLowerCase().includes(keyword)
-}
-
-const filterItem = (item: ExtensionRuntimeItem, source: ExtensionRuntimeScope) => {
-  if (item.kind !== manager.activeKind.value) return false
-
-  const matchesTag = !activeTag.value || item.tags?.includes(activeTag.value)
-  return Boolean(matchesTag && (props.searchFn ?? defaultSearch)(searchQuery.value, item, source))
-}
-
-const display = computed(() => ({
-  installed: manager.unfilteredDisplayItems.value.installed.filter((item) => filterItem(item, 'installed')),
-  available: manager.unfilteredDisplayItems.value.available.filter((item) => filterItem(item, 'available')),
-}))
-
-if (filterLease.active) {
-  watch(
-    display,
-    (value) => {
-      manager.setDisplayItems(value)
-    },
-    { immediate: true },
-  )
-
-  watch(manager.activeKind, () => {
-    searchQuery.value = ''
-    activeTag.value = ''
-  })
-}
-
-onUnmounted(() => {
-  filterLease()
-})
+const { activeKind, activeTag, kindOptions, searchQuery, tagOptions } = useExtensionFilter(props, emit)
 </script>
 
 <template>
   <div class="extension-filter">
+    <div class="extension-filter__filter">
+      <select v-model="activeKind" class="extension-filter__select" aria-label="Extension kind">
+        <option v-if="!kindOptions.length" value="">No extension types</option>
+        <option v-for="option in kindOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+    </div>
+
     <div v-if="props.showTagFilter" class="extension-filter__filter">
       <select v-model="activeTag" class="extension-filter__select" :aria-label="props.tagPlaceholder">
         <option value="">{{ props.tagPlaceholder }}</option>

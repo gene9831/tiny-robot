@@ -2,10 +2,7 @@
 import type { ExtensionRootEmits, ExtensionRootProps } from './index.type'
 import { provideExtensionContext } from './composables/internalExtensionContext'
 
-const props = withDefaults(defineProps<ExtensionRootProps>(), {
-  extensions: () => [],
-  defaultActiveKind: 'mcp',
-})
+const props = withDefaults(defineProps<ExtensionRootProps>(), { extensions: () => [] })
 
 const emit = defineEmits<ExtensionRootEmits>()
 const context = provideExtensionContext(props, emit)

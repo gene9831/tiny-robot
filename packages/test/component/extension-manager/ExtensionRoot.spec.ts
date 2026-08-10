@@ -5,7 +5,6 @@ test.describe('Extension Root canonical context', () => {
   test('normalizes canonical inputs into installed and available projections', async ({ mount }) => {
     const component = await mount(ExtensionRootFixture)
 
-    await expect(component.getByTestId('active-kind')).toHaveText('mcp')
     await expect(component.getByTestId('all-extensions')).toHaveText(
       'Map service,Summary skill,Plain installed service,Train service,Translate skill',
     )
@@ -34,23 +33,12 @@ test.describe('Extension Root canonical context', () => {
     await expect(component.getByTestId('install-operation-status')).toHaveText('pending')
   })
 
-  test('exposes the canonical public context without Filter writer capabilities', async ({ mount }) => {
+  test('exposes the canonical public context without Filter state or writer capabilities', async ({ mount }) => {
     const component = await mount(ExtensionRootFixture)
 
     await expect(component.getByTestId('root-public-api')).toHaveText('available')
-    await component.getByTestId('set-exposed-active-kind').click()
-    await expect(component.getByTestId('active-kind')).toHaveText('skill')
+    await expect(component.getByTestId('root-active-kind-api')).toHaveText('private')
     await expect(component.getByTestId('root-internal-filter-writers')).toHaveText('private')
-  })
-
-  test('keeps active kind read-only until set through its semantic action', async ({ mount }) => {
-    const component = await mount(ExtensionRootFixture)
-
-    await component.getByTestId('write-active-kind').click()
-    await expect(component.getByTestId('active-kind')).toHaveText('mcp')
-    await expect(component.getByTestId('event-log')).toHaveText('')
-    await component.getByTestId('set-exposed-active-kind').click()
-    await expect(component.getByTestId('active-kind')).toHaveText('skill')
   })
 
   test('tracks installed and available section expansion independently', async ({ mount }) => {
@@ -68,13 +56,9 @@ test.describe('Extension Root canonical context', () => {
     )
   })
 
-  test('synchronizes controlled canonical active kind and sections', async ({ mount }) => {
+  test('synchronizes controlled canonical section state', async ({ mount }) => {
     const component = await mount(ExtensionRootFixture)
 
-    await component.getByTestId('set-external-active-kind').click()
-    await expect(component.getByTestId('active-kind')).toHaveText('skill')
-    await component.getByTestId('show-mcp').click()
-    await expect(component.getByTestId('event-log')).toContainText('active-kind:mcp')
     await component.getByTestId('set-external-expanded-sections').click()
     await expect(component.getByTestId('installed-section-expanded')).toHaveText('false')
     await expect(component.getByTestId('available-section-expanded')).toHaveText('false')

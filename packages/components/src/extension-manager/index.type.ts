@@ -178,8 +178,11 @@ export interface ExtensionListEmits {
 }
 
 export interface ExtensionFilterProps {
+  activeKind?: ExtensionKind
+  defaultActiveKind?: ExtensionKind
   query?: string
   tag?: string
+  kindLabels?: Record<string, string>
   searchPlaceholder?: string
   tagPlaceholder?: string
   showSearch?: boolean
@@ -188,6 +191,7 @@ export interface ExtensionFilterProps {
 }
 
 export interface ExtensionFilterEmits {
+  (e: 'update:active-kind', kind: ExtensionKind): void
   (e: 'update:query', query: string): void
   (e: 'update:tag', tag: string): void
   (e: 'query-change', query: string): void
@@ -197,15 +201,11 @@ export interface ExtensionFilterEmits {
 export interface ExtensionRootProps {
   extensions?: ExtensionInput[]
   operationStates?: ExtensionOperationStatusMap
-  activeKind?: ExtensionKind
-  defaultActiveKind?: ExtensionKind
   expandedSections?: Record<ExtensionScope, boolean>
 }
 
 export interface ExtensionRootEmits {
-  (e: 'update:active-kind', kind: ExtensionKind): void
   (e: 'update:expanded-sections', expandedSections: Record<ExtensionScope, boolean>): void
-  (e: 'kind-change', kind: ExtensionKind): void
   (e: 'install', intent: ExtensionIntent): void
   (e: 'create', kind: ExtensionKind): void
   (e: 'detail', intent: ExtensionIntent): void
@@ -217,6 +217,8 @@ export interface ExtensionRootEmits {
 }
 
 export interface ExtensionManagerProps extends ExtensionRootProps {
+  activeKind?: ExtensionKind
+  defaultActiveKind?: ExtensionKind
   title?: string
   searchPlaceholder?: string
   tagPlaceholder?: string
@@ -242,6 +244,7 @@ export interface ExtensionManagerProps extends ExtensionRootProps {
 
 export interface ExtensionManagerEmits extends ExtensionRootEmits {
   (e: 'update:visible', visible: boolean): void
+  (e: 'update:active-kind', kind: ExtensionKind): void
   (e: 'search-change', query: string, kind: ExtensionKind): void
   (e: 'tag-change', tag: string, kind: ExtensionKind): void
 }
@@ -261,14 +264,11 @@ export interface ExtensionToolToggleIntent extends ExtensionIntent {
 }
 
 export interface ExtensionContext {
-  activeKind: ComputedRef<ExtensionKind>
   allExtensions: ComputedRef<Extension[]>
   displayItems: ComputedRef<ExtensionDisplay>
   operationStates: ComputedRef<ExtensionOperationStatusMap>
-  typeOptions: ComputedRef<ExtensionTypeOption[]>
   installedItems: ComputedRef<Extension[]>
   availableItems: ComputedRef<Extension[]>
-  setActiveKind: (kind: ExtensionKind) => void
   isSectionExpanded: (scope: ExtensionScope) => boolean
   toggleSection: (scope: ExtensionScope) => void
   requestInstall: (item: Extension) => void

@@ -20,16 +20,10 @@ const requestMalformedToggle = () => {
 const requestMalformedToolToggle = () => {
   manager.requestToolToggle(map, 'map-directions', 'false' as unknown as boolean)
 }
-
-const writeActiveKind = () => {
-  const activeKind = manager.activeKind as unknown as { value: string }
-  activeKind.value = 'skill'
-}
 </script>
 
 <template>
   <div>
-    <div data-testid="active-kind">{{ manager.activeKind.value }}</div>
     <div data-testid="all-extensions">{{ manager.allExtensions.value.map((item) => item.name).join(',') }}</div>
     <div data-testid="display-items">
       {{ manager.displayItems.value.installed.map((item) => item.name).join(',') }}|{{
@@ -45,9 +39,6 @@ const writeActiveKind = () => {
     <div data-testid="installed-section-expanded">{{ manager.isSectionExpanded('installed') }}</div>
     <div data-testid="available-section-expanded">{{ manager.isSectionExpanded('available') }}</div>
 
-    <button type="button" data-testid="show-skills" @click="manager.setActiveKind('skill')">Skills</button>
-    <button type="button" data-testid="show-mcp" @click="manager.setActiveKind('mcp')">MCP</button>
-    <button type="button" data-testid="write-active-kind" @click="writeActiveKind">Write active kind</button>
     <button type="button" data-testid="toggle-installed-section" @click="manager.toggleSection('installed')">
       Toggle installed section
     </button>

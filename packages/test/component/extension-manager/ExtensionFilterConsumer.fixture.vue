@@ -12,6 +12,5 @@ const manager = useExtensionContext()
     <div data-testid="display-available">
       {{ manager.displayItems.value.available.map((item) => item.name).join(',') }}
     </div>
-    <button type="button" data-testid="show-skills" @click="manager.setActiveKind('skill')">Skills</button>
   </div>
 </template>

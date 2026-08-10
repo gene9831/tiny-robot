@@ -27,9 +27,9 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 
 const emit = defineEmits<ExtensionManagerEmits>()
 const visible = defineModel<boolean>('visible', { default: true })
-const managerRoot = ref<Pick<ExtensionContext, 'activeKind' | 'requestCreate'>>()
+const managerRoot = ref<Pick<ExtensionContext, 'requestCreate'>>()
 
-const activeKind = computed(() => managerRoot.value?.activeKind.value ?? props.activeKind ?? props.defaultActiveKind)
+const activeKind = computed(() => props.activeKind ?? props.defaultActiveKind)
 
 const handleClose = () => {
   visible.value = false
@@ -42,12 +42,8 @@ const handleClose = () => {
       ref="managerRoot"
       :extensions="props.extensions"
       :operation-states="props.operationStates"
-      :active-kind="props.activeKind"
-      :default-active-kind="props.defaultActiveKind"
       :expanded-sections="props.expandedSections"
-      @update:active-kind="emit('update:active-kind', $event)"
       @update:expanded-sections="emit('update:expanded-sections', $event)"
-      @kind-change="emit('kind-change', $event)"
       @install="emit('install', $event)"
       @create="emit('create', $event)"
       @detail="emit('detail', $event)"
@@ -75,6 +71,8 @@ const handleClose = () => {
       </div>
 
       <ExtensionFilter
+        :active-kind="props.activeKind"
+        :default-active-kind="props.defaultActiveKind"
         :search-placeholder="props.searchPlaceholder"
         :tag-placeholder="props.tagPlaceholder"
         :show-search="props.enableSearch"
