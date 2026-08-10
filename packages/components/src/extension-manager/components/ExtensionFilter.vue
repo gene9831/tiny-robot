@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<ExtensionFilterProps>(), {
 const emit = defineEmits<ExtensionFilterEmits>()
 
 const { activeKind, activeTag, kindOptions, searchQuery, tagOptions } = useExtensionFilter(props, emit)
+
+defineExpose({ activeKind })
 </script>
 
 <template>

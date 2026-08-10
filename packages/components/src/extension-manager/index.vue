@@ -27,12 +27,11 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 const emit = defineEmits<ExtensionManagerEmits>()
 const visible = defineModel<boolean>('visible', { default: true })
 const managerRoot = ref<Pick<ExtensionContext, 'requestCreate'>>()
-const filterActiveKind = ref<ExtensionKind>()
+const extensionFilter = ref<{ activeKind?: ExtensionKind }>()
 
-const activeKind = computed(() => filterActiveKind.value ?? props.activeKind ?? props.defaultActiveKind)
+const activeKind = computed(() => extensionFilter.value?.activeKind)
 
 const handleActiveKindUpdate = (kind: ExtensionKind) => {
-  filterActiveKind.value = kind
   emit('update:active-kind', kind)
 }
 
@@ -80,6 +79,7 @@ const handleClose = () => {
       </div>
 
       <ExtensionFilter
+        ref="extensionFilter"
         :active-kind="props.activeKind"
         :default-active-kind="props.defaultActiveKind"
         :query="props.query"

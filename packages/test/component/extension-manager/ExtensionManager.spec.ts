@@ -36,4 +36,53 @@ test.describe('ExtensionManager facade', () => {
 
     await expect(component.getByTestId('event-log')).toHaveText('create:skill')
   })
+
+  test('creates with the Filter-resolved first catalog kind when no kind is configured', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture, {
+      props: {
+        extensions: [
+          { id: 'skill', kind: 'skill', name: 'Summary skill' },
+          { id: 'mcp', kind: 'mcp', name: 'Map service' },
+        ],
+      },
+    })
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+  })
+
+  test('creates with a controlled active kind', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture, { props: { activeKind: 'skill' } })
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+  })
+
+  test('creates with the controlled default active kind', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture, { props: { defaultActiveKind: 'skill' } })
+
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('create:skill')
+  })
+
+  test('creates with the Filter fallback after the selected kind is removed', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture, { props: { activeKind: 'skill' } })
+
+    await component.getByTestId('remove-skill').click()
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('create:mcp')
+  })
+
+  test('does not create when the Filter resolves no kind for an empty catalog', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+
+    await component.getByTestId('clear-catalog').click()
+    await component.getByRole('button', { name: '添加自定义服务' }).click()
+
+    await expect(component.getByTestId('event-log')).toHaveText('')
+  })
 })
