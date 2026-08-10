@@ -1,28 +1,64 @@
 <script setup lang="ts">
-import type { ExtensionCardActionEvent, ExtensionRecord, ExtensionSource } from '@opentiny/tiny-robot'
-import { ExtensionManager, useExtensionManagerContext } from '@opentiny/tiny-robot'
+import { computed } from 'vue'
+import type {
+  ExtensionCardActionEvent,
+  ExtensionContext,
+  Extension,
+  ExtensionKind,
+  ExtensionScope,
+} from '@opentiny/tiny-robot'
+import { ExtensionManager, useExtensionContext } from '@opentiny/tiny-robot'
 import { IconArrowDown, IconPlus } from '@opentiny/tiny-robot-svgs'
 
-const manager = useExtensionManagerContext()
-const sources: ExtensionSource[] = ['installed', 'market']
+const props = defineProps<{
+  activeKind?: ExtensionKind
+}>()
 
-const getItems = (source: ExtensionSource) => {
-  return source === 'installed' ? manager.installedItems.value : manager.marketItems.value
-}
+const emit = defineEmits<{
+  (e: 'update:active-kind', kind: ExtensionKind): void
+}>()
 
-const getSectionTitle = (source: ExtensionSource) => {
-  const typeLabel = manager.typeOptions.value.find((option) => option.value === manager.activeType.value)?.label
-  return `${source === 'installed' ? '已添加' : '市场'}${typeLabel ?? manager.activeType.value}`
-}
+const manager: ExtensionContext = useExtensionContext()
+const scopes: ExtensionScope[] = ['installed', 'available']
+const kindOptions = computed(() => {
+  const seenKinds = new Set<ExtensionKind>()
 
-const handleCardAction = (item: ExtensionRecord, source: ExtensionSource, event: ExtensionCardActionEvent) => {
-  if (event.id === 'toggle' && typeof event.checked === 'boolean') {
-    manager.requestToggle(item, event.checked, source)
-  } else if (event.id === 'add') {
-    manager.requestAdd(item, source)
-  } else if (event.id === 'delete') {
-    manager.requestDelete(item, source)
+  return manager.allExtensions.value.flatMap((item) => {
+    if (seenKinds.has(item.kind)) return []
+    seenKinds.add(item.kind)
+    return [{ value: item.kind, label: item.kind }]
+  })
+})
+
+const selectedKind = computed(() => {
+  if (props.activeKind && kindOptions.value.some((option) => option.value === props.activeKind)) {
+    return props.activeKind
   }
+
+  return kindOptions.value[0]?.value
+})
+
+const getItems = (scope: ExtensionScope) => {
+  return manager.displayItems.value[scope]
+}
+
+const getSectionTitle = (scope: ExtensionScope) => {
+  const kindLabel = kindOptions.value.find((option) => option.value === selectedKind.value)?.label ?? selectedKind.value
+  return `${scope === 'installed' ? '已添加' : '可用'}${kindLabel ?? ''}`
+}
+
+const handleCardAction = (item: Extension, event: ExtensionCardActionEvent) => {
+  if (event.id === 'toggle' && typeof event.checked === 'boolean') {
+    manager.requestToggle(item, event.checked)
+  } else if (event.id === 'install') {
+    manager.requestInstall(item)
+  } else if (event.id === 'delete') {
+    manager.requestDelete(item)
+  }
+}
+
+const handleCreate = () => {
+  if (selectedKind.value) manager.requestCreate(selectedKind.value)
 }
 </script>
 
@@ -30,7 +66,7 @@ const handleCardAction = (item: ExtensionRecord, source: ExtensionSource, event:
   <div class="composed-extension-manager">
     <header class="composed-extension-manager__header">
       <strong>服务列表</strong>
-      <button class="composed-extension-manager__create" type="button" @click="manager.requestCreate()">
+      <button class="composed-extension-manager__create" type="button" :disabled="!selectedKind" @click="handleCreate">
         <IconPlus />
         添加自定义服务
       </button>
@@ -38,45 +74,45 @@ const handleCardAction = (item: ExtensionRecord, source: ExtensionSource, event:
 
     <nav class="composed-extension-manager__tabs" aria-label="扩展类型">
       <button
-        v-for="option in manager.typeOptions.value"
+        v-for="option in kindOptions"
         :key="option.value"
         class="composed-extension-manager__tab"
-        :class="{ 'is-active': manager.activeType.value === option.value }"
+        :class="{ 'is-active': selectedKind === option.value }"
         type="button"
-        @click="manager.setActiveType(option.value)"
+        @click="emit('update:active-kind', option.value)"
       >
         {{ option.label }}
       </button>
     </nav>
 
     <div class="composed-extension-manager__sections">
-      <section v-for="source in sources" :key="source" class="composed-extension-manager__section">
+      <section v-for="scope in scopes" :key="scope" class="composed-extension-manager__section">
         <button
           class="composed-extension-manager__section-title"
           type="button"
-          :aria-expanded="manager.isSectionExpanded(source)"
-          @click="manager.toggleSection(source)"
+          :aria-expanded="manager.isSectionExpanded(scope)"
+          @click="manager.toggleSection(scope)"
         >
           <IconArrowDown
             class="composed-extension-manager__section-arrow"
-            :class="{ 'is-expanded': manager.isSectionExpanded(source) }"
+            :class="{ 'is-expanded': manager.isSectionExpanded(scope) }"
           />
-          <span>{{ getSectionTitle(source) }}</span>
+          <span>{{ getSectionTitle(scope) }}</span>
         </button>
 
-        <div v-show="manager.isSectionExpanded(source)" class="composed-extension-manager__section-body">
+        <div v-show="manager.isSectionExpanded(scope)" class="composed-extension-manager__section-body">
           <ExtensionManager.List
-            :source="source"
-            :items="getItems(source)"
-            :operation-states="manager.operationStates.value"
-            :empty-text="source === 'installed' ? '暂无已添加扩展' : '暂无市场扩展'"
+            :scope="scope"
+            :items="getItems(scope)"
+            :empty-text="scope === 'installed' ? '暂无已添加扩展' : '暂无可用扩展'"
+            @retry="manager.requestRefresh(scope)"
           >
             <ExtensionManager.Card
-              v-for="item in getItems(source)"
+              v-for="item in getItems(scope)"
               :key="item.id"
               :item="item"
-              @name-click="manager.requestDetailOpen(item, source)"
-              @action="handleCardAction(item, source, $event)"
+              @name-click="manager.requestDetail(item)"
+              @action="handleCardAction(item, $event)"
             />
           </ExtensionManager.List>
         </div>

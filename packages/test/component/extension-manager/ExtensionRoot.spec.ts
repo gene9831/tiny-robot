@@ -16,10 +16,10 @@ test.describe('Extension Root canonical context', () => {
     )
     await expect(component.getByTestId('available-items')).toHaveText('Train service,Translate skill')
     await expect(component.getByTestId('normalized-available-config')).toHaveText('absent')
-    await expect(component.getByTestId('source-config-preserved')).toHaveText('true')
+    await expect(component.getByTestId('input-config-preserved')).toHaveText('true')
   })
 
-  test('reacts to canonical input changes without a second source prop', async ({ mount }) => {
+  test('reacts to canonical input changes without a second catalog prop', async ({ mount }) => {
     const component = await mount(ExtensionRootFixture)
 
     await expect(component.getByTestId('available-items')).toHaveText('Train service,Translate skill')

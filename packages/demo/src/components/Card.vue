@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type {
-  ExtensionAddState,
+  Extension,
   ExtensionCardActionEvent,
   ExtensionCardCustomAction,
   ExtensionCardMoreMenuAction,
   ExtensionCardMoreMenuPlacement,
   ExtensionCardPrimaryAction,
+  ExtensionOperationStatus,
+  ExtensionOperationStatusMap,
 } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { IconDelete, IconEditPen, IconRefresh } from '@opentiny/tiny-robot-svgs'
@@ -14,11 +16,12 @@ import { computed, ref } from 'vue'
 const checked = ref(true)
 const toggleDisabled = ref(false)
 const showToggleAction = ref(true)
-const addState = ref<ExtensionAddState>('idle')
+const installStatus = ref<ExtensionOperationStatus['status']>('pending')
 const progress = ref(45)
 const showProgressValue = ref(true)
-const addDisabled = ref(false)
-const showAddAction = ref(false)
+const installRetryable = ref(true)
+const installDisabled = ref(false)
+const showInstallAction = ref(true)
 const buttonDisabled = ref(false)
 const showButtonAction = ref(false)
 const customDisabled = ref(false)
@@ -27,6 +30,34 @@ const moreMenuPlacement = ref<ExtensionCardMoreMenuPlacement>('bottom-end')
 const editDisabled = ref(false)
 const nameClickable = ref(true)
 const events = ref<string[]>([])
+
+const cardItem: Extension = {
+  id: 'mcp-amap',
+  kind: 'mcp',
+  name: '高德地图 MCP',
+  description: '提供地理编码、路线规划、天气查询等地图工具。',
+  icon: 'https://img.alicdn.com/imgextra/i4/O1CN01iPPabT1EGRN6uatHP_!!6000000000324-0-tps-512-512.jpg',
+  installed: true,
+  config: { enabled: checked.value },
+}
+
+const installPreviewItem: Extension = {
+  id: 'install-preview',
+  kind: 'skill',
+  name: '安装状态预览',
+  description: 'List 从 Root 的外部 operationStates 投影安装状态。',
+  installed: false,
+}
+
+const operationStates = computed<ExtensionOperationStatusMap>(() => ({
+  [installPreviewItem.id]: {
+    install: {
+      status: installStatus.value,
+      progress: installStatus.value === 'pending' && showProgressValue.value ? progress.value : undefined,
+      retryable: installStatus.value === 'error' ? installRetryable.value : undefined,
+    },
+  },
+}))
 
 const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
   return [
@@ -40,11 +71,9 @@ const primaryActions = computed<ExtensionCardPrimaryAction[]>(() => {
     },
     {
       id: 'install',
-      type: 'add',
-      state: addState.value,
-      hidden: !showAddAction.value,
-      progress: showProgressValue.value ? progress.value : undefined,
-      disabled: addDisabled.value,
+      type: 'install',
+      hidden: !showInstallAction.value,
+      disabled: installDisabled.value,
       label: '安装',
       ariaLabel: '安装扩展',
     },
@@ -97,6 +126,11 @@ const logEvent = (message: string) => {
   events.value = events.value.slice(0, 8)
 }
 
+const handleInstallPreview = () => {
+  installStatus.value = 'pending'
+  logEvent('安装状态预览 → pending')
+}
+
 const getCustomActionLabel = (action: ExtensionCardCustomAction) => {
   return (action.data as { label?: string } | undefined)?.label ?? action.id
 }
@@ -136,31 +170,40 @@ const handleAction = (event: ExtensionCardActionEvent) => {
           disabled
         </label>
 
-        <strong>add action</strong>
+        <strong>install action</strong>
         <label class="card-playground__checkbox">
-          <input v-model="showAddAction" type="checkbox" />
+          <input v-model="showInstallAction" type="checkbox" />
           show action
         </label>
         <label>
-          state
-          <select v-model="addState">
-            <option value="idle">idle</option>
-            <option value="loading">loading</option>
-            <option value="added">added</option>
-            <option value="failed">failed</option>
+          external status
+          <select v-model="installStatus">
+            <option value="pending">pending</option>
+            <option value="success">success</option>
+            <option value="error">error</option>
           </select>
         </label>
         <label>
           progress
-          <input v-model.number="progress" type="number" min="0" max="100" :disabled="!showProgressValue" />
+          <input
+            v-model.number="progress"
+            type="number"
+            min="0"
+            max="100"
+            :disabled="installStatus !== 'pending' || !showProgressValue"
+          />
         </label>
         <label class="card-playground__checkbox">
           <input v-model="showProgressValue" type="checkbox" />
           determinate progress
         </label>
         <label class="card-playground__checkbox">
-          <input v-model="addDisabled" type="checkbox" />
+          <input v-model="installDisabled" type="checkbox" />
           disabled
+        </label>
+        <label class="card-playground__checkbox">
+          <input v-model="installRetryable" type="checkbox" />
+          retryable error
         </label>
 
         <strong>button action</strong>
@@ -203,37 +246,48 @@ const handleAction = (event: ExtensionCardActionEvent) => {
         </label>
       </form>
 
-      <div class="card-playground__preview">
-        <div class="card-playground__preview-group">
-          <div class="card-playground__preview-title">
-            toggle + add + button + custom slot + more menu + unified action event
+      <ExtensionManager.Root :extensions="[cardItem, installPreviewItem]" :operation-states="operationStates">
+        <div class="card-playground__preview">
+          <div class="card-playground__preview-group">
+            <div class="card-playground__preview-title">
+              toggle + install + button + custom slot + more menu + unified action event
+            </div>
+            <ExtensionManager.Card
+              :item="cardItem"
+              :primary-actions="primaryActions"
+              :more-menu-actions="moreMenuActions"
+              :more-menu-placement="moreMenuPlacement"
+              more-menu-trigger-aria-label="更多扩展操作"
+              :name-clickable="nameClickable"
+              @name-click="logEvent('打开详情：高德地图 MCP')"
+              @action="handleAction"
+            >
+              <template #custom-action="{ action, trigger }">
+                <button
+                  class="custom-status-action"
+                  type="button"
+                  :disabled="action.disabled"
+                  :aria-label="action.ariaLabel"
+                  @click="trigger({ origin: 'custom-status' })"
+                >
+                  {{ getCustomActionLabel(action) }}
+                </button>
+              </template>
+            </ExtensionManager.Card>
           </div>
-          <ExtensionManager.Card
-            name="高德地图 MCP"
-            description="提供地理编码、路线规划、天气查询等地图工具。"
-            icon="https://img.alicdn.com/imgextra/i4/O1CN01iPPabT1EGRN6uatHP_!!6000000000324-0-tps-512-512.jpg"
-            :primary-actions="primaryActions"
-            :more-menu-actions="moreMenuActions"
-            :more-menu-placement="moreMenuPlacement"
-            more-menu-trigger-aria-label="更多扩展操作"
-            :name-clickable="nameClickable"
-            @name-click="logEvent('打开详情：高德地图 MCP')"
-            @action="handleAction"
-          >
-            <template #custom-action="{ action, trigger }">
-              <button
-                class="custom-status-action"
-                type="button"
-                :disabled="action.disabled"
-                :aria-label="action.ariaLabel"
-                @click="trigger({ source: 'custom-status' })"
-              >
-                {{ getCustomActionLabel(action) }}
-              </button>
-            </template>
-          </ExtensionManager.Card>
+
+          <div class="card-playground__preview-group">
+            <div class="card-playground__preview-title">List + Card 从 Root 投影外部安装状态</div>
+            <ExtensionManager.List scope="available" :items="[installPreviewItem]">
+              <ExtensionManager.Card
+                :item="installPreviewItem"
+                :primary-actions="showInstallAction ? undefined : []"
+                @action="handleInstallPreview"
+              />
+            </ExtensionManager.List>
+          </div>
         </div>
-      </div>
+      </ExtensionManager.Root>
     </section>
 
     <section class="event-panel">

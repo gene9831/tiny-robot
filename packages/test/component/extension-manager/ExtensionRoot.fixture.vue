@@ -85,6 +85,6 @@ const setExternalExpandedSections = () => {
   <div data-testid="root-public-api">{{ root?.displayItems ? 'available' : 'unavailable' }}</div>
   <div data-testid="root-active-kind-api">{{ root && 'activeKind' in root ? 'leaked' : 'private' }}</div>
   <div data-testid="root-internal-filter-writers">{{ exposesInternalFilterWriter ? 'leaked' : 'private' }}</div>
-  <div data-testid="source-config-preserved">{{ 'config' in availableWithConfig }}</div>
+  <div data-testid="input-config-preserved">{{ 'config' in availableWithConfig }}</div>
   <div data-testid="event-log">{{ eventLog.join('|') }}</div>
 </template>

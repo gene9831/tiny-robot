@@ -1,125 +1,153 @@
 <script setup lang="ts">
-import type { ExtensionCardActionEvent, ExtensionItem } from '@opentiny/tiny-robot'
+import type {
+  Extension,
+  ExtensionCardActionEvent,
+  ExtensionOperation,
+  ExtensionOperationStatus,
+  ExtensionOperationStatusMap,
+  McpConfig,
+  McpMetadata,
+} from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-const installedItems = ref<ExtensionItem[]>([
+type DemoExtension = Extension<McpConfig, McpMetadata>
+
+const extensions = ref<DemoExtension[]>([
   {
     id: 'mcp-amap',
-    type: 'mcp',
+    kind: 'mcp',
     name: '高德地图 MCP',
     description: '提供地理编码、路线规划、天气查询等地图工具。',
-    enabled: true,
+    installed: true,
+    config: {
+      enabled: true,
+      tools: {
+        'geo-code': { enabled: false },
+        'route-plan': { enabled: false },
+        weather: { enabled: true },
+      },
+    },
     tags: ['map', 'official'],
     metadata: {
       tools: [
-        { id: 'geo-code', name: '地理编码', disabled: true },
-        { id: 'route-plan', name: '路径规划', enabled: false },
-        { id: 'weather', name: '天气查询', enabled: true },
+        { id: 'geo-code', name: '地理编码' },
+        { id: 'route-plan', name: '路径规划' },
+        { id: 'weather', name: '天气查询' },
       ],
     },
   },
   {
     id: 'skill-doc-summary',
-    type: 'skill',
+    kind: 'skill',
     name: '文档总结',
     description: '对长文档进行摘要、提纲整理和重点提取。',
-    enabled: false,
+    installed: true,
+    config: { enabled: false },
     tags: ['writing'],
   },
-])
-
-const marketItems = ref<ExtensionItem[]>([
   {
     id: 'mcp-file-system',
-    type: 'mcp',
+    kind: 'mcp',
     name: '文件系统',
     description: '读取、搜索和管理本地文件。',
+    installed: false,
     tags: ['system', 'local'],
-    addState: 'loading',
-    progress: 45,
     metadata: {
       tools: [
         { id: 'geo-code', name: '地理编码' },
         { id: 'route-plan', name: '路径规划' },
-        // { id: 'weather', name: '天气查询' },
       ],
     },
   },
   {
     id: 'skill-translate',
-    type: 'skill',
+    kind: 'skill',
     name: '翻译专家',
     description: '提供多语言翻译、润色和术语解释。',
+    installed: false,
     tags: ['writing', 'recommended'],
-    addState: 'idle',
   },
   {
     id: 'skill-research',
-    type: 'skill',
+    kind: 'skill',
     name: '资料调研',
     description: '围绕主题收集资料并输出结构化结论。',
+    installed: false,
     tags: ['search', 'recommended'],
-    addState: 'failed',
   },
 ])
 
+const operationStates = ref<ExtensionOperationStatusMap>({
+  'mcp-file-system': { install: { status: 'pending', progress: 45 } },
+  'skill-research': { install: { status: 'error', retryable: true } },
+})
 const showInstalledLoading = ref(false)
-const showMarketLoading = ref(false)
+const showAvailableLoading = ref(false)
 const events = ref<string[]>([])
+
+const installedItems = computed(() => extensions.value.filter((extension) => extension.installed))
+const availableItems = computed(() => extensions.value.filter((extension) => !extension.installed))
 
 const logEvent = (message: string) => {
   events.value.unshift(`${new Date().toLocaleTimeString()} ${message}`)
   events.value = events.value.slice(0, 8)
 }
 
-const handleAdd = (item: ExtensionItem) => {
-  logEvent(`添加：${item.name}`)
-  const target = marketItems.value.find((extension) => extension.id === item.id)
-  if (!target) return
+const wait = (duration: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, duration)
+  })
 
-  addItem(target)
+const setOperation = (id: string, operation: ExtensionOperation, status: ExtensionOperationStatus) => {
+  operationStates.value = {
+    ...operationStates.value,
+    [id]: {
+      ...operationStates.value[id],
+      [operation]: status,
+    },
+  }
 }
 
-const addItem = async (item: ExtensionItem) => {
-  item.addState = 'loading'
+const handleInstall = async (item: DemoExtension) => {
+  logEvent(`安装：${item.name}`)
 
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  while ((item.progress || 0) < 100) {
-    item.progress = (item.progress || 0) + 10
-
-    await new Promise((resolve) => setTimeout(resolve, 200))
+  for (let progress = 0; progress <= 100; progress += 10) {
+    setOperation(item.id, 'install', { status: 'pending', progress })
+    await wait(100)
   }
 
-  item.addState = 'idle'
-  item.progress = undefined
-  item.enabled = true
-  marketItems.value = marketItems.value.filter((i) => i.id !== item.id)
-  installedItems.value = installedItems.value.concat(item)
+  extensions.value = extensions.value.map((extension) =>
+    extension.id === item.id
+      ? { ...extension, installed: true, config: { ...extension.config, enabled: true } }
+      : extension,
+  )
+  setOperation(item.id, 'install', { status: 'success' })
 }
 
-const handleToggle = (item: ExtensionItem, enabled: boolean) => {
+const handleToggle = (item: DemoExtension, enabled: boolean) => {
   logEvent(`${enabled ? '启用' : '停用'}：${item.name}`)
-  const target = installedItems.value.find((extension) => extension.id === item.id)
-  if (target) target.enabled = enabled
+  extensions.value = extensions.value.map((extension) =>
+    extension.id === item.id ? { ...extension, config: { ...extension.config, enabled } } : extension,
+  )
 }
 
-const handleDelete = (item: ExtensionItem) => {
+const handleDelete = (item: DemoExtension) => {
   logEvent(`删除：${item.name}`)
-  installedItems.value = installedItems.value.filter((extension) => extension.id !== item.id)
-  marketItems.value = marketItems.value.concat(item)
+  extensions.value = extensions.value.map((extension) =>
+    extension.id === item.id ? { ...extension, installed: false, config: undefined } : extension,
+  )
 }
 
-const handleDetailOpen = (item: ExtensionItem) => {
+const handleDetailOpen = (item: DemoExtension) => {
   logEvent(`打开详情：${item.name}`)
 }
 
-const handleCardAction = (item: ExtensionItem, event: ExtensionCardActionEvent) => {
+const handleCardAction = (item: DemoExtension, event: ExtensionCardActionEvent) => {
   if (event.id === 'toggle' && typeof event.checked === 'boolean') {
     handleToggle(item, event.checked)
-  } else if (event.id === 'add') {
-    handleAdd(item)
+  } else if (event.id === 'install') {
+    handleInstall(item)
   } else if (event.id === 'delete') {
     handleDelete(item)
   }
@@ -139,46 +167,48 @@ const handleCardAction = (item: ExtensionItem, event: ExtensionCardActionEvent) 
         installed loading
       </label>
       <label>
-        <input v-model="showMarketLoading" type="checkbox" />
-        market loading
+        <input v-model="showAvailableLoading" type="checkbox" />
+        available loading
       </label>
     </section>
 
-    <section class="extension-list-demo__section">
-      <h3>Installed source</h3>
-      <ExtensionManager.List
-        source="installed"
-        :items="installedItems"
-        :loading="showInstalledLoading"
-        empty-text="暂无已安装扩展"
-      >
-        <ExtensionManager.Card
-          v-for="item in installedItems"
-          :key="item.id"
-          :item="item"
-          @name-click="handleDetailOpen(item)"
-          @action="handleCardAction(item, $event)"
-        />
-      </ExtensionManager.List>
-    </section>
+    <ExtensionManager.Root :extensions="extensions" :operation-states="operationStates">
+      <section class="extension-list-demo__section">
+        <h3>Installed scope</h3>
+        <ExtensionManager.List
+          scope="installed"
+          :items="installedItems"
+          :loading="showInstalledLoading"
+          empty-text="暂无已安装扩展"
+        >
+          <ExtensionManager.Card
+            v-for="item in installedItems"
+            :key="item.id"
+            :item="item"
+            @name-click="handleDetailOpen(item)"
+            @action="handleCardAction(item, $event)"
+          />
+        </ExtensionManager.List>
+      </section>
 
-    <section class="extension-list-demo__section">
-      <h3>Market source</h3>
-      <ExtensionManager.List
-        source="market"
-        :items="marketItems"
-        :loading="showMarketLoading"
-        empty-text="暂无市场扩展"
-      >
-        <ExtensionManager.Card
-          v-for="item in marketItems"
-          :key="item.id"
-          :item="item"
-          @name-click="handleDetailOpen(item)"
-          @action="handleCardAction(item, $event)"
-        />
-      </ExtensionManager.List>
-    </section>
+      <section class="extension-list-demo__section">
+        <h3>Available scope</h3>
+        <ExtensionManager.List
+          scope="available"
+          :items="availableItems"
+          :loading="showAvailableLoading"
+          empty-text="暂无可用扩展"
+        >
+          <ExtensionManager.Card
+            v-for="item in availableItems"
+            :key="item.id"
+            :item="item"
+            @name-click="handleDetailOpen(item)"
+            @action="handleCardAction(item, $event)"
+          />
+        </ExtensionManager.List>
+      </section>
+    </ExtensionManager.Root>
 
     <section class="event-panel">
       <h3>事件日志</h3>

@@ -156,7 +156,7 @@ export interface ExtensionCardEmits {
   (e: 'action', payload: ExtensionCardActionEvent): void
 }
 
-export interface ExtensionTypeOption {
+export interface ExtensionKindOption {
   value: ExtensionKind
   label: string
 }

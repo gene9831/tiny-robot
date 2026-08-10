@@ -52,7 +52,7 @@ const eventPayload = computed(() => JSON.stringify(lastEvent.value?.payload ?? n
       @action="lastEvent = $event"
     >
       <template #custom-action="{ trigger }">
-        <button type="button" @click="trigger({ source: 'fixture' })">检查</button>
+        <button type="button" @click="trigger({ origin: 'fixture' })">检查</button>
       </template>
     </ExtensionCard>
 

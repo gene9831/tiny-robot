@@ -23,31 +23,31 @@ const passiveInstalledItem: Extension = {
   installed: true,
 }
 
-const marketItem: Extension = {
-  id: 'market-extension',
+const availableItem: Extension = {
+  id: 'available-extension',
   kind: 'skill',
-  name: 'Market extension',
+  name: 'Available extension',
   installed: false,
 }
 
-const pendingMarketItem: Extension = {
-  id: 'pending-market-extension',
+const pendingAvailableItem: Extension = {
+  id: 'pending-available-extension',
   kind: 'skill',
-  name: 'Pending market extension',
+  name: 'Pending available extension',
   installed: false,
 }
 
-const successfulMarketItem: Extension = {
-  id: 'successful-market-extension',
+const successfulAvailableItem: Extension = {
+  id: 'successful-available-extension',
   kind: 'skill',
-  name: 'Successful market extension',
+  name: 'Successful available extension',
   installed: false,
 }
 
-const idleMarketItem: Extension = {
-  id: 'idle-market-extension',
+const idleAvailableItem: Extension = {
+  id: 'idle-available-extension',
   kind: 'skill',
-  name: 'Idle market extension',
+  name: 'Idle available extension',
   installed: false,
 }
 
@@ -60,13 +60,13 @@ const availableInstalledItem: Extension = {
 }
 
 const operationStates: ExtensionOperationStatusMap = {
-  'market-extension': {
+  'available-extension': {
     install: { status: 'error', retryable: true },
   },
-  'pending-market-extension': {
+  'pending-available-extension': {
     install: { status: 'pending', progress: 50 },
   },
-  'successful-market-extension': {
+  'successful-available-extension': {
     install: { status: 'success' },
   },
 }
@@ -104,12 +104,12 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
 
     <ExtensionList
       scope="available"
-      :items="[marketItem, pendingMarketItem, successfulMarketItem, idleMarketItem, availableInstalledItem]"
+      :items="[availableItem, pendingAvailableItem, successfulAvailableItem, idleAvailableItem, availableInstalledItem]"
     >
-      <ExtensionCard data-testid="market-card" :item="marketItem" />
-      <ExtensionCard data-testid="pending-market-card" :item="pendingMarketItem" />
-      <ExtensionCard data-testid="successful-market-card" :item="successfulMarketItem" />
-      <ExtensionCard data-testid="idle-market-card" :item="idleMarketItem" />
+      <ExtensionCard data-testid="available-card" :item="availableItem" />
+      <ExtensionCard data-testid="pending-available-card" :item="pendingAvailableItem" />
+      <ExtensionCard data-testid="successful-available-card" :item="successfulAvailableItem" />
+      <ExtensionCard data-testid="idle-available-card" :item="idleAvailableItem" />
       <ExtensionCard data-testid="available-installed-card" :item="availableInstalledItem" />
     </ExtensionList>
   </ExtensionManagerRoot>
@@ -117,7 +117,9 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
   <ExtensionCard data-testid="standalone-card" :item="installedItem" />
 
   <output data-testid="available-input-state">
-    {{ JSON.stringify({ marketInstalled: marketItem.installed, pendingInstalled: pendingMarketItem.installed }) }}
+    {{
+      JSON.stringify({ availableInstalled: availableItem.installed, pendingInstalled: pendingAvailableItem.installed })
+    }}
   </output>
-  <output data-testid="operation-state">{{ operationStates['pending-market-extension'].install?.status }}</output>
+  <output data-testid="operation-state">{{ operationStates['pending-available-extension'].install?.status }}</output>
 </template>

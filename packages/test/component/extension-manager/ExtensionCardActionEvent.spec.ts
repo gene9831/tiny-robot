@@ -28,7 +28,7 @@ test.describe('ExtensionCard action event', () => {
 
     await component.getByRole('button', { name: '检查' }).click()
     await expect(component.getByTestId('event-id')).toHaveText('inspect-extension')
-    await expect(component.getByTestId('event-payload')).toHaveText('{"source":"fixture"}')
+    await expect(component.getByTestId('event-payload')).toHaveText('{"origin":"fixture"}')
   })
 
   test('emits a more action id', async ({ mount }) => {

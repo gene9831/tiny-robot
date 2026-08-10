@@ -1,5 +1,12 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
-import type { ExtensionFilterEmits, ExtensionFilterProps, ExtensionKind, ExtensionScope } from '../index.type'
+import type {
+  ExtensionFilterEmits,
+  ExtensionFilterProps,
+  ExtensionKind,
+  ExtensionKindOption,
+  ExtensionScope,
+  ExtensionTagOption,
+} from '../index.type'
 import { useInternalExtensionFilterContext } from './internalExtensionContext'
 
 export const useExtensionFilter = (props: Readonly<ExtensionFilterProps>, emit: ExtensionFilterEmits) => {
@@ -11,7 +18,7 @@ export const useExtensionFilter = (props: Readonly<ExtensionFilterProps>, emit: 
   const uncontrolledQuery = ref('')
   const uncontrolledTag = ref('')
 
-  const kindOptions = computed(() => {
+  const kindOptions = computed<ExtensionKindOption[]>(() => {
     const seenKinds = new Set<ExtensionKind>()
 
     return manager.allExtensions.value.flatMap((item) => {
@@ -20,7 +27,7 @@ export const useExtensionFilter = (props: Readonly<ExtensionFilterProps>, emit: 
       return [{ value: item.kind, label: props.kindLabels?.[item.kind] ?? item.kind }]
     })
   })
-  const tagOptions = computed(() => {
+  const tagOptions = computed<ExtensionTagOption[]>(() => {
     const seenTags = new Set<string>()
 
     return manager.allExtensions.value.flatMap((item) =>

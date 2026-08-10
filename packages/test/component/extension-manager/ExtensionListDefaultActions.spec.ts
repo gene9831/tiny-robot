@@ -11,28 +11,30 @@ test.describe('ExtensionList default card actions', () => {
     await expect(card.getByRole('button', { name: '删除' })).toBeVisible()
   })
 
-  test('projects the market install operation state onto the matching card', async ({ mount }) => {
+  test('projects the available install operation state onto the matching card', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
-    await expect(component.getByTestId('market-card').getByRole('button', { name: '重试' })).toBeVisible()
+    await expect(component.getByTestId('available-card').getByRole('button', { name: '重试' })).toBeVisible()
   })
 
-  test('maps install phases to stable action labels and disabled states', async ({ mount }) => {
+  test('maps install statuses to stable action labels and disabled states', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
-    await expect(component.getByTestId('idle-market-card').getByRole('button', { name: '安装' })).toBeEnabled()
-    await expect(component.getByTestId('pending-market-card').getByRole('button', { name: '安装中' })).toBeDisabled()
-    await expect(component.getByTestId('successful-market-card').getByRole('button', { name: '已安装' })).toBeDisabled()
+    await expect(component.getByTestId('idle-available-card').getByRole('button', { name: '安装' })).toBeEnabled()
+    await expect(component.getByTestId('pending-available-card').getByRole('button', { name: '安装中' })).toBeDisabled()
+    await expect(
+      component.getByTestId('successful-available-card').getByRole('button', { name: '已安装' }),
+    ).toBeDisabled()
   })
 
   test('projects root operation state without mutating available items or the status map', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
 
     await expect(
-      component.getByTestId('pending-market-card').locator('.tr-extension-card__progress-bar'),
+      component.getByTestId('pending-available-card').locator('.tr-extension-card__progress-bar'),
     ).toHaveAttribute('style', /width: 50%/)
     await expect(component.getByTestId('available-input-state')).toHaveText(
-      '{"marketInstalled":false,"pendingInstalled":false}',
+      '{"availableInstalled":false,"pendingInstalled":false}',
     )
     await expect(component.getByTestId('operation-state')).toHaveText('pending')
   })

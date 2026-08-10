@@ -1,139 +1,174 @@
 <script setup lang="ts">
 import type {
+  Extension,
   ExtensionIntent,
-  ExtensionOperationKind,
-  ExtensionOperationState,
-  ExtensionOperationStateMap,
-  ExtensionRecord,
+  ExtensionKind,
+  ExtensionOperation,
+  ExtensionOperationStatus,
+  ExtensionOperationStatusMap,
+  ExtensionToolToggleIntent,
   ExtensionToggleIntent,
-  ExtensionType,
-  McpExtensionCreatePayload,
-  McpExtensionMetadata,
+  McpConfig,
+  McpFormPayload,
+  McpMetadata,
 } from '@opentiny/tiny-robot'
-import { ExtensionManager, McpExtensionDetail, McpExtensionForm } from '@opentiny/tiny-robot'
+import { ExtensionManager } from '@opentiny/tiny-robot'
 import { computed, ref } from 'vue'
 import ExtensionManagerContent from './ExtensionManagerContent.vue'
 
-const extensions = ref<ExtensionRecord[]>([
+type DemoExtension = Extension<McpConfig, McpMetadata>
+
+const extensions = ref<DemoExtension[]>([
   {
     id: 'mcp-amap',
-    type: 'mcp',
+    kind: 'mcp',
     name: '高德地图 MCP',
     description: '提供地理编码、路线规划、天气查询等地图工具。',
     tags: ['map', 'official'],
-    installation: { enabled: true },
+    installed: true,
+    config: {
+      enabled: true,
+      tools: { 'geo-code': { enabled: true } },
+    },
     metadata: {
-      tools: [{ id: 'geo-code', name: '地理编码', enabled: true }],
+      tools: [{ id: 'geo-code', name: '地理编码' }],
     },
   },
   {
     id: 'mcp-browser',
-    type: 'mcp',
+    kind: 'mcp',
     name: '浏览器控制',
     description: '打开页面、读取内容并执行浏览器交互。',
     tags: ['browser', 'local'],
-    installation: { enabled: false },
+    installed: true,
+    config: { enabled: false },
   },
   {
     id: 'skill-toutiao-search',
-    type: 'skill',
+    kind: 'skill',
     name: '头条搜索',
     description: '使用头条的搜索功能来阅读或搜索 URL。',
     tags: ['search', 'official'],
-    installation: { enabled: true },
+    installed: true,
+    config: { enabled: true },
   },
   {
     id: 'skill-doc-summary',
-    type: 'skill',
+    kind: 'skill',
     name: '文档总结',
     description: '对长文档进行摘要、提纲整理和重点提取。',
     tags: ['writing'],
-    installation: { enabled: true },
+    installed: true,
+    config: { enabled: true },
   },
-  { id: 'mcp-12306', type: 'mcp', name: '12306 查询', description: '查询车次、余票和站点信息。', tags: ['travel'] },
-  { id: 'mcp-file-system', type: 'mcp', name: '文件系统', description: '读取、搜索和管理本地文件。', tags: ['system'] },
+  {
+    id: 'mcp-12306',
+    kind: 'mcp',
+    name: '12306 查询',
+    description: '查询车次、余票和站点信息。',
+    tags: ['travel'],
+    installed: false,
+  },
+  {
+    id: 'mcp-file-system',
+    kind: 'mcp',
+    name: '文件系统',
+    description: '读取、搜索和管理本地文件。',
+    tags: ['system'],
+    installed: false,
+  },
   {
     id: 'skill-translate',
-    type: 'skill',
+    kind: 'skill',
     name: '翻译专家',
     description: '提供多语言翻译、润色和术语解释。',
     tags: ['writing'],
+    installed: false,
   },
   {
     id: 'skill-research',
-    type: 'skill',
+    kind: 'skill',
     name: '资料调研',
     description: '围绕主题收集资料并输出结构化结论。',
     tags: ['search'],
+    installed: false,
   },
 ])
 
-const operationStates = ref<ExtensionOperationStateMap>({
-  'mcp-file-system': { install: { phase: 'pending', progress: 45 } },
-  'skill-research': { install: { phase: 'error' } },
+const operationStates = ref<ExtensionOperationStatusMap>({
+  'mcp-file-system': { install: { status: 'pending', progress: 45 } },
+  'skill-research': { install: { status: 'error', retryable: true } },
 })
 const events = ref<string[]>([])
 const selectedExtensionId = ref<string>()
 const showMcpForm = ref(false)
+const activeKind = ref<ExtensionKind>('mcp')
 
 const logEvent = (message: string) => {
   events.value.unshift(`${new Date().toLocaleTimeString()} ${message}`)
   events.value = events.value.slice(0, 8)
 }
 
-const waitForOperation = () => new Promise<void>((resolve) => setTimeout(resolve, 400))
+const waitForOperation = () =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, 400)
+  })
 
 const findExtension = (id: string) => extensions.value.find((extension) => extension.id === id)
 
 const selectedMcpExtension = computed(() => {
   const extension = selectedExtensionId.value ? findExtension(selectedExtensionId.value) : undefined
 
-  return extension?.type === 'mcp' ? (extension as ExtensionRecord<McpExtensionMetadata>) : undefined
+  return extension?.kind === 'mcp' ? extension : undefined
 })
 
-const setOperation = (id: string, kind: ExtensionOperationKind, state: ExtensionOperationState) => {
+const setOperation = (id: string, operation: ExtensionOperation, status: ExtensionOperationStatus) => {
   operationStates.value = {
     ...operationStates.value,
     [id]: {
       ...operationStates.value[id],
-      [kind]: state,
+      [operation]: status,
     },
   }
 }
 
-const handleCreate = (type: ExtensionType) => {
-  if (type === 'mcp') {
+const handleCreate = (kind: ExtensionKind) => {
+  if (kind === 'mcp') {
     showMcpForm.value = true
     return
   }
 
-  logEvent(`自定义添加：${type}`)
+  logEvent(`自定义添加：${kind}`)
 }
 
-const handleAdd = async (intent: ExtensionIntent) => {
+const handleInstall = async (intent: ExtensionIntent) => {
   const extension = findExtension(intent.id)
   if (!extension) return
 
-  logEvent(`添加扩展：${extension.name}`)
-  setOperation(intent.id, 'install', { phase: 'pending', progress: 65 })
+  logEvent(`安装扩展：${extension.name}`)
+  setOperation(intent.id, 'install', { status: 'pending', progress: 65 })
   await waitForOperation()
   extensions.value = extensions.value.map((item) =>
-    item.id === intent.id ? { ...item, installation: { enabled: true } } : item,
+    item.id === intent.id && item.kind === intent.kind
+      ? { ...item, installed: true, config: { ...item.config, enabled: true } }
+      : item,
   )
-  setOperation(intent.id, 'install', { phase: 'success' })
+  setOperation(intent.id, 'install', { status: 'success' })
 }
 
 const handleToggle = async (intent: ExtensionToggleIntent) => {
   const extension = findExtension(intent.id)
-  if (!extension?.installation) return
+  if (!extension?.installed || extension.kind !== intent.kind) return
 
   logEvent(`${intent.enabled ? '启用' : '停用'}扩展：${extension.name}`)
-  setOperation(intent.id, 'toggle', { phase: 'pending' })
+  setOperation(intent.id, 'toggle', { status: 'pending' })
   await waitForOperation()
   extensions.value = extensions.value.map((item) =>
-    item.id === intent.id && item.installation ? { ...item, installation: { enabled: intent.enabled } } : item,
+    item.id === intent.id && item.kind === intent.kind
+      ? { ...item, config: { ...item.config, enabled: intent.enabled } }
+      : item,
   )
-  setOperation(intent.id, 'toggle', { phase: 'success' })
+  setOperation(intent.id, 'toggle', { status: 'success' })
 }
 
 const handleDelete = (intent: ExtensionIntent) => {
@@ -142,38 +177,42 @@ const handleDelete = (intent: ExtensionIntent) => {
 
   logEvent(`删除扩展：${extension.name}`)
   extensions.value = extensions.value.filter((item) => item.id !== intent.id)
+  if (selectedExtensionId.value === intent.id) selectedExtensionId.value = undefined
 }
 
 const handleDetailOpen = (intent: ExtensionIntent) => {
   const extension = findExtension(intent.id)
-  if (!extension || extension.type !== 'mcp') return
+  if (!extension || extension.kind !== 'mcp' || extension.kind !== intent.kind) return
 
   selectedExtensionId.value = extension.id
   logEvent(`打开详情：${extension.name}`)
 }
 
-const handleToolToggle = (toolId: string, enabled: boolean) => {
-  const extension = selectedMcpExtension.value
-  const tools = extension?.metadata?.tools
-  if (!extension || !tools) return
+const handleToolToggle = (intent: ExtensionToolToggleIntent) => {
+  const extension = findExtension(intent.id)
+  if (!extension || !extension.installed || extension.kind !== intent.kind) return
 
   extensions.value = extensions.value.map((item) => {
-    if (item.id !== extension.id) return item
-
-    const metadata = item.metadata as McpExtensionMetadata
+    if (item.id !== intent.id || item.kind !== intent.kind) return item
 
     return {
       ...item,
       metadata: {
-        ...metadata,
-        tools: metadata.tools?.map((tool) => (tool.id === toolId ? { ...tool, enabled } : tool)),
+        ...item.metadata,
+      },
+      config: {
+        ...item.config,
+        tools: {
+          ...item.config?.tools,
+          [intent.toolId]: { enabled: intent.enabled },
+        },
       },
     }
   })
-  logEvent(`${extension.name}：${enabled ? '启用' : '停用'}工具 ${toolId}`)
+  logEvent(`${extension.name}：${intent.enabled ? '启用' : '停用'}工具 ${intent.toolId}`)
 }
 
-const handleMcpSubmit = (payload: McpExtensionCreatePayload) => {
+const handleMcpSubmit = (payload: McpFormPayload) => {
   const name = payload.mode === 'form' ? payload.data.name : '自定义 MCP'
   const description = payload.mode === 'form' ? payload.data.description : '通过 JSON 配置添加的 MCP。'
 
@@ -181,10 +220,11 @@ const handleMcpSubmit = (payload: McpExtensionCreatePayload) => {
     ...extensions.value,
     {
       id: `custom-mcp-${Date.now()}`,
-      type: 'mcp',
+      kind: 'mcp',
       name,
       description,
-      installation: { enabled: true },
+      installed: true,
+      config: { enabled: true, tools: {} },
       metadata: { tools: [] },
     },
   ]
@@ -192,7 +232,10 @@ const handleMcpSubmit = (payload: McpExtensionCreatePayload) => {
   logEvent(`创建扩展：${name}`)
 }
 
-const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${type}`)
+const handleKindChange = (kind: ExtensionKind) => {
+  activeKind.value = kind
+  logEvent(`切换 kind：${kind}`)
+}
 </script>
 
 <template>
@@ -205,25 +248,25 @@ const handleTypeChange = (type: ExtensionType) => logEvent(`切换类型：${typ
     <ExtensionManager.Root
       :extensions="extensions"
       :operation-states="operationStates"
-      @extension-create="handleCreate"
-      @extension-add="handleAdd"
-      @extension-toggle="handleToggle"
-      @extension-delete="handleDelete"
-      @extension-detail-open="handleDetailOpen"
-      @type-change="handleTypeChange"
+      @create="handleCreate"
+      @install="handleInstall"
+      @toggle="handleToggle"
+      @delete="handleDelete"
+      @detail="handleDetailOpen"
+      @tool-toggle="handleToolToggle"
     >
-      <ExtensionManager.Filter />
-      <ExtensionManagerContent />
+      <ExtensionManager.Filter :active-kind="activeKind" @update:active-kind="handleKindChange" />
+      <ExtensionManagerContent :active-kind="activeKind" @update:active-kind="handleKindChange" />
     </ExtensionManager.Root>
 
     <section v-if="selectedMcpExtension" class="extension-manager-demo__panel">
       <h3>{{ selectedMcpExtension.name }} 工具</h3>
-      <McpExtensionDetail :item="selectedMcpExtension" @tool-toggle="handleToolToggle" />
+      <ExtensionManager.McpDetail :item="selectedMcpExtension" @tool-toggle="handleToolToggle" />
     </section>
 
     <section v-if="showMcpForm" class="extension-manager-demo__panel">
       <h3>添加 MCP</h3>
-      <McpExtensionForm @submit="handleMcpSubmit" @cancel="showMcpForm = false" />
+      <ExtensionManager.McpForm @submit="handleMcpSubmit" @cancel="showMcpForm = false" />
     </section>
 
     <section class="event-panel">

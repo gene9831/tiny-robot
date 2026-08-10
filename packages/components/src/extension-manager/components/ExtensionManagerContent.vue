@@ -23,20 +23,20 @@ const props = withDefaults(
 
 const manager: ExtensionContext = useExtensionContext()
 const sections = computed(() => [
-  { source: 'installed' as const, items: manager.displayItems.value.installed },
-  { source: 'available' as const, items: manager.displayItems.value.available },
+  { scope: 'installed' as const, items: manager.displayItems.value.installed },
+  { scope: 'available' as const, items: manager.displayItems.value.available },
 ])
 type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
-type ExtensionRuntimeScope = (typeof sections.value)[number]['source']
+type ExtensionRuntimeScope = (typeof sections.value)[number]['scope']
 
-const getSectionTitle = (source: ExtensionRuntimeScope) =>
-  source === 'installed' ? props.installedTitle : props.availableTitle
+const getSectionTitle = (scope: ExtensionRuntimeScope) =>
+  scope === 'installed' ? props.installedTitle : props.availableTitle
 
-const getEmptyText = (source: ExtensionRuntimeScope) => (source === 'installed' ? '暂无已添加扩展' : '暂无可用扩展')
+const getEmptyText = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? '暂无已添加扩展' : '暂无可用扩展')
 
-const getLoading = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.loading : props.availableLoading)
+const getLoading = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? props.loading : props.availableLoading)
 
-const getError = (source: ExtensionRuntimeScope) => (source === 'installed' ? props.error : props.availableError)
+const getError = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? props.error : props.availableError)
 
 const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardActionEvent) => {
   if (event.id === 'toggle' && typeof event.checked === 'boolean') {
@@ -52,28 +52,28 @@ const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardAction
 <template>
   <div class="extension-manager__content">
     <div class="extension-manager__sections">
-      <section v-for="section in sections" :key="section.source" class="extension-manager__section">
+      <section v-for="section in sections" :key="section.scope" class="extension-manager__section">
         <button
           class="extension-manager__section-title"
           type="button"
-          :aria-expanded="manager.isSectionExpanded(section.source)"
-          @click="manager.toggleSection(section.source)"
+          :aria-expanded="manager.isSectionExpanded(section.scope)"
+          @click="manager.toggleSection(section.scope)"
         >
           <IconArrowDown
             class="extension-manager__section-arrow"
-            :class="{ 'is-expanded': manager.isSectionExpanded(section.source) }"
+            :class="{ 'is-expanded': manager.isSectionExpanded(section.scope) }"
           />
-          <span>{{ getSectionTitle(section.source) }}</span>
+          <span>{{ getSectionTitle(section.scope) }}</span>
         </button>
 
-        <div v-show="manager.isSectionExpanded(section.source)" class="extension-manager__section-body">
+        <div v-show="manager.isSectionExpanded(section.scope)" class="extension-manager__section-body">
           <ExtensionList
-            :scope="section.source"
+            :scope="section.scope"
             :items="section.items"
-            :loading="getLoading(section.source)"
-            :error="getError(section.source)"
-            :empty-text="getEmptyText(section.source)"
-            @retry="manager.requestRefresh(section.source)"
+            :loading="getLoading(section.scope)"
+            :error="getError(section.scope)"
+            :empty-text="getEmptyText(section.scope)"
+            @retry="manager.requestRefresh(section.scope)"
           >
             <ExtensionCard
               v-for="item in section.items"
