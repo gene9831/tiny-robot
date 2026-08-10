@@ -25,12 +25,13 @@ test.describe('ExtensionList default card actions', () => {
     await expect(component.getByTestId('successful-market-card').getByRole('button', { name: '已添加' })).toBeDisabled()
   })
 
-  test('only supplies installed defaults for records with installation data', async ({ mount }) => {
+  test('provides delete but no toggle for a passive installed extension', async ({ mount }) => {
     const component = await mount(ExtensionListDefaultActionsFixture)
+    const card = component.getByTestId('passive-installed-card')
 
-    await expect(
-      component.getByTestId('unavailable-installed-card').locator('.tr-extension-card__actions'),
-    ).toHaveCount(0)
+    await expect(card.getByRole('checkbox')).toHaveCount(0)
+    await card.getByRole('button', { name: '更多操作' }).click()
+    await expect(card.getByRole('button', { name: '删除' })).toBeVisible()
   })
 
   test('gives an explicit card id priority over item id for list defaults', async ({ mount }) => {

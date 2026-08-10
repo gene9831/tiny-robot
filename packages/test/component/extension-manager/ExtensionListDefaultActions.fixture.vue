@@ -15,10 +15,10 @@ const installedItem: Extension = {
   config: { enabled: true },
 }
 
-const unavailableInstalledItem: Extension = {
-  id: 'unavailable-installed-extension',
+const passiveInstalledItem: Extension = {
+  id: 'passive-installed-extension',
   kind: 'mcp',
-  name: 'Unavailable installed extension',
+  name: 'Passive installed extension',
   installed: true,
 }
 
@@ -94,8 +94,8 @@ const overridePrimaryActions: ExtensionCardPrimaryAction[] = [
     />
   </ExtensionList>
 
-  <ExtensionList scope="installed" :items="[unavailableInstalledItem]">
-    <ExtensionCard data-testid="unavailable-installed-card" :item="unavailableInstalledItem" />
+  <ExtensionList scope="installed" :items="[passiveInstalledItem]">
+    <ExtensionCard data-testid="passive-installed-card" :item="passiveInstalledItem" />
   </ExtensionList>
 
   <ExtensionList

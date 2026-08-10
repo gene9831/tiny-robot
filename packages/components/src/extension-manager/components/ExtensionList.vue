@@ -68,7 +68,7 @@ const getDefaultPrimaryActions = (id: string): ExtensionCardPrimaryAction[] => {
 const getDefaultMoreActions = (id: string): ExtensionCardMoreMenuAction[] => {
   const item = runtimeItems.value.find((candidate) => candidate.id === id)
 
-  if (!item?.installed || getEnabled(item) === undefined || runtimeScope.value !== 'installed') return []
+  if (!item?.installed || runtimeScope.value !== 'installed') return []
 
   return [{ id: 'delete', label: '删除', icon: IconDelete, danger: true }]
 }
