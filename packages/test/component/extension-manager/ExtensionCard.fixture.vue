@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { IconEditPen } from '@opentiny/tiny-robot-svgs'
-import type { ExtensionCardAction, ExtensionCardActionEvent } from '../../../components/src/extension-manager/index.type'
+import type {
+  ExtensionCardAction,
+  ExtensionCardActionEvent,
+} from '../../../components/src/extension-manager/index.type'
 import ExtensionCard from '../../../components/src/extension-manager/components/ExtensionCard.vue'
 
 const actions: ExtensionCardAction[] = [
   { id: 'enabled', type: 'switch', label: '启用扩展', checked: true },
-  { id: 'install', type: 'button', label: '安装' },
-  { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'fixture' } },
   { id: 'hidden', type: 'button', label: '隐藏操作', hidden: true },
   { id: 'disabled', type: 'button', label: '禁用操作', disabled: true },
+  { id: 'install', type: 'button', label: '安装' },
+  { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'fixture' } },
 ]
 
 const lastEvent = ref<ExtensionCardActionEvent>()
@@ -34,7 +37,7 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       data-testid="actions-card"
       name="Actions card"
       :actions="actions"
-      :primary-actions-limit="1"
+      :primary-actions-limit="2"
       overflow-menu-label="扩展操作"
       @action="handleAction"
     />
