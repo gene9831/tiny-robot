@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
 import { computed } from 'vue'
-import type { ExtensionCardActionEvent, ExtensionContext, ExtensionManagerProps } from '../index.type'
+import type { ExtensionContext, ExtensionManagerProps } from '../index.type'
 import { useExtensionContext } from '../composables'
-import ExtensionCard from './ExtensionCard.vue'
 import ExtensionList from './ExtensionList.vue'
 
 const props = withDefaults(
@@ -26,7 +25,6 @@ const sections = computed(() => [
   { scope: 'installed' as const, items: manager.displayItems.value.installed },
   { scope: 'available' as const, items: manager.displayItems.value.available },
 ])
-type ExtensionRuntimeItem = (typeof sections.value)[number]['items'][number]
 type ExtensionRuntimeScope = (typeof sections.value)[number]['scope']
 
 const getSectionTitle = (scope: ExtensionRuntimeScope) =>
@@ -37,16 +35,6 @@ const getEmptyText = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? 
 const getLoading = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? props.loading : props.availableLoading)
 
 const getError = (scope: ExtensionRuntimeScope) => (scope === 'installed' ? props.error : props.availableError)
-
-const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardActionEvent) => {
-  if (event.id === 'toggle' && typeof event.checked === 'boolean') {
-    manager.requestToggle(item, event.checked)
-  } else if (event.id === 'install') {
-    manager.requestInstall(item)
-  } else if (event.id === 'delete') {
-    manager.requestDelete(item)
-  }
-}
 </script>
 
 <template>
@@ -75,13 +63,14 @@ const handleCardAction = (item: ExtensionRuntimeItem, event: ExtensionCardAction
             :empty-text="getEmptyText(section.scope)"
             @retry="manager.requestRefresh(section.scope)"
           >
-            <ExtensionCard
+            <!-- The Extension-to-Card adapter is intentionally deferred to a later integration task. -->
+            <!-- <ExtensionCard
               v-for="item in section.items"
               :key="item.id"
               :item="item"
               @name-click="manager.requestDetail(item)"
               @action="handleCardAction(item, $event)"
-            />
+            /> -->
           </ExtensionList>
         </div>
       </section>
