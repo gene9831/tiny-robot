@@ -2,16 +2,14 @@
 import type { VNode } from 'vue'
 import { computed } from 'vue'
 import type {
+  ExtensionCardAction,
   ExtensionCardActionEvent,
-  ExtensionCardButtonAction,
   ExtensionCardCustomAction,
-  ExtensionCardToggleAction,
 } from '../index.type'
-import type { ExtensionCardRenderAction } from '../internal.type'
 
 const props = withDefaults(
   defineProps<{
-    actions?: ExtensionCardRenderAction[]
+    actions?: ExtensionCardAction[]
   }>(),
   {
     actions: () => [],
@@ -19,7 +17,7 @@ const props = withDefaults(
 )
 
 defineSlots<{
-  'custom-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
+  'primary-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
 }>()
 
 const emit = defineEmits<{
@@ -28,45 +26,28 @@ const emit = defineEmits<{
 
 const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
 
-type ExtensionCardRuntimeInstallAction = Extract<ExtensionCardRenderAction, { type: 'install' }>
-
-const getInstallState = (action: ExtensionCardRuntimeInstallAction) =>
-  ('state' in action ? action.state : undefined) ?? 'idle'
-
-const getInstallText = (action: ExtensionCardRuntimeInstallAction) => {
-  const state = getInstallState(action)
-  if (state === 'pending') return '安装中'
-  if (state === 'success') return '已安装'
-  if (state === 'error') return '重试'
-  return action.label ?? '安装'
-}
-
-const isInstallDisabled = (action: ExtensionCardRuntimeInstallAction) => {
-  const state = getInstallState(action)
-  return action.disabled || state === 'pending' || state === 'success'
-}
-
-const handleInstall = (action: ExtensionCardRuntimeInstallAction) => {
-  if (isInstallDisabled(action)) return
-  emit('action', { id: action.id })
-}
-
-const handleToggle = (action: ExtensionCardToggleAction, event: Event) => {
+const handleSwitch = (action: Extract<ExtensionCardAction, { type: 'switch' }>, event: Event) => {
   if (action.disabled) return
+
   emit('action', {
     id: action.id,
+    type: action.type,
     checked: (event.target as HTMLInputElement).checked,
   })
 }
 
-const handleButton = (action: ExtensionCardButtonAction) => {
+const handleButton = (action: Extract<ExtensionCardAction, { type: 'button' }>) => {
   if (action.disabled) return
-  emit('action', { id: action.id })
+  emit('action', { id: action.id, type: action.type })
 }
 
 const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   if (action.disabled) return
-  emit('action', { id: action.id, payload })
+
+  const event: ExtensionCardActionEvent = { id: action.id, type: action.type }
+  if (payload !== undefined) event.payload = payload
+
+  emit('action', event)
 }
 </script>
 
@@ -74,41 +55,26 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   <div class="tr-extension-card-primary-actions">
     <template v-for="action in visibleActions" :key="action.id">
       <label
-        v-if="action.type === 'toggle'"
+        v-if="action.type === 'switch'"
         class="tr-extension-card-primary-actions__switch"
-        :class="{ 'is-disabled': action.disabled }"
-        :aria-label="action.ariaLabel"
+        :class="{ 'is-disabled': action.disabled, 'is-danger': action.danger }"
       >
         <input
           type="checkbox"
           :checked="action.checked"
           :disabled="action.disabled"
-          @change="handleToggle(action, $event)"
+          :aria-label="action.label"
+          @change="handleSwitch(action, $event)"
         />
         <span class="tr-extension-card-primary-actions__switch-track"></span>
       </label>
 
       <button
-        v-else-if="action.type === 'install'"
-        class="tr-extension-card-primary-actions__install"
-        :class="{
-          'is-loading': getInstallState(action) === 'pending',
-          'is-installed': getInstallState(action) === 'success',
-          'is-failed': getInstallState(action) === 'error',
-        }"
-        type="button"
-        :aria-label="action.ariaLabel"
-        :disabled="isInstallDisabled(action)"
-        @click="handleInstall(action)"
-      >
-        {{ getInstallText(action) }}
-      </button>
-
-      <button
         v-else-if="action.type === 'button'"
         class="tr-extension-card-primary-actions__button"
+        :class="{ 'is-danger': action.danger }"
         type="button"
-        :aria-label="action.ariaLabel"
+        :aria-label="action.label"
         :disabled="action.disabled"
         @click="handleButton(action)"
       >
@@ -116,9 +82,30 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
         <span>{{ action.label }}</span>
       </button>
 
-      <span v-else class="tr-extension-card-primary-actions__custom-action" :class="{ 'is-disabled': action.disabled }">
-        <slot name="custom-action" :action="action" :trigger="(payload: unknown) => handleCustom(action, payload)" />
+      <span
+        v-else-if="$slots['primary-action']"
+        class="tr-extension-card-primary-actions__custom-action"
+        :class="{ 'is-disabled': action.disabled, 'is-danger': action.danger }"
+      >
+        <slot
+          name="primary-action"
+          :action="action"
+          :trigger="(payload: unknown) => handleCustom(action, payload)"
+        />
       </span>
+
+      <button
+        v-else
+        class="tr-extension-card-primary-actions__button"
+        :class="{ 'is-danger': action.danger }"
+        type="button"
+        :aria-label="action.label"
+        :disabled="action.disabled"
+        @click="handleCustom(action)"
+      >
+        <component v-if="action.icon" :is="action.icon" class="tr-extension-card-primary-actions__button-icon" />
+        <span>{{ action.label }}</span>
+      </button>
     </template>
   </div>
 </template>
@@ -142,6 +129,10 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
 .tr-extension-card-primary-actions__switch.is-disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.tr-extension-card-primary-actions__switch.is-danger {
+  color: var(--tr-error-color, #f23030);
 }
 
 .tr-extension-card-primary-actions__switch input {
@@ -183,35 +174,6 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   transition: transform 0.2s ease;
 }
 
-.tr-extension-card-primary-actions__install {
-  min-width: 64px;
-  height: 30px;
-  padding: 0 16px;
-  border: 1px solid var(--tr-extension-card-install-button-border-color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--tr-text-primary);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.tr-extension-card-primary-actions__install:disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.tr-extension-card-primary-actions__install.is-loading {
-  color: var(--tr-extension-card-install-button-text-color);
-}
-
-.tr-extension-card-primary-actions__install.is-installed {
-  color: var(--tr-text-secondary);
-}
-
-.tr-extension-card-primary-actions__install.is-failed {
-  color: var(--tr-error-color, #f23030);
-}
-
 .tr-extension-card-primary-actions__button {
   display: inline-flex;
   align-items: center;
@@ -226,6 +188,10 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   color: var(--tr-text-primary);
   cursor: pointer;
   font-size: 13px;
+}
+
+.tr-extension-card-primary-actions__button.is-danger {
+  color: var(--tr-error-color, #f23030);
 }
 
 .tr-extension-card-primary-actions__button:disabled {
@@ -246,5 +212,9 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
 .tr-extension-card-primary-actions__custom-action.is-disabled {
   pointer-events: none;
   opacity: 0.5;
+}
+
+.tr-extension-card-primary-actions__custom-action.is-danger {
+  color: var(--tr-error-color, #f23030);
 }
 </style>

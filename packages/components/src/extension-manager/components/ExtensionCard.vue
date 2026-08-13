@@ -1,51 +1,73 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useExtensionListContext } from '../composables'
-import type { ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
-import type { ExtensionCardRenderAction } from '../internal.type'
+import { computed, useSlots, watch } from 'vue'
+import type { ExtensionCardAction, ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
 import ExtensionCardMoreMenu from './ExtensionCardMoreMenu.vue'
-import ExtensionCardPrimaryActions from './ExtensionCardPrimaryActions.vue'
+import ExtensionCardActions from './ExtensionCardActions.vue'
 
 const props = withDefaults(defineProps<ExtensionCardProps>(), {
+  actions: () => [],
+  primaryActionsLimit: 1,
   nameClickable: true,
+  overflowMenuLabel: '更多操作',
+  overflowMenuPlacement: 'bottom-end',
 })
 
+const slots = useSlots()
 defineSlots<ExtensionCardSlots>()
 
 const emit = defineEmits<ExtensionCardEmits>()
 
-const extensionListContext = useExtensionListContext()
+const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
 
-// 显式传入的数组（包括空数组）会覆盖 List 提供的默认操作。
-const resolvedPrimaryActions = computed<ExtensionCardRenderAction[]>(
-  () => props.primaryActions ?? extensionListContext?.getDefaultPrimaryActions(props.item.id) ?? [],
-)
+const normalizedPrimaryActionsLimit = computed(() => Math.max(0, Math.floor(props.primaryActionsLimit)))
 
-// 次级菜单操作使用相同的优先级规则，并通过 Card 的 id 获取 List 提供的默认操作。
-const resolvedMoreMenuActions = computed(() => {
-  return props.moreMenuActions ?? extensionListContext?.getDefaultMoreActions(props.item.id) ?? []
+const primaryActions = computed(() => visibleActions.value.slice(0, normalizedPrimaryActionsLimit.value))
+
+const overflowActions = computed(() => visibleActions.value.slice(normalizedPrimaryActionsLimit.value))
+
+const shouldShowActions = computed(() => primaryActions.value.length > 0 || overflowActions.value.length > 0)
+
+const normalizedProgress = computed(() => {
+  if (props.progress === 'indeterminate' || props.progress === undefined) return props.progress
+  return Math.min(100, Math.max(0, props.progress))
 })
 
-const hasVisiblePrimaryActions = computed(() => resolvedPrimaryActions.value.some((action) => !action.hidden))
+const hasPrimaryActionSlot = computed(() => Boolean(slots['primary-action']))
 
-const shouldShowActions = computed(() => hasVisiblePrimaryActions.value || resolvedMoreMenuActions.value.length > 0)
+if (import.meta.env.DEV) {
+  let lastDuplicateIdSet: string | undefined
 
-const installProgressState = computed(() => {
-  const action = resolvedPrimaryActions.value.find(
-    (action) => !action.hidden && action.type === 'install' && 'state' in action && action.state === 'pending',
+  const getDuplicateIdSet = () => {
+    const seenIds = new Set<string>()
+    const duplicateIds = new Set<string>()
+
+    for (const action of props.actions) {
+      if (seenIds.has(action.id)) duplicateIds.add(action.id)
+      seenIds.add(action.id)
+    }
+
+    const duplicateIdList = [...duplicateIds].sort()
+
+    return duplicateIdList.join('\u0000')
+  }
+
+  watch(
+    getDuplicateIdSet,
+    (duplicateIdSet) => {
+      if (duplicateIdSet === lastDuplicateIdSet) return
+
+      lastDuplicateIdSet = duplicateIdSet
+      if (!duplicateIdSet) return
+
+      console.warn('[ExtensionManager.Card] Action ids must be unique:', duplicateIdSet.split('\u0000'))
+    },
+    { immediate: true },
   )
+}
 
-  if (!action) {
-    return undefined
-  }
-
-  const progress = 'progress' in action ? action.progress : undefined
-
-  return {
-    isIndeterminate: typeof progress !== 'number',
-    style: typeof progress === 'number' ? { width: `${Math.min(100, Math.max(0, progress))}%` } : undefined,
-  }
-})
+const handleOverflowAction = (action: Pick<ExtensionCardAction, 'id' | 'type'>) => {
+  emit('action', { id: action.id, type: action.type })
+}
 
 const handleNameClick = (event: MouseEvent) => {
   if (!props.nameClickable) return
@@ -62,12 +84,16 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 <template>
   <div class="tr-extension-card">
     <div class="tr-extension-card__icon-region">
-      <slot name="icon">
-        <img v-if="item.icon" :src="item.icon" :alt="item.name" class="tr-extension-card__icon" />
-        <div v-else class="tr-extension-card__icon tr-extension-card__icon--placeholder">
-          {{ item.name.slice(0, 1) }}
-        </div>
-      </slot>
+      <img
+        v-if="typeof icon === 'string' && icon"
+        :src="icon"
+        :alt="name"
+        class="tr-extension-card__icon"
+      />
+      <component v-else-if="icon" :is="icon" class="tr-extension-card__icon" />
+      <div v-else class="tr-extension-card__icon tr-extension-card__icon--placeholder">
+        {{ name.slice(0, 1) }}
+      </div>
     </div>
 
     <div class="tr-extension-card__content">
@@ -76,42 +102,42 @@ const handleNameKeydown = (event: KeyboardEvent) => {
         :class="{ 'is-clickable': nameClickable }"
         :role="nameClickable ? 'button' : undefined"
         :tabindex="nameClickable ? 0 : undefined"
-        :title="item.name"
+        :title="name"
         @click="handleNameClick"
         @keydown="handleNameKeydown"
       >
-        {{ item.name }}
+        {{ name }}
       </div>
-      <div v-if="item.description" class="tr-extension-card__description" :title="item.description">
-        {{ item.description }}
+      <div v-if="description" class="tr-extension-card__description" :title="description">
+        {{ description }}
       </div>
     </div>
 
     <div v-if="shouldShowActions" class="tr-extension-card__actions" @click.stop @keydown.stop>
-      <ExtensionCardPrimaryActions
-        v-if="hasVisiblePrimaryActions"
-        :actions="resolvedPrimaryActions"
+      <ExtensionCardActions
+        v-if="primaryActions.length"
+        :actions="primaryActions"
         @action="emit('action', $event)"
       >
-        <template #custom-action="{ action, trigger }">
-          <slot name="custom-action" :action="action" :trigger="trigger" />
+        <template v-if="hasPrimaryActionSlot" #primary-action="slotProps">
+          <slot name="primary-action" v-bind="slotProps" />
         </template>
-      </ExtensionCardPrimaryActions>
+      </ExtensionCardActions>
 
       <ExtensionCardMoreMenu
-        v-if="resolvedMoreMenuActions.length"
-        :actions="resolvedMoreMenuActions"
-        :trigger-aria-label="moreMenuTriggerAriaLabel"
-        :placement="moreMenuPlacement"
-        @action="emit('action', { id: $event.id })"
+        v-if="overflowActions.length"
+        :actions="overflowActions"
+        :trigger-aria-label="overflowMenuLabel"
+        :placement="overflowMenuPlacement"
+        @action="handleOverflowAction"
       />
     </div>
 
-    <div v-if="installProgressState" class="tr-extension-card__progress">
+    <div v-if="normalizedProgress !== undefined" class="tr-extension-card__progress">
       <span
         class="tr-extension-card__progress-bar"
-        :class="{ 'is-indeterminate': installProgressState.isIndeterminate }"
-        :style="installProgressState.style"
+        :class="{ 'is-indeterminate': normalizedProgress === 'indeterminate' }"
+        :style="normalizedProgress === 'indeterminate' ? undefined : { width: `${normalizedProgress}%` }"
       ></span>
     </div>
   </div>
@@ -128,8 +154,6 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 
 <style lang="less" scoped>
 .tr-extension-card {
-  --tr-extension-card-install-button-border-color: var(--tr-border-color-default);
-  --tr-extension-card-install-button-text-color: var(--tr-text-primary);
   --tr-extension-card-progress-bg-color: var(--tr-extension-card-bg-color-hover);
   --tr-extension-card-progress-bar-color: var(--tr-success-color, #52c41a);
   --tr-extension-card-switch-bg-color: var(--tr-extension-card-bg-color-hover);
