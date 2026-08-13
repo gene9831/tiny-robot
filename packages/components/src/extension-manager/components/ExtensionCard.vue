@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, useSlots, watch } from 'vue'
-import type { ExtensionCardAction, ExtensionCardEmits, ExtensionCardProps, ExtensionCardSlots } from '../index.type'
+import type {
+  ExtensionCardActionEvent,
+  ExtensionCardEmits,
+  ExtensionCardProps,
+  ExtensionCardSlots,
+} from '../index.type'
 import ExtensionCardMoreMenu from './ExtensionCardMoreMenu.vue'
 import ExtensionCardActions from './ExtensionCardActions.vue'
 
@@ -65,8 +70,8 @@ if (import.meta.env.DEV) {
   )
 }
 
-const handleOverflowAction = (action: Pick<ExtensionCardAction, 'id' | 'type'>) => {
-  emit('action', { id: action.id, type: action.type })
+const handleOverflowAction = (action: ExtensionCardActionEvent) => {
+  emit('action', action)
 }
 
 const handleNameClick = (event: MouseEvent) => {
@@ -84,12 +89,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 <template>
   <div class="tr-extension-card">
     <div class="tr-extension-card__icon-region">
-      <img
-        v-if="typeof icon === 'string' && icon"
-        :src="icon"
-        :alt="name"
-        class="tr-extension-card__icon"
-      />
+      <img v-if="typeof icon === 'string' && icon" :src="icon" :alt="name" class="tr-extension-card__icon" />
       <component v-else-if="icon" :is="icon" class="tr-extension-card__icon" />
       <div v-else class="tr-extension-card__icon tr-extension-card__icon--placeholder">
         {{ name.slice(0, 1) }}
@@ -114,11 +114,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
     </div>
 
     <div v-if="shouldShowActions" class="tr-extension-card__actions" @click.stop @keydown.stop>
-      <ExtensionCardActions
-        v-if="primaryActions.length"
-        :actions="primaryActions"
-        @action="emit('action', $event)"
-      >
+      <ExtensionCardActions v-if="primaryActions.length" :actions="primaryActions" @action="emit('action', $event)">
         <template v-if="hasPrimaryActionSlot" #primary-action="slotProps">
           <slot name="primary-action" v-bind="slotProps" />
         </template>
@@ -127,7 +123,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
       <ExtensionCardMoreMenu
         v-if="overflowActions.length"
         :actions="overflowActions"
-        :trigger-aria-label="overflowMenuLabel"
+        :label="overflowMenuLabel"
         :placement="overflowMenuPlacement"
         @action="handleOverflowAction"
       />

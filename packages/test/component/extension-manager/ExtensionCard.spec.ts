@@ -60,6 +60,44 @@ test.describe('standalone ExtensionCard', () => {
     await expect(component.getByTestId('event-type')).toHaveText('custom')
   })
 
+  test('uses overflowMenuLabel and emits switch state from the overflow menu', async ({ mount }) => {
+    const component = await mount(ExtensionCardFixture)
+    const card = component.getByTestId('overflow-switch-card')
+    const trigger = card.getByRole('button', { name: '扩展操作' })
+
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAttribute('title', '扩展操作')
+    await trigger.click()
+
+    const switchItem = card.getByRole('button', { name: '启用扩展' })
+
+    await expect(switchItem).toHaveAttribute('aria-pressed', 'true')
+    await expect(switchItem.getByText('✓')).toBeVisible()
+    await switchItem.click()
+    await expect(component.getByTestId('event-id')).toHaveText('overflow-enabled')
+    await expect(component.getByTestId('event-type')).toHaveText('switch')
+    await expect(component.getByTestId('event-checked')).toHaveText('false')
+
+    await trigger.click()
+    await expect(card.getByRole('button', { name: '启用扩展' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('renders custom overflow actions as buttons and keeps danger styling', async ({ mount }) => {
+    const component = await mount(ExtensionCardFixture)
+    const card = component.getByTestId('overflow-switch-card')
+
+    await card.getByRole('button', { name: '扩展操作' }).click()
+
+    const customItem = card.getByRole('button', { name: '自定义溢出操作' })
+    const dangerItem = card.getByRole('button', { name: '危险操作' })
+
+    await expect(customItem).toBeVisible()
+    await expect(dangerItem).toHaveClass(/is-danger/)
+    await customItem.click()
+    await expect(component.getByTestId('event-id')).toHaveText('overflow-custom')
+    await expect(component.getByTestId('event-type')).toHaveText('custom')
+  })
+
   test('renders indeterminate and clamped determinate progress', async ({ mount }) => {
     const component = await mount(ExtensionCardFixture)
 

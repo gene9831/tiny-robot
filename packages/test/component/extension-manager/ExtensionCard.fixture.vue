@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { IconEditPen } from '@opentiny/tiny-robot-svgs'
 import type {
   ExtensionCardAction,
@@ -15,10 +15,27 @@ const actions: ExtensionCardAction[] = [
   { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'fixture' } },
 ]
 
+const overflowActions = ref<ExtensionCardAction[]>([
+  { id: 'overflow-enabled', type: 'switch', label: '启用扩展', checked: true },
+  { id: 'overflow-hidden', type: 'button', label: '隐藏溢出操作', hidden: true },
+  { id: 'overflow-custom', type: 'custom', label: '自定义溢出操作' },
+  { id: 'overflow-danger', type: 'button', label: '危险操作', danger: true },
+])
+
 const lastEvent = ref<ExtensionCardActionEvent>()
+
+const eventChecked = computed(() => {
+  return typeof lastEvent.value?.checked === 'boolean' ? String(lastEvent.value.checked) : ''
+})
 
 const handleAction = (event: ExtensionCardActionEvent) => {
   lastEvent.value = event
+
+  if (event.type !== 'switch' || typeof event.checked !== 'boolean') return
+
+  overflowActions.value = overflowActions.value.map((action) =>
+    action.id === event.id && action.type === 'switch' ? { ...action, checked: event.checked } : action,
+  )
 }
 </script>
 
@@ -49,12 +66,21 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       @action="handleAction"
     />
 
+    <ExtensionCard
+      data-testid="overflow-switch-card"
+      name="Overflow switch"
+      :actions="overflowActions"
+      :primary-actions-limit="0"
+      overflow-menu-label="扩展操作"
+      @action="handleAction"
+    />
+
     <ExtensionCard data-testid="progress-card" name="Progress card" progress="indeterminate" />
     <ExtensionCard data-testid="high-progress-card" name="High progress" :progress="125" />
     <ExtensionCard data-testid="low-progress-card" name="Low progress" :progress="-10" />
 
     <output data-testid="event-id">{{ lastEvent?.id }}</output>
     <output data-testid="event-type">{{ lastEvent?.type }}</output>
-    <output data-testid="event-checked">{{ lastEvent?.checked }}</output>
+    <output data-testid="event-checked">{{ eventChecked }}</output>
   </div>
 </template>

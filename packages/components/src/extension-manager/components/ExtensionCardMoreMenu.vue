@@ -1,34 +1,43 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { IconMore } from '@opentiny/tiny-robot-svgs'
-import type { ExtensionCardMoreMenuAction, ExtensionCardMoreMenuPlacement } from '../index.type'
+import type { ExtensionCardAction, ExtensionCardActionEvent, ExtensionCardOverflowMenuPlacement } from '../index.type'
 import ExtensionCardPopover from './ExtensionCardPopover.vue'
 
 const props = withDefaults(
   defineProps<{
-    actions?: ExtensionCardMoreMenuAction[]
-    triggerAriaLabel?: string
-    placement?: ExtensionCardMoreMenuPlacement
+    actions?: ExtensionCardAction[]
+    label?: string
+    placement?: ExtensionCardOverflowMenuPlacement
   }>(),
   {
     actions: () => [],
-    triggerAriaLabel: '更多操作',
+    label: '更多操作',
     placement: 'bottom-end',
   },
 )
 
 const emit = defineEmits<{
-  (e: 'action', action: ExtensionCardMoreMenuAction): void
+  (e: 'action', action: ExtensionCardActionEvent): void
 }>()
 
-const handleAction = (action: ExtensionCardMoreMenuAction, close: () => void) => {
+const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
+
+const handleAction = (action: ExtensionCardAction, close: () => void) => {
   if (action.disabled) return
+
   close()
-  emit('action', action)
+
+  emit('action', {
+    id: action.id,
+    type: action.type,
+    ...(action.type === 'switch' ? { checked: !action.checked } : {}),
+  })
 }
 </script>
 
 <template>
-  <div v-if="props.actions.length" class="tr-extension-card__more-action">
+  <div v-if="visibleActions.length" class="tr-extension-card__more-action">
     <ExtensionCardPopover as-child :placement="props.placement">
       <template #trigger="{ popoverId, open }">
         <button
@@ -36,8 +45,8 @@ const handleAction = (action: ExtensionCardMoreMenuAction, close: () => void) =>
           type="button"
           :popovertarget="popoverId"
           popovertargetaction="toggle"
-          :title="props.triggerAriaLabel"
-          :aria-label="props.triggerAriaLabel"
+          :title="props.label"
+          :aria-label="props.label"
           :aria-expanded="open"
         >
           <IconMore class="tr-extension-card__action-icon" />
@@ -45,15 +54,19 @@ const handleAction = (action: ExtensionCardMoreMenuAction, close: () => void) =>
       </template>
       <template #content="{ close }">
         <ul class="tr-extension-card__more-menu">
-          <li v-for="action in props.actions" :key="action.id">
+          <li v-for="action in visibleActions" :key="action.id">
             <button
               class="tr-extension-card__more-menu-item"
               :class="{ 'is-danger': action.danger }"
               type="button"
               :disabled="action.disabled"
+              :aria-pressed="action.type === 'switch' ? action.checked : undefined"
               @click="handleAction(action, close)"
             >
               <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
+              <span v-if="action.type === 'switch'" class="tr-extension-card__more-menu-item-check" aria-hidden="true">
+                {{ action.checked ? '✓' : '' }}
+              </span>
               <span>{{ action.label }}</span>
             </button>
           </li>
@@ -139,5 +152,17 @@ const handleAction = (action: ExtensionCardMoreMenuAction, close: () => void) =>
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
+}
+
+.tr-extension-card__more-menu-item-check {
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: currentColor;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 16px;
 }
 </style>
