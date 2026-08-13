@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type {
-  ExtensionCardActionEvent,
-  ExtensionContext,
-  Extension,
-  ExtensionKind,
-  ExtensionScope,
-} from '@opentiny/tiny-robot'
+import type { ExtensionContext, ExtensionKind, ExtensionScope } from '@opentiny/tiny-robot'
 import { ExtensionManager, useExtensionContext } from '@opentiny/tiny-robot'
 import { IconArrowDown, IconPlus } from '@opentiny/tiny-robot-svgs'
 
@@ -45,16 +39,6 @@ const getItems = (scope: ExtensionScope) => {
 const getSectionTitle = (scope: ExtensionScope) => {
   const kindLabel = kindOptions.value.find((option) => option.value === selectedKind.value)?.label ?? selectedKind.value
   return `${scope === 'installed' ? '已添加' : '可用'}${kindLabel ?? ''}`
-}
-
-const handleCardAction = (item: Extension, event: ExtensionCardActionEvent) => {
-  if (event.id === 'toggle' && typeof event.checked === 'boolean') {
-    manager.requestToggle(item, event.checked)
-  } else if (event.id === 'install') {
-    manager.requestInstall(item)
-  } else if (event.id === 'delete') {
-    manager.requestDelete(item)
-  }
 }
 
 const handleCreate = () => {
@@ -107,13 +91,7 @@ const handleCreate = () => {
             :empty-text="scope === 'installed' ? '暂无已添加扩展' : '暂无可用扩展'"
             @retry="manager.requestRefresh(scope)"
           >
-            <ExtensionManager.Card
-              v-for="item in getItems(scope)"
-              :key="item.id"
-              :item="item"
-              @name-click="manager.requestDetail(item)"
-              @action="handleCardAction(item, $event)"
-            />
+            <!-- Root/List Card integration is paused until an Extension-to-Card adapter is designed. -->
           </ExtensionManager.List>
         </div>
       </section>
