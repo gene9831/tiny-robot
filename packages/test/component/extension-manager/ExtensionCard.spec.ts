@@ -111,4 +111,28 @@ test.describe('standalone ExtensionCard', () => {
       component.getByTestId('low-progress-card').locator('.tr-extension-card__progress-bar'),
     ).toHaveAttribute('style', /width: 0%/)
   })
+
+  test('warns once per duplicate action ID set in development', async ({ mount, page }) => {
+    const duplicateActionWarnings: string[] = []
+    page.on('console', (message) => {
+      if (
+        message.type() === 'warning' &&
+        message.text().includes('[ExtensionManager.Card] Action ids must be unique')
+      ) {
+        duplicateActionWarnings.push(message.text())
+      }
+    })
+
+    const component = await mount(ExtensionCardFixture)
+
+    await expect.poll(() => duplicateActionWarnings).toHaveLength(1)
+    await expect.poll(() => duplicateActionWarnings[0] ?? '').toContain('duplicate-initial')
+
+    await component.getByTestId('replace-duplicate-actions').click()
+    await expect.poll(() => duplicateActionWarnings).toHaveLength(1)
+
+    await component.getByTestId('change-duplicate-actions').click()
+    await expect.poll(() => duplicateActionWarnings).toHaveLength(2)
+    await expect.poll(() => duplicateActionWarnings[1] ?? '').toContain('duplicate-changed')
+  })
 })
