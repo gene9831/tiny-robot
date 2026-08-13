@@ -1,36 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type {
+  ExtensionCardAction,
   ExtensionCardActionEvent,
-  ExtensionCardMoreMenuAction,
-  ExtensionCardPrimaryAction,
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionCard from '../../../components/src/extension-manager/components/ExtensionCard.vue'
 
-const primaryActions: ExtensionCardPrimaryAction[] = [
-  {
-    id: 'toggle-extension',
-    type: 'toggle',
-    checked: true,
-    ariaLabel: '扩展开关',
-  },
-  {
-    id: 'install-extension',
-    type: 'install',
-  },
-  {
-    id: 'configure-extension',
-    type: 'button',
-    label: '配置',
-  },
-  {
-    id: 'inspect-extension',
-    type: 'custom',
-  },
-]
-
-const moreMenuActions: ExtensionCardMoreMenuAction[] = [{ id: 'delete-extension', label: '删除' }]
-
+const actions = ref<ExtensionCardAction[]>([
+  { id: 'toggle-extension', type: 'switch', label: '扩展开关', checked: true },
+  { id: 'install-extension', type: 'button', label: '安装' },
+  { id: 'inspect-extension', type: 'custom', label: '检查' },
+  { id: 'delete-extension', type: 'button', label: '删除' },
+])
 const lastEvent = ref<ExtensionCardActionEvent>()
 
 const eventChecked = computed(() => {
@@ -38,25 +19,37 @@ const eventChecked = computed(() => {
 })
 
 const eventPayload = computed(() => JSON.stringify(lastEvent.value?.payload ?? null))
+
+const handleAction = (event: ExtensionCardActionEvent) => {
+  lastEvent.value = event
+  if (event.type !== 'switch' || typeof event.checked !== 'boolean') return
+
+  actions.value = actions.value.map((action) =>
+    action.id === event.id && action.type === 'switch' ? { ...action, checked: event.checked } : action,
+  )
+}
 </script>
 
 <template>
   <div>
     <ExtensionCard
       data-testid="action-event-card"
-      :item="{ id: 'action-event-card', kind: 'mcp', name: 'Action event card', installed: false }"
-      :primary-actions="primaryActions"
-      :more-menu-actions="moreMenuActions"
-      more-menu-trigger-aria-label="扩展操作菜单"
-      more-menu-placement="top-end"
-      @action="lastEvent = $event"
+      name="Action event card"
+      :actions="actions"
+      :primary-actions-limit="3"
+      overflow-menu-label="扩展操作菜单"
+      overflow-menu-placement="top-end"
+      @action="handleAction"
     >
-      <template #custom-action="{ trigger }">
-        <button type="button" @click="trigger({ origin: 'fixture' })">检查</button>
+      <template #primary-action="{ action, trigger }">
+        <button type="button" :aria-label="action.label" @click="trigger({ origin: 'fixture' })">
+          {{ action.label }}
+        </button>
       </template>
     </ExtensionCard>
 
     <output data-testid="event-id">{{ lastEvent?.id }}</output>
+    <output data-testid="event-type">{{ lastEvent?.type }}</output>
     <output data-testid="event-checked">{{ eventChecked }}</output>
     <output data-testid="event-payload">{{ eventPayload }}</output>
   </div>
