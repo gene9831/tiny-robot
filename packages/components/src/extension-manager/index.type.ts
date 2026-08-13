@@ -1,5 +1,4 @@
 import type { Component, ComputedRef, VNode } from 'vue'
-import type { ExtensionCardPopoverPlacement } from './internal.type'
 
 export type ExtensionKind = string & {}
 export type ExtensionScope = 'installed' | 'available'
@@ -90,27 +89,24 @@ export interface ExtensionOperationStatus {
 
 export type ExtensionOperationStatusMap = Record<string, Partial<Record<ExtensionOperation, ExtensionOperationStatus>>>
 
+export type ExtensionCardOverflowMenuPlacement = 'bottom-end' | 'top-end'
+
 export interface ExtensionCardActionBase {
   id: string
+  label: string
+  icon?: Component
   hidden?: boolean
   disabled?: boolean
-  ariaLabel?: string
+  danger?: boolean
 }
 
-export interface ExtensionCardToggleAction extends ExtensionCardActionBase {
-  type: 'toggle'
-  checked?: boolean
-}
-
-export interface ExtensionCardInstallAction extends ExtensionCardActionBase {
-  type: 'install'
-  label?: string
+export interface ExtensionCardSwitchAction extends ExtensionCardActionBase {
+  type: 'switch'
+  checked: boolean
 }
 
 export interface ExtensionCardButtonAction extends ExtensionCardActionBase {
   type: 'button'
-  label: string
-  icon?: Component
 }
 
 export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
@@ -118,37 +114,32 @@ export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
   data?: unknown
 }
 
-export type ExtensionCardPrimaryAction =
-  ExtensionCardToggleAction | ExtensionCardInstallAction | ExtensionCardButtonAction | ExtensionCardCustomAction
-
-export interface ExtensionCardMoreMenuAction {
-  id: string
-  label: string
-  icon?: Component
-  disabled?: boolean
-  danger?: boolean
-}
-
-export type ExtensionCardMoreMenuPlacement = ExtensionCardPopoverPlacement
+export type ExtensionCardAction = ExtensionCardSwitchAction | ExtensionCardButtonAction | ExtensionCardCustomAction
 
 export interface ExtensionCardActionEvent {
   id: string
+  type: ExtensionCardAction['type']
   checked?: boolean
   payload?: unknown
 }
 
 export interface ExtensionCardProps {
-  item: Extension
+  name: string
+  description?: string
+  icon?: string | Component
+  actions?: ExtensionCardAction[]
+  primaryActionsLimit?: number
+  progress?: number | 'indeterminate'
   nameClickable?: boolean
-  primaryActions?: ExtensionCardPrimaryAction[]
-  moreMenuActions?: ExtensionCardMoreMenuAction[]
-  moreMenuTriggerAriaLabel?: string
-  moreMenuPlacement?: ExtensionCardMoreMenuPlacement
+  overflowMenuLabel?: string
+  overflowMenuPlacement?: ExtensionCardOverflowMenuPlacement
 }
 
 export interface ExtensionCardSlots {
-  icon?: () => VNode[]
-  'custom-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
+  'primary-action'?: (props: {
+    action: ExtensionCardCustomAction
+    trigger: (payload?: unknown) => void
+  }) => VNode[]
 }
 
 export interface ExtensionCardEmits {

@@ -1,7 +1,9 @@
+import type { Component } from 'vue'
 import type {
   Extension,
   ExtensionContext,
-  ExtensionCardPrimaryAction,
+  ExtensionCardAction,
+  ExtensionCardActionEvent,
   ExtensionCardProps,
   ExtensionIntent,
   ExtensionListProps,
@@ -23,16 +25,52 @@ const listProps: ExtensionListProps = {
   scope: 'available',
 }
 
-const cardProps: ExtensionCardProps = { item: extension }
+const icon = {} as Component
 
-// Card presentation is canonicalized through the required Extension item.
-// @ts-expect-error ExtensionCardProps requires an item
-const cardWithoutItem: ExtensionCardProps = {}
+const cardProps: ExtensionCardProps = {
+  name: 'Standalone card',
+  description: 'Card description',
+  icon,
+  actions: [
+    { id: 'enabled', type: 'switch', label: '启用扩展', checked: true },
+    { id: 'install', type: 'button', label: '安装' },
+    { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'type-test' } },
+  ],
+  primaryActionsLimit: 1,
+  progress: 'indeterminate',
+  nameClickable: false,
+  overflowMenuLabel: '扩展操作',
+  overflowMenuPlacement: 'top-end',
+}
 
-// Operation state is projected privately by List, not accepted from public actions.
-const installAction: ExtensionCardPrimaryAction = { id: 'install', type: 'install' }
-// @ts-expect-error public install actions do not expose operation status
-const installActionWithState: ExtensionCardPrimaryAction = { id: 'install', type: 'install', state: 'pending' }
+const switchAction: ExtensionCardAction = {
+  id: 'enabled',
+  type: 'switch',
+  label: '启用扩展',
+  checked: false,
+}
+const buttonAction: ExtensionCardAction = {
+  id: 'install',
+  type: 'button',
+  label: '安装',
+}
+const customAction: ExtensionCardAction = {
+  id: 'inspect',
+  type: 'custom',
+  label: '检查',
+}
+const event: ExtensionCardActionEvent = {
+  id: 'enabled',
+  type: 'switch',
+  checked: true,
+}
+
+// @ts-expect-error Card no longer accepts an Extension item.
+const oldCardProps: ExtensionCardProps = { item: extension }
+// @ts-expect-error Every action requires a label.
+const unlabeledAction: ExtensionCardAction = { id: 'install', type: 'button' }
+// @ts-expect-error Domain-specific install action is not a Card action type.
+const installAction: ExtensionCardAction = { id: 'install', type: 'install', label: '安装' }
 
 const search: ExtensionSearchFn = (_query, item, scope) => item.kind === 'skill' && scope === 'available'
 
@@ -51,6 +89,10 @@ void search
 void intent
 void availableItems
 void cardProps
-void cardWithoutItem
+void switchAction
+void buttonAction
+void customAction
+void event
+void oldCardProps
+void unlabeledAction
 void installAction
-void installActionWithState
