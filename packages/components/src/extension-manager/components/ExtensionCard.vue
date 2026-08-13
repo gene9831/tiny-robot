@@ -48,7 +48,7 @@ if (import.meta.env.DEV) {
 
     const duplicateIdList = [...duplicateIds].sort()
 
-    return duplicateIdList.join('\u0000')
+    return duplicateIdList.length ? duplicateIdList.join('\u0000') : undefined
   }
 
   watch(
@@ -57,7 +57,7 @@ if (import.meta.env.DEV) {
       if (duplicateIdSet === lastDuplicateIdSet) return
 
       lastDuplicateIdSet = duplicateIdSet
-      if (!duplicateIdSet) return
+      if (duplicateIdSet === undefined) return
 
       console.warn('[ExtensionManager.Card] Action ids must be unique:', duplicateIdSet.split('\u0000'))
     },
