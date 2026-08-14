@@ -8,8 +8,8 @@ import CardPlaygroundDemo from './CardPlaygroundDemo.vue'
     <header class="card-gallery-page__header">
       <div>
         <div class="card-gallery-page__eyebrow">卡片 / 示例</div>
-        <h2>先看模式。<br />再试细节。</h2>
-        <p>这里汇集一组直接传入数据的 Card 示例，方便阅读和复用。</p>
+        <h2>Card 组件示例</h2>
+        <p>查看 Card 的基础信息、操作、进度和自定义插槽用法。</p>
       </div>
       <div class="card-gallery-page__principle">
         <strong>页面原则</strong>
