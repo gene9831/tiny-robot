@@ -136,15 +136,42 @@ export interface ExtensionCardProps {
 }
 
 export interface ExtensionCardSlots {
-  'primary-action'?: (props: {
-    action: ExtensionCardCustomAction
-    trigger: (payload?: unknown) => void
-  }) => VNode[]
+  'primary-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
 }
 
 export interface ExtensionCardEmits {
   (e: 'name-click', event: MouseEvent | KeyboardEvent): void
   (e: 'action', payload: ExtensionCardActionEvent): void
+}
+
+export type CardGridItem = ExtensionCardProps & {
+  id: string
+}
+
+export interface CardGridProps {
+  items: CardGridItem[]
+  columns?: number
+  emptyText?: string
+}
+
+export interface CardGridSlots {
+  item?: (props: { item: CardGridItem; index: number }) => VNode[]
+  empty?: () => VNode[]
+}
+
+export interface CardGridActionEvent {
+  itemId: string
+  action: ExtensionCardActionEvent
+}
+
+export interface CardGridNameClickEvent {
+  itemId: string
+  event: MouseEvent | KeyboardEvent
+}
+
+export interface CardGridEmits {
+  (e: 'action', payload: CardGridActionEvent): void
+  (e: 'name-click', payload: CardGridNameClickEvent): void
 }
 
 export interface ExtensionKindOption {

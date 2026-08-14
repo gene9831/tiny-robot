@@ -1,5 +1,11 @@
 import type { Component } from 'vue'
 import type {
+  CardGridActionEvent,
+  CardGridEmits,
+  CardGridItem,
+  CardGridNameClickEvent,
+  CardGridProps,
+  CardGridSlots,
   Extension,
   ExtensionContext,
   ExtensionCardAction,
@@ -65,8 +71,53 @@ const event: ExtensionCardActionEvent = {
   checked: true,
 }
 
+const cardGridItem: CardGridItem = {
+  ...cardProps,
+  id: 'grid-item',
+}
+
+const cardGridProps: CardGridProps = {
+  items: [cardGridItem],
+  columns: 3,
+  emptyText: 'No cards',
+}
+const cardGridDefaultProps: CardGridProps = {
+  items: [cardGridItem],
+}
+
+const cardGridSlots: CardGridSlots = {
+  item: ({ item, index }) => {
+    const itemId: string = item.id
+    const itemName: string = item.name
+    const itemIndex: number = index
+
+    void itemId
+    void itemName
+    void itemIndex
+    return []
+  },
+  empty: () => [],
+}
+
+const cardGridActionEvent: CardGridActionEvent = {
+  itemId: cardGridItem.id,
+  action: event,
+}
+const cardGridNameClickEvent: CardGridNameClickEvent = {
+  itemId: cardGridItem.id,
+  event: {} as MouseEvent,
+}
+
+declare const cardGridEmit: CardGridEmits
+cardGridEmit('action', cardGridActionEvent)
+cardGridEmit('name-click', cardGridNameClickEvent)
+
 // @ts-expect-error Card no longer accepts an Extension item.
 const oldCardProps: ExtensionCardProps = { item: extension }
+// @ts-expect-error Grid identity is not a Card prop.
+const cardPropsWithGridId: ExtensionCardProps = { name: 'Card without Grid identity', id: 'grid-only' }
+// @ts-expect-error CardGridItem requires the Grid-owned id.
+const cardGridItemWithoutId: CardGridItem = { name: 'Missing Grid identity' }
 // @ts-expect-error Every action requires a label.
 const unlabeledAction: ExtensionCardAction = { id: 'install', type: 'button' }
 // @ts-expect-error Domain-specific install action is not a Card action type.
@@ -93,6 +144,14 @@ void switchAction
 void buttonAction
 void customAction
 void event
+void cardGridItem
+void cardGridProps
+void cardGridDefaultProps
+void cardGridSlots
+void cardGridActionEvent
+void cardGridNameClickEvent
 void oldCardProps
+void cardPropsWithGridId
+void cardGridItemWithoutId
 void unlabeledAction
 void installAction
