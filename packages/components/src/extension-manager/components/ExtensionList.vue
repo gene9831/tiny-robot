@@ -1,6 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { ExtensionListEmits, ExtensionListProps, ExtensionListSlots } from '../index.type'
+import { computed, type VNode } from 'vue'
+import type { Extension, ExtensionScope } from '../index.type'
+
+interface ExtensionListProps {
+  items?: Extension[]
+  scope: ExtensionScope
+  loading?: boolean
+  error?: unknown
+  emptyText?: string
+  errorText?: string
+}
+
+interface ExtensionListSlots {
+  default?: () => VNode[]
+  error?: (props: { error: unknown; retry: () => void }) => VNode[]
+}
+
+interface ExtensionListEmits {
+  (e: 'retry'): void
+}
 
 const props = withDefaults(defineProps<ExtensionListProps>(), {
   items: () => [],

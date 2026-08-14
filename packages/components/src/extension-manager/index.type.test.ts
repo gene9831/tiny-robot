@@ -12,7 +12,6 @@ import type {
   ExtensionCardActionEvent,
   ExtensionCardProps,
   ExtensionIntent,
-  ExtensionListProps,
   ExtensionRootProps,
   ExtensionScope,
   ExtensionSearchFn,
@@ -24,11 +23,6 @@ const extension: Extension = { ...input, installed: false }
 const rootProps: ExtensionRootProps = {
   extensions: [input],
   expandedSections: { installed: true, available: true },
-}
-
-const listProps: ExtensionListProps = {
-  items: [extension],
-  scope: 'available',
 }
 
 const icon = {} as Component
@@ -135,7 +129,6 @@ context.isSectionExpanded(scope)
 context.requestInstall(extension)
 
 void rootProps
-void listProps
 void search
 void intent
 void availableItems

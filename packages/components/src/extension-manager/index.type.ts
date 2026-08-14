@@ -184,24 +184,6 @@ export interface ExtensionTagOption {
   label: string
 }
 
-export interface ExtensionListProps {
-  items?: Extension[]
-  scope: ExtensionScope
-  loading?: boolean
-  error?: unknown
-  emptyText?: string
-  errorText?: string
-}
-
-export interface ExtensionListSlots {
-  default?: () => VNode[]
-  error?: (props: { error: unknown; retry: () => void }) => VNode[]
-}
-
-export interface ExtensionListEmits {
-  (e: 'retry'): void
-}
-
 export interface ExtensionFilterProps {
   activeKind?: ExtensionKind
   defaultActiveKind?: ExtensionKind
