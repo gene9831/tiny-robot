@@ -39,6 +39,11 @@ const overflowActions = ref<ExtensionCardAction[]>([
   { id: 'overflow-danger', type: 'button', label: '危险操作', danger: true },
 ])
 
+const iconOverflowActions: ExtensionCardAction[] = [
+  { id: 'overflow-icon', type: 'button', label: '带图标操作', icon: IconEditPen },
+  { id: 'overflow-text', type: 'button', label: '无图标操作' },
+]
+
 const lastEvent = ref<ExtensionCardActionEvent>()
 
 const eventChecked = computed(() => {
@@ -99,6 +104,16 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       :actions="overflowActions"
       :primary-actions-limit="0"
       overflow-menu-label="扩展操作"
+      @action="handleAction"
+    />
+
+    <ExtensionCard
+      data-testid="overflow-without-icons-card"
+      name="Overflow without icons"
+      :actions="iconOverflowActions"
+      :primary-actions-limit="0"
+      :overflow-menu-show-icons="false"
+      overflow-menu-label="无图标溢出菜单"
       @action="handleAction"
     />
 

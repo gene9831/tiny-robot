@@ -13,11 +13,13 @@ const props = withDefaults(
     actions?: ExtensionCardRenderableAction[]
     label?: string
     placement?: ExtensionCardOverflowMenuPlacement
+    showIcons?: boolean
   }>(),
   {
     actions: () => [],
     label: '更多操作',
     placement: 'bottom-end',
+    showIcons: true,
   },
 )
 
@@ -25,7 +27,7 @@ const emit = defineEmits<{
   (e: 'action', action: ExtensionCardActionEvent): void
 }>()
 
-const hasActionIcons = computed(() => props.actions.some((action) => Boolean(action.icon)))
+const hasActionIcons = computed(() => props.showIcons && props.actions.some((action) => Boolean(action.icon)))
 
 const handleAction = (action: ExtensionCardRenderableAction, close: () => void) => {
   if (action.disabled) return

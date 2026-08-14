@@ -137,6 +137,7 @@ export interface ExtensionCardProps {
   nameClickable?: boolean
   overflowMenuLabel?: string
   overflowMenuPlacement?: ExtensionCardOverflowMenuPlacement
+  overflowMenuShowIcons?: boolean
 }
 
 export interface ExtensionCardSlots {

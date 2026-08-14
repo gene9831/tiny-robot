@@ -98,6 +98,24 @@ test.describe('standalone ExtensionCard', () => {
     await expect(component.getByTestId('event-type')).toHaveText('custom')
   })
 
+  test('hides overflow action icons while preserving labels and events', async ({ mount }) => {
+    const component = await mount(ExtensionCardFixture)
+    const card = component.getByTestId('overflow-without-icons-card')
+
+    await card.getByRole('button', { name: '无图标溢出菜单' }).click()
+
+    const menu = card.locator('.tr-extension-card__more-menu')
+    await expect(menu.getByRole('button', { name: '带图标操作' })).toBeVisible()
+    await expect(menu.getByRole('button', { name: '无图标操作' })).toBeVisible()
+    await expect(menu.locator('.tr-extension-card__more-menu-item-icon-slot')).toHaveCount(0)
+    await expect(menu.locator('.tr-extension-card__more-menu-item-icon')).toHaveCount(0)
+    await expect(menu.locator('.tr-extension-card__more-menu-item-icon-placeholder')).toHaveCount(0)
+
+    await menu.getByRole('button', { name: '无图标操作' }).click()
+    await expect(component.getByTestId('event-id')).toHaveText('overflow-text')
+    await expect(component.getByTestId('event-type')).toHaveText('button')
+  })
+
   test('renders indeterminate and clamped determinate progress', async ({ mount }) => {
     const component = await mount(ExtensionCardFixture)
 

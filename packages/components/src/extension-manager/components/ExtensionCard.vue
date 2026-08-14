@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<ExtensionCardProps>(), {
   nameClickable: true,
   overflowMenuLabel: '更多操作',
   overflowMenuPlacement: 'bottom-end',
+  overflowMenuShowIcons: true,
 })
 
 const slots = useSlots()
@@ -125,6 +126,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
         :actions="overflowActions"
         :label="overflowMenuLabel"
         :placement="overflowMenuPlacement"
+        :show-icons="overflowMenuShowIcons"
         @action="handleOverflowAction"
       />
     </div>
