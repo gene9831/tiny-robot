@@ -1,26 +1,26 @@
 import { expect, test } from '@playwright/experimental-ct-vue'
-import CardStandaloneInstallDemo from '../../../demo/src/components/CardStandaloneInstallDemo.vue'
+import CardProgressDemo from '../../../demo/src/components/CardProgressDemo.vue'
 
-test.describe('ExtensionCard demo progress controls', () => {
-  test('uses indeterminate progress as the opt-in inverse semantic in standalone demo', async ({ mount }) => {
-    const component = await mount(CardStandaloneInstallDemo)
-    const indeterminateProgress = component.getByRole('checkbox', { name: 'indeterminate progress' })
+test.describe('Card demo progress controls', () => {
+  test('disables the Value control and shows indeterminate progress in indeterminate mode', async ({ mount }) => {
+    const component = await mount(CardProgressDemo)
+    const mode = component.getByLabel('Mode')
 
-    await expect(indeterminateProgress).not.toBeChecked()
-    await expect(component.getByRole('spinbutton', { name: 'progress' })).toBeEnabled()
+    await expect(mode).toHaveValue('determinate')
+    await expect(component.getByRole('spinbutton', { name: 'Value' })).toBeEnabled()
 
-    await indeterminateProgress.check()
+    await mode.selectOption('indeterminate')
 
-    await expect(component.getByRole('spinbutton', { name: 'progress' })).toBeDisabled()
+    await expect(component.getByRole('spinbutton', { name: 'Value' })).toBeDisabled()
     await expect(component.locator('.tr-extension-card__progress-bar')).toHaveClass(/is-indeterminate/)
   })
 
-  test('hides progress and labels the action as installed after success', async ({ mount }) => {
-    const component = await mount(CardStandaloneInstallDemo)
+  test('shows the Complete status and hides progress in hidden mode', async ({ mount }) => {
+    const component = await mount(CardProgressDemo)
 
-    await component.getByLabel('install state').selectOption('success')
+    await component.getByLabel('Mode').selectOption('hidden')
 
-    await expect(component.getByRole('button', { name: '已安装' })).toBeVisible()
+    await expect(component.getByText('Complete', { exact: true })).toBeVisible()
     await expect(component.locator('.tr-extension-card__progress-bar')).toHaveCount(0)
   })
 })
