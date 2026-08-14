@@ -18,7 +18,9 @@ const normalizedColumns = computed(() => {
 
   if (!Number.isFinite(columns) || columns <= 0) return 2
 
-  return Math.max(1, Math.floor(columns))
+  const normalizedColumns = Math.floor(columns)
+
+  return normalizedColumns > 0 ? normalizedColumns : 2
 })
 
 const getCardProps = (item: CardGridItem) => {

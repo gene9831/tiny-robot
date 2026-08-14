@@ -99,6 +99,7 @@ test.describe('standalone ExtensionCardGrid', () => {
       })
 
     await expect.poll(() => readRenderedTrackCount('columns-one')).toBe(1)
+    await expect.poll(() => readRenderedTrackCount('columns-sub-unit')).toBe(2)
     await expect.poll(() => readRenderedTrackCount('columns-fraction')).toBe(2)
     await expect.poll(() => readRenderedTrackCount('columns-integer')).toBe(7)
     await expect.poll(() => readRenderedTrackCount('columns-zero')).toBe(2)

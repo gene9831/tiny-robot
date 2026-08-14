@@ -67,6 +67,7 @@ const columnItems: CardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
 const emptyItems: CardGridItem[] = []
 const columnCases = [
   { testId: 'columns-one', columns: 1 },
+  { testId: 'columns-sub-unit', columns: 0.5 },
   { testId: 'columns-fraction', columns: 2.75 },
   { testId: 'columns-integer', columns: 7 },
   { testId: 'columns-zero', columns: 0 },
