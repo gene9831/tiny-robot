@@ -22,8 +22,6 @@ const emit = defineEmits<{
 }>()
 
 const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
-const hasActionIcons = computed(() => visibleActions.value.some((action) => Boolean(action.icon)))
-const hasActionChecks = computed(() => visibleActions.value.some((action) => action.type === 'switch'))
 
 const handleAction = (action: ExtensionCardAction, close: () => void) => {
   if (action.disabled) return
@@ -65,15 +63,9 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
               :aria-pressed="action.type === 'switch' ? action.checked : undefined"
               @click="handleAction(action, close)"
             >
-              <span v-if="hasActionIcons" class="tr-extension-card__more-menu-item-icon-slot">
-                <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
-                <span v-else class="tr-extension-card__more-menu-item-icon-placeholder" aria-hidden="true"></span>
-              </span>
-              <span v-if="hasActionChecks" class="tr-extension-card__more-menu-item-check-slot" aria-hidden="true">
-                <span v-if="action.type === 'switch'" class="tr-extension-card__more-menu-item-check">
-                  {{ action.checked ? '✓' : '' }}
-                </span>
-                <span v-else class="tr-extension-card__more-menu-item-check-placeholder"></span>
+              <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
+              <span v-if="action.type === 'switch'" class="tr-extension-card__more-menu-item-check" aria-hidden="true">
+                {{ action.checked ? '✓' : '' }}
               </span>
               <span>{{ action.label }}</span>
             </button>
@@ -158,49 +150,19 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
 
 .tr-extension-card__more-menu-item-icon {
   flex: 0 0 auto;
-  width: var(--tr-extension-card-action-icon-size, 16px);
-  height: var(--tr-extension-card-action-icon-size, 16px);
-}
-
-.tr-extension-card__more-menu-item-icon-slot {
-  display: inline-flex;
-  flex: 0 0 var(--tr-extension-card-menu-icon-slot-size, 16px);
-  align-items: center;
-  justify-content: center;
-  width: var(--tr-extension-card-menu-icon-slot-size, 16px);
-  height: var(--tr-extension-card-menu-icon-slot-size, 16px);
-}
-
-.tr-extension-card__more-menu-item-icon-placeholder {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.tr-extension-card__more-menu-item-check-slot {
-  display: inline-flex;
-  flex: 0 0 16px;
-  align-items: center;
-  justify-content: center;
   width: 16px;
   height: 16px;
 }
 
 .tr-extension-card__more-menu-item-check {
   display: inline-flex;
+  flex: 0 0 16px;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  width: 16px;
   color: currentColor;
   font-size: 16px;
   font-weight: 600;
   line-height: 16px;
-}
-
-.tr-extension-card__more-menu-item-check-placeholder {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 </style>
