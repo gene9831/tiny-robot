@@ -150,6 +150,8 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 
 <style lang="less" scoped>
 .tr-extension-card {
+  --tr-extension-card-action-icon-size: 16px;
+  --tr-extension-card-menu-icon-slot-size: var(--tr-extension-card-action-icon-size);
   --tr-extension-card-progress-bg-color: var(--tr-extension-card-bg-color-hover);
   --tr-extension-card-progress-bar-color: var(--tr-success-color, #52c41a);
   --tr-extension-card-switch-bg-color: var(--tr-extension-card-bg-color-hover);

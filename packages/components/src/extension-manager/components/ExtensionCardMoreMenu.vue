@@ -22,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
+const hasActionIcons = computed(() => visibleActions.value.some((action) => Boolean(action.icon)))
 
 const handleAction = (action: ExtensionCardAction, close: () => void) => {
   if (action.disabled) return
@@ -63,7 +64,10 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
               :aria-pressed="action.type === 'switch' ? action.checked : undefined"
               @click="handleAction(action, close)"
             >
-              <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
+              <span v-if="hasActionIcons" class="tr-extension-card__more-menu-item-icon-slot">
+                <component v-if="action.icon" :is="action.icon" class="tr-extension-card__more-menu-item-icon" />
+                <span v-else class="tr-extension-card__more-menu-item-icon-placeholder" aria-hidden="true"></span>
+              </span>
               <span v-if="action.type === 'switch'" class="tr-extension-card__more-menu-item-check" aria-hidden="true">
                 {{ action.checked ? '✓' : '' }}
               </span>
@@ -150,8 +154,23 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
 
 .tr-extension-card__more-menu-item-icon {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: var(--tr-extension-card-action-icon-size, 16px);
+  height: var(--tr-extension-card-action-icon-size, 16px);
+}
+
+.tr-extension-card__more-menu-item-icon-slot {
+  display: inline-flex;
+  flex: 0 0 var(--tr-extension-card-menu-icon-slot-size, 16px);
+  align-items: center;
+  justify-content: center;
+  width: var(--tr-extension-card-menu-icon-slot-size, 16px);
+  height: var(--tr-extension-card-menu-icon-slot-size, 16px);
+}
+
+.tr-extension-card__more-menu-item-icon-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .tr-extension-card__more-menu-item-check {

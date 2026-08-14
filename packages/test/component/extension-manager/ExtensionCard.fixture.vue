@@ -15,6 +15,27 @@ const actions: ExtensionCardAction[] = [
   { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'fixture' } },
 ]
 
+const buttonFeedbackActions: ExtensionCardAction[] = [
+  { id: 'feedback', type: 'button', label: '反馈按钮' },
+  { id: 'disabled-feedback', type: 'button', label: '禁用反馈按钮', disabled: true },
+]
+
+const mixedIconMenuActions: ExtensionCardAction[] = [
+  { id: 'menu-with-icon', type: 'button', label: '带图标菜单项', icon: IconEditPen },
+  { id: 'menu-without-icon', type: 'button', label: '无图标菜单项' },
+]
+
+const noIconMenuActions: ExtensionCardAction[] = [
+  { id: 'plain-menu-first', type: 'button', label: '普通菜单项一' },
+  { id: 'plain-menu-second', type: 'custom', label: '普通菜单项二' },
+]
+
+const customIconSizeActions: ExtensionCardAction[] = [
+  { id: 'custom-primary-icon', type: 'button', label: '自定义主操作图标', icon: IconEditPen },
+  { id: 'custom-menu-icon', type: 'button', label: '自定义菜单图标', icon: IconEditPen },
+  { id: 'custom-menu-plain', type: 'button', label: '自定义菜单无图标' },
+]
+
 const createDuplicateActions = (id: string): ExtensionCardAction[] => [
   { id, type: 'button', label: `${id} first` },
   { id, type: 'button', label: `${id} second` },
@@ -72,6 +93,38 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       :primary-actions-limit="2"
       overflow-menu-label="扩展操作"
       @action="handleAction"
+    />
+
+    <ExtensionCard
+      data-testid="button-feedback-card"
+      name="Button feedback"
+      :actions="buttonFeedbackActions"
+      :primary-actions-limit="2"
+    />
+
+    <ExtensionCard
+      data-testid="mixed-icon-menu-card"
+      name="Mixed menu icons"
+      :actions="mixedIconMenuActions"
+      :primary-actions-limit="0"
+    />
+
+    <ExtensionCard
+      data-testid="no-icon-menu-card"
+      name="No menu icons"
+      :actions="noIconMenuActions"
+      :primary-actions-limit="0"
+    />
+
+    <ExtensionCard
+      data-testid="custom-icon-size-card"
+      name="Custom icon size"
+      :style="{
+        '--tr-extension-card-action-icon-size': '20px',
+        '--tr-extension-card-menu-icon-slot-size': '24px',
+      }"
+      :actions="customIconSizeActions"
+      :primary-actions-limit="1"
     />
 
     <button data-testid="replace-duplicate-actions" type="button" @click="replaceDuplicateActions">
