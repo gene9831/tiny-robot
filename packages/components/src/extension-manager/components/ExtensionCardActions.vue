@@ -176,7 +176,7 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: transparent;
+  background: var(--tr-extension-card-bg-color-hover);
   color: var(--tr-text-primary);
   cursor: pointer;
   font-size: 13px;
@@ -184,7 +184,7 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
 }
 
 .tr-extension-card-primary-actions__button:hover:not(:disabled) {
-  background-color: var(--tr-extension-card-bg-color-hover);
+  background-color: color-mix(in srgb, var(--tr-extension-card-bg-color-hover) 80%, var(--tr-text-primary) 20%);
 }
 
 .tr-extension-card-primary-actions__button:active:not(:disabled) {
