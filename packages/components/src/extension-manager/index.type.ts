@@ -117,11 +117,8 @@ export interface ExtensionCardCustomAction extends ExtensionCardActionBase {
 export type ExtensionCardAction = ExtensionCardSwitchAction | ExtensionCardButtonAction | ExtensionCardCustomAction
 
 /** Actions passed from Card to its internal renderers after visibility is resolved. */
-export type ExtensionCardRenderableSwitchAction = Omit<ExtensionCardSwitchAction, 'hidden'>
-export type ExtensionCardRenderableButtonAction = Omit<ExtensionCardButtonAction, 'hidden'>
-export type ExtensionCardRenderableCustomAction = Omit<ExtensionCardCustomAction, 'hidden'>
-export type ExtensionCardRenderableAction =
-  ExtensionCardRenderableSwitchAction | ExtensionCardRenderableButtonAction | ExtensionCardRenderableCustomAction
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+export type ExtensionCardRenderableAction = DistributiveOmit<ExtensionCardAction, 'hidden'>
 
 export interface ExtensionCardActionEvent {
   id: string
@@ -144,7 +141,7 @@ export interface ExtensionCardProps {
 
 export interface ExtensionCardSlots {
   'primary-action'?: (props: {
-    action: ExtensionCardRenderableCustomAction
+    action: Extract<ExtensionCardRenderableAction, { type: 'custom' }>
     trigger: (payload?: unknown) => void
   }) => VNode[]
 }
