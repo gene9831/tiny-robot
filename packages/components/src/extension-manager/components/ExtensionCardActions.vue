@@ -180,15 +180,6 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
   color: var(--tr-text-primary);
   cursor: pointer;
   font-size: 13px;
-  transition: background-color 0.2s ease;
-}
-
-.tr-extension-card-primary-actions__button:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--tr-extension-card-bg-color-hover) 80%, var(--tr-text-primary) 20%);
-}
-
-.tr-extension-card-primary-actions__button:active:not(:disabled) {
-  background-color: var(--tr-container-bg-active, rgba(0, 0, 0, 0.15));
 }
 
 .tr-extension-card-primary-actions__button.is-danger {
@@ -201,9 +192,8 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
 }
 
 .tr-extension-card-primary-actions__button-icon {
-  flex: 0 0 var(--tr-extension-card-action-icon-size, 16px);
-  width: var(--tr-extension-card-action-icon-size, 16px);
-  height: var(--tr-extension-card-action-icon-size, 16px);
+  width: 16px;
+  height: 16px;
 }
 
 .tr-extension-card-primary-actions__custom-action {
