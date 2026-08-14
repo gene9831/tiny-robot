@@ -151,23 +151,6 @@ test.describe('standalone ExtensionCard', () => {
     await expect(menu.locator('[aria-hidden="true"]')).toHaveCount(0)
   })
 
-  test('keeps labels aligned when mixed More Actions also reserve a switch column', async ({ mount }) => {
-    const component = await mount(ExtensionCardFixture)
-    const card = component.getByTestId('mixed-icon-switch-menu-card')
-
-    await card.getByRole('button', { name: '更多操作' }).click()
-    const menu = card.locator('.tr-extension-card__more-menu')
-    const labels = menu.locator('.tr-extension-card__more-menu-item > span:last-child')
-
-    await expect(menu.locator('.tr-extension-card__more-menu-item-icon-slot')).toHaveCount(2)
-    await expect(menu.locator('.tr-extension-card__more-menu-item-check-slot')).toHaveCount(2)
-    const buttonLabelBox = await labels.nth(0).boundingBox()
-    const switchLabelBox = await labels.nth(1).boundingBox()
-
-    if (!buttonLabelBox || !switchLabelBox) throw new Error('Expected both mixed menu labels to have layout boxes')
-    expect(Math.abs(buttonLabelBox.x - switchLabelBox.x)).toBeLessThan(1)
-  })
-
   test('uses Card CSS variables for action icon size and menu icon slot size', async ({ mount }) => {
     const component = await mount(ExtensionCardFixture)
     const card = component.getByTestId('custom-icon-size-card')

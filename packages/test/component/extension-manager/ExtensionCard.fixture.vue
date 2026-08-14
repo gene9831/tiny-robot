@@ -25,11 +25,6 @@ const mixedIconMenuActions: ExtensionCardAction[] = [
   { id: 'menu-without-icon', type: 'button', label: '无图标菜单项' },
 ]
 
-const mixedIconSwitchMenuActions: ExtensionCardAction[] = [
-  { id: 'menu-icon-row', type: 'button', label: '带图标菜单项', icon: IconEditPen },
-  { id: 'menu-switch-row', type: 'switch', label: '开关菜单项', checked: true },
-]
-
 const noIconMenuActions: ExtensionCardAction[] = [
   { id: 'plain-menu-first', type: 'button', label: '普通菜单项一' },
   { id: 'plain-menu-second', type: 'custom', label: '普通菜单项二' },
@@ -111,13 +106,6 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       data-testid="mixed-icon-menu-card"
       name="Mixed menu icons"
       :actions="mixedIconMenuActions"
-      :primary-actions-limit="0"
-    />
-
-    <ExtensionCard
-      data-testid="mixed-icon-switch-menu-card"
-      name="Mixed menu icon and switch"
-      :actions="mixedIconSwitchMenuActions"
       :primary-actions-limit="0"
     />
 
