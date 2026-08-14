@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CardPatternGallery from './CardPatternGallery.vue'
+import CardPlaygroundDemo from './CardPlaygroundDemo.vue'
 </script>
 
 <template>
@@ -17,6 +18,17 @@ import CardPatternGallery from './CardPatternGallery.vue'
     </header>
 
     <CardPatternGallery />
+
+    <section class="card-gallery-page__playground" aria-labelledby="card-playground-heading">
+      <div class="card-gallery-page__section-heading">
+        <div>
+          <div class="card-gallery-page__eyebrow">live composition</div>
+          <h3 id="card-playground-heading">Interactive playground</h3>
+        </div>
+        <span>one card / many inputs</span>
+      </div>
+      <CardPlaygroundDemo />
+    </section>
   </div>
 </template>
 
@@ -82,6 +94,38 @@ import CardPatternGallery from './CardPatternGallery.vue'
   font-size: 13px;
 }
 
+.card-gallery-page__playground {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid #e0eafa;
+}
+
+.card-gallery-page__section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.card-gallery-page__section-heading h3 {
+  margin: 0;
+  color: #253a60;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.card-gallery-page__section-heading > span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e3f7f0;
+  color: #4b9d89;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 720px) {
   .card-gallery-page {
     padding: 18px;
@@ -92,6 +136,12 @@ import CardPatternGallery from './CardPatternGallery.vue'
     grid-template-columns: 1fr;
     gap: 18px;
     padding-bottom: 24px;
+  }
+
+  .card-gallery-page__section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 }
 </style>
