@@ -1,15 +1,15 @@
 import type { App } from 'vue'
 import ExtensionManager from './index.vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
-import { ExtensionCard, ExtensionFilter, ExtensionList, McpDetail, McpForm } from './components'
+import { ExtensionCard, ExtensionCardGrid, ExtensionFilter, McpDetail, McpForm } from './components'
 import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
 
 ExtensionManager.name = 'ExtensionManager'
 ExtensionManagerRoot.name = 'ExtensionManagerRoot'
 ExtensionManagerContent.name = 'ExtensionManagerContent'
 ExtensionCard.name = 'ExtensionCard'
+ExtensionCardGrid.name = 'ExtensionCardGrid'
 ExtensionFilter.name = 'ExtensionFilter'
-ExtensionList.name = 'ExtensionList'
 McpDetail.name = 'McpDetail'
 McpForm.name = 'McpForm'
 
@@ -18,8 +18,8 @@ const install = function <T>(app: App<T>) {
   app.component(ExtensionManagerRoot.name!, ExtensionManagerRoot)
   app.component(ExtensionManagerContent.name!, ExtensionManagerContent)
   app.component(ExtensionCard.name!, ExtensionCard)
+  app.component(ExtensionCardGrid.name!, ExtensionCardGrid)
   app.component(ExtensionFilter.name!, ExtensionFilter)
-  app.component(ExtensionList.name!, ExtensionList)
   app.component(McpDetail.name!, McpDetail)
   app.component(McpForm.name!, McpForm)
 }
@@ -28,8 +28,8 @@ const ExtensionManagerWithSubComponents = Object.assign(ExtensionManager, {
   install,
   Root: ExtensionManagerRoot,
   Card: ExtensionCard,
+  CardGrid: ExtensionCardGrid,
   Filter: ExtensionFilter,
-  List: ExtensionList,
   McpDetail,
   McpForm,
 })
@@ -42,8 +42,8 @@ export default ExtensionManagerWithSubComponents as typeof ExtensionManager & {
   install: typeof install
   Root: typeof ExtensionManagerRoot
   Card: typeof ExtensionCard
+  CardGrid: typeof ExtensionCardGrid
   Filter: typeof ExtensionFilter
-  List: typeof ExtensionList
   McpDetail: typeof McpDetail
   McpForm: typeof McpForm
 }
