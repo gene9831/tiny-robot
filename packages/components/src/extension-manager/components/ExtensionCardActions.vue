@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { VNode } from 'vue'
 import { computed } from 'vue'
-import type { ExtensionCardAction, ExtensionCardActionEvent, ExtensionCardCustomAction } from '../index.type'
+import type {
+  ExtensionCardAction,
+  ExtensionCardActionEvent,
+  ExtensionCardCustomAction,
+} from '../index.type'
 
 const props = withDefaults(
   defineProps<{
@@ -83,7 +87,11 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
         class="tr-extension-card-primary-actions__custom-action"
         :class="{ 'is-disabled': action.disabled, 'is-danger': action.danger }"
       >
-        <slot name="primary-action" :action="action" :trigger="(payload: unknown) => handleCustom(action, payload)" />
+        <slot
+          name="primary-action"
+          :action="action"
+          :trigger="(payload: unknown) => handleCustom(action, payload)"
+        />
       </span>
 
       <button
