@@ -7,8 +7,8 @@ test.describe('ExtensionManager namespace', () => {
 
     await expect(component.getByTestId('root-name')).toHaveText('ExtensionManagerRoot')
     await expect(component.getByTestId('filter-name')).toHaveText('ExtensionFilter')
-    await expect(component.getByTestId('list-name')).toHaveText('ExtensionList')
     await expect(component.getByTestId('card-name')).toHaveText('ExtensionCard')
+    await expect(component.getByTestId('card-grid-name')).toHaveText('ExtensionCardGrid')
     await expect(component.getByTestId('detail-name')).toHaveText('McpDetail')
     await expect(component.getByTestId('form-name')).toHaveText('McpForm')
     await expect(component.getByTestId('standalone-primitives')).toHaveText('')
@@ -16,5 +16,6 @@ test.describe('ExtensionManager namespace', () => {
     await expect(component.getByTestId('legacy-form')).toHaveText('true')
     await expect(component.getByTestId('detail-registration')).toHaveText('true')
     await expect(component.getByTestId('form-registration')).toHaveText('true')
+    await expect(component.getByTestId('card-grid-registration')).toHaveText('true')
   })
 })
