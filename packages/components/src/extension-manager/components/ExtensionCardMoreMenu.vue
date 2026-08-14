@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IconMore } from '@opentiny/tiny-robot-svgs'
-import type { ExtensionCardAction, ExtensionCardActionEvent, ExtensionCardOverflowMenuPlacement } from '../index.type'
+import type {
+  ExtensionCardActionEvent,
+  ExtensionCardOverflowMenuPlacement,
+  ExtensionCardRenderableAction,
+} from '../index.type'
 import ExtensionCardPopover from './ExtensionCardPopover.vue'
 
 const props = withDefaults(
   defineProps<{
-    actions?: ExtensionCardAction[]
+    actions?: ExtensionCardRenderableAction[]
     label?: string
     placement?: ExtensionCardOverflowMenuPlacement
   }>(),
@@ -21,10 +25,9 @@ const emit = defineEmits<{
   (e: 'action', action: ExtensionCardActionEvent): void
 }>()
 
-const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
-const hasActionIcons = computed(() => visibleActions.value.some((action) => Boolean(action.icon)))
+const hasActionIcons = computed(() => props.actions.some((action) => Boolean(action.icon)))
 
-const handleAction = (action: ExtensionCardAction, close: () => void) => {
+const handleAction = (action: ExtensionCardRenderableAction, close: () => void) => {
   if (action.disabled) return
 
   close()
@@ -38,7 +41,7 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
 </script>
 
 <template>
-  <div v-if="visibleActions.length" class="tr-extension-card__more-action">
+  <div v-if="props.actions.length" class="tr-extension-card__more-action">
     <ExtensionCardPopover as-child :placement="props.placement">
       <template #trigger="{ popoverId, open }">
         <button
@@ -55,7 +58,7 @@ const handleAction = (action: ExtensionCardAction, close: () => void) => {
       </template>
       <template #content="{ close }">
         <ul class="tr-extension-card__more-menu">
-          <li v-for="action in visibleActions" :key="action.id">
+          <li v-for="action in props.actions" :key="action.id">
             <button
               class="tr-extension-card__more-menu-item"
               :class="{ 'is-danger': action.danger }"

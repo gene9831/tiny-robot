@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { VNode } from 'vue'
-import { computed } from 'vue'
-import type { ExtensionCardAction, ExtensionCardActionEvent, ExtensionCardCustomAction } from '../index.type'
+import type { ExtensionCardActionEvent, ExtensionCardRenderableAction } from '../index.type'
 
 const props = withDefaults(
   defineProps<{
-    actions?: ExtensionCardAction[]
+    actions?: ExtensionCardRenderableAction[]
   }>(),
   {
     actions: () => [],
@@ -13,16 +12,17 @@ const props = withDefaults(
 )
 
 defineSlots<{
-  'primary-action'?: (props: { action: ExtensionCardCustomAction; trigger: (payload?: unknown) => void }) => VNode[]
+  'primary-action'?: (props: {
+    action: Extract<ExtensionCardRenderableAction, { type: 'custom' }>
+    trigger: (payload?: unknown) => void
+  }) => VNode[]
 }>()
 
 const emit = defineEmits<{
   (e: 'action', payload: ExtensionCardActionEvent): void
 }>()
 
-const visibleActions = computed(() => props.actions.filter((action) => !action.hidden))
-
-const handleSwitch = (action: Extract<ExtensionCardAction, { type: 'switch' }>, event: Event) => {
+const handleSwitch = (action: Extract<ExtensionCardRenderableAction, { type: 'switch' }>, event: Event) => {
   if (action.disabled) return
 
   emit('action', {
@@ -32,12 +32,12 @@ const handleSwitch = (action: Extract<ExtensionCardAction, { type: 'switch' }>, 
   })
 }
 
-const handleButton = (action: Extract<ExtensionCardAction, { type: 'button' }>) => {
+const handleButton = (action: Extract<ExtensionCardRenderableAction, { type: 'button' }>) => {
   if (action.disabled) return
   emit('action', { id: action.id, type: action.type })
 }
 
-const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
+const handleCustom = (action: Extract<ExtensionCardRenderableAction, { type: 'custom' }>, payload?: unknown) => {
   if (action.disabled) return
 
   const event: ExtensionCardActionEvent = { id: action.id, type: action.type }
@@ -49,7 +49,7 @@ const handleCustom = (action: ExtensionCardCustomAction, payload?: unknown) => {
 
 <template>
   <div class="tr-extension-card-primary-actions">
-    <template v-for="action in visibleActions" :key="action.id">
+    <template v-for="action in props.actions" :key="action.id">
       <label
         v-if="action.type === 'switch'"
         class="tr-extension-card-primary-actions__switch"
