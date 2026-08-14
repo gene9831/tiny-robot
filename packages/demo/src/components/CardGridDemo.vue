@@ -44,6 +44,7 @@ type SlotDemoEvent =
 const sparklesIcon = markRaw(IconSparkles)
 const editPenIcon = markRaw(IconEditPen)
 const deleteIcon = markRaw(IconDelete)
+const getPinLabel = (checked: boolean) => (checked ? '取消固定' : '固定')
 
 const defaultItems = ref<CardGridItem[]>([
   {
@@ -55,7 +56,7 @@ const defaultItems = ref<CardGridItem[]>([
     nameClickable: true,
     primaryActionsLimit: 1,
     actions: [
-      { id: 'pin', type: 'switch', label: '固定', checked: true },
+      { id: 'pin', type: 'switch', label: getPinLabel(true), checked: true },
       { id: 'edit', type: 'button', label: '编辑', icon: editPenIcon },
       { id: 'copy', type: 'custom', label: '复制', data: { source: 'default-grid' } },
     ],
@@ -146,6 +147,7 @@ const handleGridAction = (payload: CardGridActionEvent) => {
 
   if (action?.type === 'switch' && typeof payload.action.checked === 'boolean') {
     action.checked = payload.action.checked
+    action.label = getPinLabel(payload.action.checked)
   }
 
   latestGridEvent.value = { kind: 'action', payload }

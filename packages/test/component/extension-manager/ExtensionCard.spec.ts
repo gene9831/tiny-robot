@@ -69,17 +69,17 @@ test.describe('standalone ExtensionCard', () => {
     await expect(trigger).toHaveAttribute('title', '扩展操作')
     await trigger.click()
 
-    const switchItem = card.getByRole('button', { name: '启用扩展' })
+    const switchItem = card.getByRole('button', { name: '停止跟踪更新' })
 
     await expect(switchItem).toHaveAttribute('aria-pressed', 'true')
-    await expect(switchItem.getByText('✓')).toBeVisible()
+    await expect(switchItem.locator('.tr-extension-card__more-menu-item-check')).toHaveCount(0)
     await switchItem.click()
     await expect(component.getByTestId('event-id')).toHaveText('overflow-enabled')
     await expect(component.getByTestId('event-type')).toHaveText('switch')
     await expect(component.getByTestId('event-checked')).toHaveText('false')
 
     await trigger.click()
-    await expect(card.getByRole('button', { name: '启用扩展' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(card.getByRole('button', { name: '跟踪更新' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('renders custom overflow actions as buttons and keeps danger styling', async ({ mount }) => {

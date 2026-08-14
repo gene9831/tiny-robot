@@ -34,7 +34,7 @@ const actions = computed<ExtensionCardAction[]>(() => [
   {
     id: 'follow-updates',
     type: 'switch',
-    label: '跟踪更新',
+    label: followUpdates.value ? '停止跟踪更新' : '跟踪更新',
     checked: followUpdates.value,
   },
   {

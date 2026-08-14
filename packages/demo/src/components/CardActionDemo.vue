@@ -16,7 +16,7 @@ const actions = computed<ExtensionCardAction[]>(() => [
   {
     id: 'focus-mode',
     type: 'switch',
-    label: '专注模式',
+    label: checked.value ? '退出专注模式' : '开启专注模式',
     checked: checked.value,
     disabled: disableSwitch.value,
   },

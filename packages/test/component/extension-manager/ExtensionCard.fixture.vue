@@ -30,8 +30,10 @@ const changeDuplicateActions = () => {
   duplicateActions.value = createDuplicateActions('duplicate-changed')
 }
 
+const getOverflowSwitchLabel = (checked: boolean) => (checked ? '停止跟踪更新' : '跟踪更新')
+
 const overflowActions = ref<ExtensionCardAction[]>([
-  { id: 'overflow-enabled', type: 'switch', label: '启用扩展', checked: true },
+  { id: 'overflow-enabled', type: 'switch', label: getOverflowSwitchLabel(true), checked: true },
   { id: 'overflow-hidden', type: 'button', label: '隐藏溢出操作', hidden: true },
   { id: 'overflow-custom', type: 'custom', label: '自定义溢出操作' },
   { id: 'overflow-danger', type: 'button', label: '危险操作', danger: true },
@@ -49,7 +51,9 @@ const handleAction = (event: ExtensionCardActionEvent) => {
   if (event.type !== 'switch' || typeof event.checked !== 'boolean') return
 
   overflowActions.value = overflowActions.value.map((action) =>
-    action.id === event.id && action.type === 'switch' ? { ...action, checked: event.checked } : action,
+    action.id === event.id && action.type === 'switch'
+      ? { ...action, checked: event.checked, label: getOverflowSwitchLabel(event.checked) }
+      : action,
   )
 }
 </script>
