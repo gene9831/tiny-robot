@@ -6,7 +6,7 @@ import CardGridDemo from './CardGridDemo.vue'
   <div class="card-grid-page">
     <header class="card-grid-page__header">
       <div>
-        <div class="card-grid-page__eyebrow">ExtensionManager.CardGrid</div>
+        <div class="card-grid-page__eyebrow">CardGrid</div>
         <h1>CardGrid 组件示例</h1>
         <p>直接传入扁平的 items，查看默认卡片、列数、插槽、空状态和事件 payload。</p>
       </div>

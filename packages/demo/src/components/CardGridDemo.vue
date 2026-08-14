@@ -4,8 +4,8 @@ import type {
   CardGridItem,
   CardGridNameClickEvent,
   ExtensionCardActionEvent,
-} from '@opentiny/tiny-robot'
-import { ExtensionManager } from '@opentiny/tiny-robot'
+} from '../../../components/src/extension-manager/index.type'
+import { ExtensionManager } from '../../../components/src/extension-manager'
 import { IconDelete, IconEditPen, IconSparkles } from '@opentiny/tiny-robot-svgs'
 import { computed, markRaw, onMounted, ref } from 'vue'
 
@@ -201,9 +201,9 @@ onMounted(inspectIdentityAttributes)
         <div>
           <div class="demo-section__eyebrow">01 / 默认渲染</div>
           <h2>直接传入扁平 items</h2>
-          <p>没有 item 插槽时，每个 item 都会被转换成一个默认的 ExtensionManager.Card。</p>
+          <p>没有 item 插槽时，每个 item 都会被转换成一个默认的 Card。</p>
         </div>
-        <code class="demo-section__api">ExtensionManager.CardGrid</code>
+        <code class="demo-section__api">CardGrid</code>
       </header>
 
       <div class="demo-contract">
