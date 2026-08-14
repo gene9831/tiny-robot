@@ -4,9 +4,9 @@ import { ExtensionManager } from '@opentiny/tiny-robot'
 import { computed, ref } from 'vue'
 
 const useSlot = ref(true)
-const latestEvent = ref('No action yet')
+const latestEvent = ref('暂无操作')
 const actions = computed<ExtensionCardAction[]>(() => [
-  { id: 'annotate', type: 'custom', label: 'Add annotation', data: { source: 'meeting-notes' } },
+  { id: 'annotate', type: 'custom', label: '添加批注', data: { source: 'meeting-notes' } },
 ])
 
 const handleAction = (event: ExtensionCardActionEvent) => {
@@ -16,17 +16,15 @@ const handleAction = (event: ExtensionCardActionEvent) => {
 
 <template>
   <article class="card-pattern">
-    <div class="card-pattern__tag">04 / custom</div>
-    <h4>Bring your trigger</h4>
-    <p class="card-pattern__description">
-      Use the primary-action slot for a custom trigger, or let Card fall back to a normal button.
-    </p>
+    <div class="card-pattern__tag">04 / 自定义</div>
+    <h4>自定义触发</h4>
+    <p class="card-pattern__description">使用 primary-action 插槽接入自定义触发器；关闭插槽后则回退为普通按钮。</p>
 
     <div class="card-pattern__preview">
       <ExtensionManager.Card
         data-testid="card-custom-preview"
-        name="Meeting notes"
-        description="A custom trigger can still emit the same action event shape."
+        name="会议记录"
+        description="自定义触发器仍然可以发出统一格式的操作事件。"
         :actions="actions"
         @action="handleAction"
       >
@@ -37,14 +35,14 @@ const handleAction = (event: ExtensionCardActionEvent) => {
             :aria-label="action.label"
             @click="trigger({ source: 'primary-slot' })"
           >
-            Add note
+            添加记录
           </button>
         </template>
       </ExtensionManager.Card>
     </div>
 
     <div class="card-pattern__controls">
-      <label><input v-model="useSlot" type="checkbox" /> Use primary-action slot</label>
+      <label><input v-model="useSlot" type="checkbox" /> 使用 primary-action 插槽</label>
     </div>
     <code class="card-pattern__event">{{ latestEvent }}</code>
   </article>

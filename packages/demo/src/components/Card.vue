@@ -7,13 +7,13 @@ import CardPlaygroundDemo from './CardPlaygroundDemo.vue'
   <div class="card-gallery-page">
     <header class="card-gallery-page__header">
       <div>
-        <div class="card-gallery-page__eyebrow">card / patterns</div>
-        <h2>See the pattern.<br />Try the detail.</h2>
-        <p>A small library of direct-input Card patterns, ready to read and reuse.</p>
+        <div class="card-gallery-page__eyebrow">卡片 / 示例</div>
+        <h2>先看模式。<br />再试细节。</h2>
+        <p>这里汇集一组直接传入数据的 Card 示例，方便阅读和复用。</p>
       </div>
       <div class="card-gallery-page__principle">
-        <strong>Page principle</strong>
-        Every example explains one input or interaction result without importing a larger product context.
+        <strong>页面原则</strong>
+        每个示例只解释一个输入或交互结果，不依赖更大的产品上下文。
       </div>
     </header>
 
@@ -22,10 +22,10 @@ import CardPlaygroundDemo from './CardPlaygroundDemo.vue'
     <section class="card-gallery-page__playground" aria-labelledby="card-playground-heading">
       <div class="card-gallery-page__section-heading">
         <div>
-          <div class="card-gallery-page__eyebrow">live composition</div>
-          <h3 id="card-playground-heading">Interactive playground</h3>
+          <div class="card-gallery-page__eyebrow">实时组合</div>
+          <h3 id="card-playground-heading">交互演示</h3>
         </div>
-        <span>one card / many inputs</span>
+        <span>一张卡片 / 多种输入</span>
       </div>
       <CardPlaygroundDemo />
     </section>

@@ -12,24 +12,22 @@ const icon = computed(() => (useComponentIcon.value ? IconSparkles : iconImage))
 
 <template>
   <article class="card-pattern">
-    <div class="card-pattern__tag">01 / presence</div>
-    <h4>Identity</h4>
-    <p class="card-pattern__description">
-      name, description, and icon are enough to establish a quiet visual identity.
-    </p>
+    <div class="card-pattern__tag">01 / 标识</div>
+    <h4>基础信息</h4>
+    <p class="card-pattern__description">传入名称、描述和图标，就能建立清晰、安静的视觉身份。</p>
 
     <div class="card-pattern__preview">
       <ExtensionManager.Card
         data-testid="card-identity-preview"
-        name="Research assistant"
-        description="Turns scattered notes into a clear first draft."
+        name="研究助手"
+        description="把零散笔记整理成清晰的初稿。"
         :icon="icon"
       />
     </div>
 
     <label class="card-pattern__control">
       <input v-model="useComponentIcon" type="checkbox" />
-      Use a component icon
+      使用组件图标
     </label>
   </article>
 </template>

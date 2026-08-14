@@ -10,34 +10,34 @@ const showCustom = ref(true)
 const showDanger = ref(true)
 const disableSwitch = ref(false)
 const disableButton = ref(false)
-const latestEvent = ref('No action yet')
+const latestEvent = ref('暂无操作')
 
 const actions = computed<ExtensionCardAction[]>(() => [
   {
     id: 'focus-mode',
     type: 'switch',
-    label: 'Focus mode',
+    label: '专注模式',
     checked: checked.value,
     disabled: disableSwitch.value,
   },
   {
     id: 'edit-details',
     type: 'button',
-    label: 'Edit details',
+    label: '编辑详情',
     icon: IconEditPen,
     disabled: disableButton.value,
   },
   {
     id: 'quick-note',
     type: 'custom',
-    label: 'Quick note',
+    label: '快速记录',
     hidden: !showCustom.value,
     data: { origin: 'action-anatomy' },
   },
   {
     id: 'clear-draft',
     type: 'button',
-    label: 'Clear draft',
+    label: '清除草稿',
     icon: IconDelete,
     danger: true,
     hidden: !showDanger.value,
@@ -52,38 +52,36 @@ const handleAction = (event: ExtensionCardActionEvent) => {
 
 <template>
   <article class="card-pattern">
-    <div class="card-pattern__tag">02 / action</div>
-    <h4>Action anatomy</h4>
-    <p class="card-pattern__description">
-      One ordered action array can describe primary, overflow, controlled, and custom behavior.
-    </p>
+    <div class="card-pattern__tag">02 / 操作</div>
+    <h4>操作组合</h4>
+    <p class="card-pattern__description">一组有序的操作可以同时表达主操作、溢出操作、受控状态和自定义行为。</p>
 
     <div class="card-pattern__preview">
       <ExtensionManager.Card
         data-testid="card-action-preview"
-        name="Workspace companion"
-        description="A focused set of actions stays close to the surface."
+        name="工作空间助手"
+        description="把常用操作放在卡片表面，保持交互集中。"
         :actions="actions"
         :primary-actions-limit="primaryActionsLimit"
-        overflow-menu-label="More actions"
+        overflow-menu-label="更多操作"
         @action="handleAction"
       />
     </div>
 
     <div class="card-pattern__controls">
       <label
-        >Primary actions
+        >主操作数量
         <select v-model.number="primaryActionsLimit">
-          <option :value="0">0</option>
-          <option :value="1">1</option>
-          <option :value="2">2</option>
-          <option :value="3">3</option>
+          <option :value="0">0 个可见</option>
+          <option :value="1">1 个可见</option>
+          <option :value="2">2 个可见</option>
+          <option :value="3">3 个可见</option>
         </select></label
       >
-      <label><input v-model="showCustom" type="checkbox" /> Show custom</label>
-      <label><input v-model="showDanger" type="checkbox" /> Show danger</label>
-      <label><input v-model="disableSwitch" type="checkbox" /> Disable switch</label>
-      <label><input v-model="disableButton" type="checkbox" /> Disable button</label>
+      <label><input v-model="showCustom" type="checkbox" /> 显示自定义</label>
+      <label><input v-model="showDanger" type="checkbox" /> 显示危险操作</label>
+      <label><input v-model="disableSwitch" type="checkbox" /> 禁用开关</label>
+      <label><input v-model="disableButton" type="checkbox" /> 禁用按钮</label>
     </div>
     <code class="card-pattern__event">{{ latestEvent }}</code>
   </article>

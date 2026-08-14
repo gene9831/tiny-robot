@@ -8,8 +8,8 @@ import CardProgressDemo from './CardProgressDemo.vue'
 <template>
   <section class="card-pattern-gallery">
     <div class="card-pattern-gallery__title">
-      <h3>Reusable examples</h3>
-      <span>four focused patterns</span>
+      <h3>可复用示例</h3>
+      <span>四个聚焦模式</span>
     </div>
     <div class="card-pattern-gallery__grid">
       <CardIdentityDemo />

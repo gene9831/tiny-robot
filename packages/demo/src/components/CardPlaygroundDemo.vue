@@ -25,8 +25,8 @@ const progress = computed<number | 'indeterminate' | undefined>(() => {
 })
 
 const progressLabel = computed(() => {
-  if (progressMode.value === 'hidden') return 'hidden'
-  if (progressMode.value === 'indeterminate') return 'working'
+  if (progressMode.value === 'hidden') return '隐藏'
+  if (progressMode.value === 'indeterminate') return '进行中'
   return `${progressValue.value}%`
 })
 
@@ -34,30 +34,30 @@ const actions = computed<ExtensionCardAction[]>(() => [
   {
     id: 'follow-updates',
     type: 'switch',
-    label: 'Follow updates',
+    label: '跟踪更新',
     checked: followUpdates.value,
   },
   {
     id: 'open-library',
     type: 'button',
-    label: 'Open library',
+    label: '打开资料库',
     icon: IconEditPen,
   },
   {
     id: 'save-view',
     type: 'custom',
-    label: 'Save view',
+    label: '保存视图',
     data: { surface: 'brand-library' },
   },
   {
     id: 'clear-preview',
     type: 'button',
-    label: 'Clear preview',
+    label: '清除预览',
     danger: true,
   },
 ])
 
-const latestEventText = computed(() => (latestEvent.value ? JSON.stringify(latestEvent.value) : 'No action yet'))
+const latestEventText = computed(() => (latestEvent.value ? JSON.stringify(latestEvent.value) : '暂无操作'))
 
 const handleAction = (event: ExtensionCardActionEvent) => {
   if (event.type === 'switch' && typeof event.checked === 'boolean') followUpdates.value = event.checked
@@ -66,44 +66,44 @@ const handleAction = (event: ExtensionCardActionEvent) => {
 </script>
 
 <template>
-  <section class="card-playground" aria-label="Card composition playground">
+  <section class="card-playground" aria-label="Card 组合演示">
     <div class="card-playground__intro">
       <div>
-        <div class="card-playground__eyebrow">compose the detail</div>
-        <h4>Brand library</h4>
-        <p>Keep the inputs close, then see the same Card respond in real time.</p>
+        <div class="card-playground__eyebrow">组合卡片</div>
+        <h4>品牌资料库</h4>
+        <p>把输入集中在左侧，实时查看同一张卡片的响应。</p>
       </div>
-      <span class="card-playground__badge">local state</span>
+      <span class="card-playground__badge">局部状态</span>
     </div>
 
     <div class="card-playground__surface">
-      <aside class="card-playground__controls" aria-label="Playground controls">
+      <aside class="card-playground__controls" aria-label="演示控制项">
         <div class="card-playground__controls-heading">
-          <strong>Tune the inputs</strong>
-          <span>direct props</span>
+          <strong>调整输入</strong>
+          <span>直接属性</span>
         </div>
 
         <label class="card-playground__field">
-          <span>Primary actions</span>
+          <span>主操作数量</span>
           <select v-model.number="primaryActionsLimit" data-testid="card-playground-primary-actions-limit">
-            <option :value="0">0 visible</option>
-            <option :value="1">1 visible</option>
-            <option :value="2">2 visible</option>
-            <option :value="3">3 visible</option>
+            <option :value="0">0 个可见</option>
+            <option :value="1">1 个可见</option>
+            <option :value="2">2 个可见</option>
+            <option :value="3">3 个可见</option>
           </select>
         </label>
 
         <label class="card-playground__field">
-          <span>Progress mode</span>
+          <span>进度模式</span>
           <select v-model="progressMode" data-testid="card-playground-progress-mode">
-            <option value="hidden">hidden</option>
-            <option value="determinate">determinate</option>
-            <option value="indeterminate">indeterminate</option>
+            <option value="hidden">隐藏</option>
+            <option value="determinate">确定进度</option>
+            <option value="indeterminate">不确定进度</option>
           </select>
         </label>
 
         <label class="card-playground__field">
-          <span>Progress value</span>
+          <span>进度数值</span>
           <span class="card-playground__input-wrap">
             <input
               v-model.number="progressValue"
@@ -119,14 +119,14 @@ const handleAction = (event: ExtensionCardActionEvent) => {
 
         <label class="card-playground__check">
           <input v-model="nameClickable" data-testid="card-playground-name-clickable" type="checkbox" />
-          <span>Name is clickable</span>
+          <span>名称可点击</span>
         </label>
 
         <label class="card-playground__field">
-          <span>Overflow placement</span>
+          <span>溢出菜单位置</span>
           <select v-model="overflowMenuPlacement" data-testid="card-playground-overflow-placement">
-            <option value="bottom-end">bottom-end</option>
-            <option value="top-end">top-end</option>
+            <option value="bottom-end">右下（bottom-end）</option>
+            <option value="top-end">右上（top-end）</option>
           </select>
         </label>
 
@@ -134,35 +134,35 @@ const handleAction = (event: ExtensionCardActionEvent) => {
 
         <label class="card-playground__check card-playground__check--switch">
           <input v-model="followUpdates" data-testid="card-playground-switch-value" type="checkbox" />
-          <span>Follow updates</span>
-          <span class="card-playground__state">{{ followUpdates ? 'on' : 'off' }}</span>
+          <span>跟踪更新</span>
+          <span class="card-playground__state">{{ followUpdates ? '开' : '关' }}</span>
         </label>
       </aside>
 
       <div class="card-playground__result">
         <div class="card-playground__result-heading">
-          <strong>Live preview</strong>
-          <span>progress {{ progressLabel }}</span>
+          <strong>实时预览</strong>
+          <span>进度 {{ progressLabel }}</span>
         </div>
 
         <div class="card-playground__preview">
           <ExtensionManager.Card
             data-testid="card-playground-preview"
-            name="Brand library"
-            description="A calm collection for keeping useful references close."
+            name="品牌资料库"
+            description="用一张安静的卡片，收纳随手可用的参考内容。"
             :icon="IconSparkles"
             :actions="actions"
             :primary-actions-limit="primaryActionsLimit"
             :progress="progress"
             :name-clickable="nameClickable"
-            overflow-menu-label="More options"
+            overflow-menu-label="更多选项"
             :overflow-menu-placement="overflowMenuPlacement"
             @action="handleAction"
           />
         </div>
 
         <div class="card-playground__event" aria-live="polite">
-          <div class="card-playground__event-label">Latest action event</div>
+          <div class="card-playground__event-label">最近一次操作事件</div>
           <code data-testid="card-playground-latest-event">{{ latestEventText }}</code>
         </div>
       </div>

@@ -14,40 +14,38 @@ const progress = computed<number | 'indeterminate' | undefined>(() => {
 })
 
 const statusLabel = computed(() => {
-  if (mode.value === 'hidden') return 'Complete'
-  if (mode.value === 'indeterminate') return 'Working'
-  return 'Ready'
+  if (mode.value === 'hidden') return '完成'
+  if (mode.value === 'indeterminate') return '进行中'
+  return '就绪'
 })
 </script>
 
 <template>
   <article class="card-pattern">
-    <div class="card-pattern__tag">03 / signal</div>
-    <h4>Progress</h4>
-    <p class="card-pattern__description">
-      Progress is an independent signal; the caller decides what the surrounding state means.
-    </p>
+    <div class="card-pattern__tag">03 / 进度</div>
+    <h4>进度</h4>
+    <p class="card-pattern__description">进度是独立信号；由调用方决定周围状态如何表达。</p>
 
     <div class="card-pattern__preview">
       <ExtensionManager.Card
         data-testid="card-progress-preview"
-        name="Preparing a research brief"
-        description="The progress bar can be determinate, indeterminate, or omitted."
+        name="正在准备研究简报"
+        description="进度条可以是确定值、不确定状态，也可以完全省略。"
         :progress="progress"
       />
     </div>
 
     <div class="card-pattern__controls">
       <label
-        >Mode
+        >模式
         <select v-model="mode">
-          <option value="hidden">hidden</option>
-          <option value="determinate">determinate</option>
-          <option value="indeterminate">indeterminate</option>
+          <option value="hidden">隐藏</option>
+          <option value="determinate">确定进度</option>
+          <option value="indeterminate">不确定进度</option>
         </select></label
       >
       <label
-        >Value <input v-model.number="value" type="number" min="0" max="100" :disabled="mode !== 'determinate'"
+        >数值 <input v-model.number="value" type="number" min="0" max="100" :disabled="mode !== 'determinate'"
       /></label>
       <span class="card-pattern__status">{{ statusLabel }}</span>
     </div>
