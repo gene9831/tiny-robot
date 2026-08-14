@@ -5,16 +5,19 @@ test.describe('standalone ExtensionCardGrid', () => {
   test('renders flat items as default Cards and keeps the Grid id on the item li', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
     const grid = component.getByTestId('default-grid')
-    const alphaItem = grid.locator('li[data-card-id="alpha"]')
-    const alphaCard = alphaItem.locator(':scope > .tr-extension-card')
+    const alphaItem = grid.locator(':scope > li[data-card-id="alpha"]')
+    const alphaCard = alphaItem.locator(':scope > *')
 
+    await expect(grid).toHaveJSProperty('tagName', 'UL')
+    await expect(grid.locator(':scope > li')).toHaveCount(2)
+    await expect(grid.locator(':scope > li[data-card-id]')).toHaveCount(2)
     await expect(alphaItem).toHaveCount(1)
-    await expect(grid.locator('[data-card-id="alpha"]')).toHaveCount(1)
+    await expect(grid.locator(':scope > li[data-card-id="alpha"]')).toHaveCount(1)
     await expect(grid.locator('[id="alpha"]')).toHaveCount(0)
     await expect(alphaCard).toHaveCount(1)
     await expect(alphaCard).not.toHaveAttribute('id')
-    await expect(alphaCard.locator('.tr-extension-card__name')).toHaveText('Alpha extension')
-    await expect(alphaCard.locator('.tr-extension-card__description')).toHaveText('Alpha description')
+    await expect(alphaCard.getByText('Alpha extension', { exact: true })).toBeVisible()
+    await expect(alphaCard.getByText('Alpha description', { exact: true })).toBeVisible()
     await expect(alphaCard.getByRole('checkbox', { name: 'Enable Alpha' })).toBeVisible()
     await expect(alphaCard.getByRole('button', { name: 'Install Alpha' })).toBeVisible()
     await expect(alphaCard.getByRole('button', { name: 'Inspect Alpha' })).toBeVisible()
@@ -23,24 +26,28 @@ test.describe('standalone ExtensionCardGrid', () => {
   test('passes the full flat item and index to the item slot while retaining Grid-owned markup', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
     const grid = component.getByTestId('slot-grid')
-    const alphaItem = grid.locator('li[data-card-id="alpha"]')
-    const betaItem = grid.locator('li[data-card-id="beta"]')
+    const alphaItem = grid.locator(':scope > li[data-card-id="alpha"]')
+    const betaItem = grid.locator(':scope > li[data-card-id="beta"]')
 
-    await expect(grid.locator('li.tr-extension-card-grid__item')).toHaveCount(2)
+    await expect(grid).toHaveJSProperty('tagName', 'UL')
+    await expect(grid.locator(':scope > li')).toHaveCount(2)
+    await expect(grid.locator(':scope > li[data-card-id]')).toHaveCount(2)
     await expect(alphaItem.locator(':scope > [data-testid="slot-item-alpha"]')).toHaveCount(1)
     await expect(alphaItem.getByTestId('slot-item-alpha-value')).toHaveText(
-      'alpha|Alpha extension|Alpha description|toggle-alpha,install-alpha,inspect-alpha|true',
+      '{"id":"alpha","name":"Alpha extension","description":"Alpha description","icon":"https://example.com/alpha-icon.png","actions":[{"id":"toggle-alpha","type":"switch","label":"Enable Alpha","checked":true,"icon":"[component]","hidden":false,"disabled":false,"danger":false},{"id":"install-alpha","type":"button","label":"Install Alpha","icon":"[component]","hidden":false,"disabled":false,"danger":false},{"id":"inspect-alpha","type":"custom","label":"Inspect Alpha","icon":"[component]","hidden":false,"disabled":false,"danger":false,"data":{"origin":"grid-fixture","nested":{"enabled":true}}}],"primaryActionsLimit":3,"progress":75,"nameClickable":true,"overflowMenuLabel":"Alpha actions","overflowMenuPlacement":"top-end"}',
     )
     await expect(alphaItem.getByTestId('slot-item-alpha-index')).toHaveText('0')
-    await expect(betaItem.getByTestId('slot-item-beta-value')).toHaveText('beta|Beta extension|Beta description||false')
+    await expect(betaItem.getByTestId('slot-item-beta-value')).toHaveText(
+      '{"id":"beta","name":"Beta extension","description":"Beta description","nameClickable":false}',
+    )
     await expect(betaItem.getByTestId('slot-item-beta-index')).toHaveText('1')
   })
 
   test('wraps default Card actions and controlled name clicks with the item id', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
-    const card = component.getByTestId('default-grid').locator('li[data-card-id="alpha"] .tr-extension-card')
+    const card = component.getByTestId('default-grid').locator(':scope > li[data-card-id="alpha"] > *')
 
-    await card.locator('.tr-extension-card-primary-actions__switch-track').click()
+    await card.getByRole('checkbox', { name: 'Enable Alpha' }).uncheck({ force: true })
     await card.getByRole('button', { name: 'Install Alpha' }).click()
     await card.getByRole('button', { name: 'Inspect Alpha' }).click()
 
@@ -56,20 +63,23 @@ test.describe('standalone ExtensionCardGrid', () => {
     const component = await mount(ExtensionCardGridFixture)
 
     const defaultEmptyGrid = component.getByTestId('default-empty-grid')
-    await expect(defaultEmptyGrid.locator('li.tr-extension-card-grid__empty')).toHaveCount(1)
-    await expect(defaultEmptyGrid).toContainText('暂无内容')
+    await expect(defaultEmptyGrid).toHaveJSProperty('tagName', 'UL')
+    await expect(defaultEmptyGrid.locator(':scope > li')).toHaveCount(1)
+    await expect(defaultEmptyGrid.locator(':scope > li')).toHaveText('暂无内容')
 
     const textEmptyGrid = component.getByTestId('text-empty-grid')
-    await expect(textEmptyGrid.locator('li.tr-extension-card-grid__empty')).toHaveCount(1)
-    await expect(textEmptyGrid).toContainText('Nothing to show')
+    await expect(textEmptyGrid).toHaveJSProperty('tagName', 'UL')
+    await expect(textEmptyGrid.locator(':scope > li')).toHaveCount(1)
+    await expect(textEmptyGrid.locator(':scope > li')).toHaveText('Nothing to show')
 
     const slotEmptyGrid = component.getByTestId('slot-empty-grid')
-    await expect(slotEmptyGrid.locator('li.tr-extension-card-grid__empty')).toHaveCount(1)
+    await expect(slotEmptyGrid).toHaveJSProperty('tagName', 'UL')
+    await expect(slotEmptyGrid.locator(':scope > li')).toHaveCount(1)
     await expect(slotEmptyGrid.getByTestId('custom-empty')).toHaveText('Custom empty slot')
     await expect(slotEmptyGrid.getByText('Fallback empty text', { exact: true })).toHaveCount(0)
   })
 
-  test('normalizes columns and does not warn for invalid values', async ({ mount, page }) => {
+  test('renders normalized grid tracks and does not warn for invalid values', async ({ mount, page }) => {
     const warnings: string[] = []
     page.on('console', (message) => {
       if (message.type() === 'warning' && message.text().includes('[ExtensionManager.CardGrid]')) {
@@ -77,35 +87,44 @@ test.describe('standalone ExtensionCardGrid', () => {
       }
     })
 
+    await page.setViewportSize({ width: 1200, height: 800 })
     const component = await mount(ExtensionCardGridFixture)
-    const readColumns = (testId: string) =>
-      component
-        .getByTestId(testId)
-        .evaluate((element) => getComputedStyle(element).getPropertyValue('--tr-extension-card-grid-columns').trim())
+    const readRenderedTrackCount = (testId: string) =>
+      component.getByTestId(testId).evaluate((element) => {
+        const style = getComputedStyle(element)
+        if (style.display !== 'grid' || style.gridTemplateColumns === 'none') return 0
 
-    await expect.poll(() => readColumns('columns-one')).toBe('1')
-    await expect.poll(() => readColumns('columns-fraction')).toBe('2')
-    await expect.poll(() => readColumns('columns-integer')).toBe('7')
-    await expect.poll(() => readColumns('columns-zero')).toBe('2')
-    await expect.poll(() => readColumns('columns-negative')).toBe('2')
-    await expect.poll(() => readColumns('columns-nan')).toBe('2')
-    await expect.poll(() => readColumns('columns-infinity')).toBe('2')
+        const leftPositions = Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().left))
+        return new Set(leftPositions).size
+      })
+
+    await expect.poll(() => readRenderedTrackCount('columns-one')).toBe(1)
+    await expect.poll(() => readRenderedTrackCount('columns-fraction')).toBe(2)
+    await expect.poll(() => readRenderedTrackCount('columns-integer')).toBe(7)
+    await expect.poll(() => readRenderedTrackCount('columns-zero')).toBe(2)
+    await expect.poll(() => readRenderedTrackCount('columns-negative')).toBe(2)
+    await expect.poll(() => readRenderedTrackCount('columns-nan')).toBe(2)
+    await expect.poll(() => readRenderedTrackCount('columns-infinity')).toBe(2)
     await expect.poll(() => warnings).toHaveLength(0)
   })
 
   test('collapses the configured columns to one track on narrow viewports', async ({ mount, page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 })
     const component = await mount(ExtensionCardGridFixture)
     const grid = component.getByTestId('responsive-grid')
-    const readTrackCount = () =>
-      grid.evaluate(
-        (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-      )
+    const readRenderedTrackCount = () =>
+      grid.evaluate((element) => {
+        const style = getComputedStyle(element)
+        if (style.display !== 'grid' || style.gridTemplateColumns === 'none') return 0
 
-    await page.setViewportSize({ width: 1200, height: 800 })
-    await expect.poll(readTrackCount).toBe(3)
+        const leftPositions = Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().left))
+        return new Set(leftPositions).size
+      })
+
+    await expect.poll(readRenderedTrackCount).toBe(3)
 
     await page.setViewportSize({ width: 768, height: 800 })
-    await expect.poll(readTrackCount).toBe(1)
+    await expect.poll(readRenderedTrackCount).toBe(1)
   })
 
   test('warns once for each changed duplicate-id set', async ({ mount, page }) => {

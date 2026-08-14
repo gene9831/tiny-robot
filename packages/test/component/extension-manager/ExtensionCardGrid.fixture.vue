@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { IconEditPen } from '@opentiny/tiny-robot-svgs'
 import type {
   CardGridActionEvent,
   CardGridItem,
@@ -12,13 +13,43 @@ const items: CardGridItem[] = [
     id: 'alpha',
     name: 'Alpha extension',
     description: 'Alpha description',
+    icon: 'https://example.com/alpha-icon.png',
     actions: [
-      { id: 'toggle-alpha', type: 'switch', label: 'Enable Alpha', checked: true },
-      { id: 'install-alpha', type: 'button', label: 'Install Alpha' },
-      { id: 'inspect-alpha', type: 'custom', label: 'Inspect Alpha' },
+      {
+        id: 'toggle-alpha',
+        type: 'switch',
+        label: 'Enable Alpha',
+        checked: true,
+        icon: IconEditPen,
+        hidden: false,
+        disabled: false,
+        danger: false,
+      },
+      {
+        id: 'install-alpha',
+        type: 'button',
+        label: 'Install Alpha',
+        icon: IconEditPen,
+        hidden: false,
+        disabled: false,
+        danger: false,
+      },
+      {
+        id: 'inspect-alpha',
+        type: 'custom',
+        label: 'Inspect Alpha',
+        icon: IconEditPen,
+        hidden: false,
+        disabled: false,
+        danger: false,
+        data: { origin: 'grid-fixture', nested: { enabled: true } },
+      },
     ],
     primaryActionsLimit: 3,
+    progress: 75,
     nameClickable: true,
+    overflowMenuLabel: 'Alpha actions',
+    overflowMenuPlacement: 'top-end',
   },
   {
     id: 'beta',
@@ -27,6 +58,11 @@ const items: CardGridItem[] = [
     nameClickable: false,
   },
 ]
+
+const columnItems: CardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
+  id: `column-${index}`,
+  name: `Column ${index}`,
+}))
 
 const emptyItems: CardGridItem[] = []
 const columnCases = [
@@ -48,14 +84,11 @@ const actionSummary = computed(() =>
     .join('|'),
 )
 
-const describeItem = (item: CardGridItem) =>
-  [
-    item.id,
-    item.name,
-    item.description,
-    item.actions?.map((action) => action.id).join(',') ?? '',
-    String(item.nameClickable),
-  ].join('|')
+const serializeItem = (item: CardGridItem) =>
+  JSON.stringify(item, (key, value) => {
+    if (key === 'icon' && value && typeof value !== 'string') return '[component]'
+    return value
+  })
 
 const handleAction = (event: CardGridActionEvent) => {
   actionEvents.value.push(event)
@@ -92,7 +125,7 @@ const changeDuplicateItems = () => {
   <ExtensionCardGrid data-testid="slot-grid" :items="items">
     <template #item="{ item, index }">
       <article :data-testid="`slot-item-${item.id}`">
-        <output :data-testid="`slot-item-${item.id}-value`">{{ describeItem(item) }}</output>
+        <output :data-testid="`slot-item-${item.id}-value`">{{ serializeItem(item) }}</output>
         <output :data-testid="`slot-item-${item.id}-index`">{{ index }}</output>
       </article>
     </template>
@@ -110,11 +143,11 @@ const changeDuplicateItems = () => {
     v-for="columnCase in columnCases"
     :key="columnCase.testId"
     :data-testid="columnCase.testId"
-    :items="emptyItems"
+    :items="columnItems"
     :columns="columnCase.columns"
   />
 
-  <ExtensionCardGrid data-testid="responsive-grid" :items="items" :columns="3" />
+  <ExtensionCardGrid data-testid="responsive-grid" :items="columnItems" :columns="3" />
 
   <button data-testid="show-duplicate-grid" type="button" @click="showDuplicateGrid">Show duplicates</button>
   <button data-testid="replace-duplicate-items" type="button" @click="replaceDuplicateItems">
