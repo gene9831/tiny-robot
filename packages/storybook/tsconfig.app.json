@@ -4,7 +4,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
     "paths": {
-      "@opentiny/tiny-robot": ["../components/src/index.ts"],
+      "@opentiny/tiny-robot": ["../components/src/extension-manager/index.ts"],
       "@opentiny/tiny-robot-svgs": ["../svgs/src/index.ts"]
     },
 

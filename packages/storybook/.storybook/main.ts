@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from '@storybook/vue3-vite'
+import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)'],
@@ -21,6 +23,7 @@ const config: StorybookConfig = {
 
     return {
       ...config,
+      plugins: [...(config.plugins ?? []), vue(), vueJsx()],
       resolve: {
         ...config.resolve,
         alias: [
