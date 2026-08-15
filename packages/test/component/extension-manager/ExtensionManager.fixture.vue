@@ -15,6 +15,7 @@ import ExtensionManager from '../../../components/src/extension-manager/index.vu
 
 const props = defineProps<{
   defaultActiveTab?: string
+  defaultExpanded?: boolean
 }>()
 
 const alphaActions: ExtensionCardAction[] = [
@@ -103,7 +104,7 @@ const customTabs: ExtensionManagerTab[] = [
       {
         id: 'custom-section',
         title: 'Custom items',
-        items: [{ id: 'custom-alpha', name: 'Custom Alpha' }],
+        items: [{ id: 'custom-alpha', name: 'Custom Alpha', description: 'Custom description' }],
       },
     ],
   },
@@ -123,7 +124,7 @@ const record = (event: string) => {
 }
 
 const handleActiveTabUpdate = (tabId: string | undefined) => {
-  record(`update:active-tab:${tabId ?? ''}`)
+  record(`update:active-tab:${tabId === undefined ? 'undefined' : tabId}`)
 }
 
 const handleExpandedSectionsUpdate = (value: Record<string, boolean>) => {
@@ -149,8 +150,8 @@ const handleAction = ({ tabId, sectionId, itemId, action }: ExtensionManagerActi
   record(`action:${JSON.stringify({ tabId, sectionId, itemId, action: actionRecord })}`)
 }
 
-const handleNameClick = ({ tabId, sectionId, itemId }: ExtensionManagerNameClickEvent) => {
-  record(`name-click:${JSON.stringify({ tabId, sectionId, itemId })}`)
+const handleNameClick = ({ tabId, sectionId, itemId, event }: ExtensionManagerNameClickEvent) => {
+  record(`name-click:${JSON.stringify({ tabId, sectionId, itemId, event: { type: event.type } })}`)
 }
 
 const handleRetry = ({ tabId, sectionId }: ExtensionManagerRetryEvent) => {
@@ -212,6 +213,7 @@ const setExternalExpandedSections = () => {
     <ExtensionManager
       :tabs="tabs"
       :default-active-tab="props.defaultActiveTab"
+      :default-expanded="props.defaultExpanded"
       v-model:active-tab="activeTab"
       v-model:expanded-sections="expandedSections"
       title="Extension manager"
@@ -303,9 +305,23 @@ const setExternalExpandedSections = () => {
   <div v-if="customManagerVisible" data-testid="custom-manager">
     <ExtensionManager :tabs="customTabs" :show-header="false">
       <template #item="{ tab, section, item, index }">
-        <article :data-testid="`custom-rendered-${item.id}`">
+        <article
+          :data-testid="`custom-rendered-${item.id}`"
+          :data-slot-context="
+            JSON.stringify({
+              tabId: tab.id,
+              tabLabel: tab.label,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              itemId: item.id,
+              itemName: item.name,
+              itemDescription: item.description,
+              index,
+            })
+          "
+        >
           <strong>Custom item: {{ item.name }}</strong>
-          <output>{{ tab.id }}/{{ section.id }}/{{ index }}</output>
+          <output data-testid="custom-slot-context"> {{ tab.id }}/{{ section.id }}/{{ item.id }}/{{ index }} </output>
         </article>
       </template>
     </ExtensionManager>

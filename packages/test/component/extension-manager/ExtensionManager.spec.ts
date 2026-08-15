@@ -26,6 +26,8 @@ test.describe('ExtensionManager foundation', () => {
     await expect(component.getByText('No enabled tabs', { exact: true })).toBeVisible()
     await expect(component.getByTestId('section-header-library-library-actions')).toHaveCount(0)
     await expect(component.getByTestId('section-header-market-market-main')).toHaveCount(0)
+    await expect(component.getByTestId('active-tab-model')).toHaveText(/^$/)
+    await expect(component.getByTestId('event-log')).toContainText('update:active-tab:undefined')
   })
 
   test('selects a tab by click and updates v-model:active-tab', async ({ mount }) => {
@@ -49,6 +51,23 @@ test.describe('ExtensionManager foundation', () => {
     await expect(component.getByTestId('section-header-market-market-main')).toBeVisible()
   })
 
+  test('applies Manager-level defaultExpanded when a section has no local default', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture, { props: { defaultExpanded: false } })
+
+    await expect(component.getByTestId('section-header-library-library-actions')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    await expect(component.getByTestId('section-header-library-library-empty')).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    await expect(component.getByTestId('section-header-library-library-state')).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
   test('excludes disabled tabs and supports Enter, Space, ArrowLeft, ArrowRight, Home, and End selection', async ({
     mount,
   }) => {
@@ -58,6 +77,11 @@ test.describe('ExtensionManager foundation', () => {
 
     await component.getByTestId('disable-market-tab').click()
     await expect(marketTab).toHaveAttribute('aria-disabled', 'true')
+
+    await marketTab.click()
+    await expect(component.getByTestId('active-tab-model')).toHaveText('library')
+    await expect(libraryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(component.getByTestId('event-log')).not.toContainText('tab-change:market')
 
     await component.getByTestId('set-active-library').click()
     await libraryTab.focus()
@@ -75,6 +99,13 @@ test.describe('ExtensionManager foundation', () => {
     await marketTab.focus()
     await marketTab.press(' ')
     await expect(component.getByTestId('active-tab-model')).toHaveText('market')
+
+    await component.getByTestId('disable-market-tab').click()
+    await expect(marketTab).toHaveAttribute('aria-disabled', 'true')
+    await expect(component.getByTestId('active-tab-model')).toHaveText('library')
+    await expect(libraryTab).toHaveAttribute('aria-selected', 'true')
+
+    await component.getByTestId('enable-market-tab').click()
 
     await component.getByTestId('set-active-library').click()
     await libraryTab.focus()
@@ -147,8 +178,25 @@ test.describe('ExtensionManager foundation', () => {
     await component.getByTestId('set-external-expanded-sections').click()
     await expect(actionHeader).toHaveAttribute('aria-expanded', 'true')
     await expect(emptyHeader).toHaveAttribute('aria-expanded', 'false')
-    await expect(component.getByTestId('expanded-sections-model')).toContainText('"library-actions":true')
-    await expect(component.getByTestId('expanded-sections-model')).toContainText('"library-empty":false')
+    const externallyControlledExpandedSections = {
+      'library-actions': true,
+      'library-empty': false,
+      'library-state': true,
+      'market-main': true,
+    }
+    await expect(component.getByTestId('expanded-sections-model')).toHaveText(
+      JSON.stringify(externallyControlledExpandedSections),
+    )
+
+    await actionHeader.click()
+    await expect(component.getByTestId('expanded-sections-model')).toHaveText(
+      JSON.stringify({
+        'library-actions': false,
+        'library-empty': false,
+        'library-state': true,
+        'market-main': true,
+      }),
+    )
   })
 
   test('applies section state precedence in loading, error, items, and empty order', async ({ mount }) => {
@@ -206,7 +254,7 @@ test.describe('ExtensionManager foundation', () => {
       'action:{"tabId":"library","sectionId":"library-actions","itemId":"alpha","action":{"id":"inspect-alpha","type":"button"}}',
     )
     await expect(component.getByTestId('event-log')).toContainText(
-      'name-click:{"tabId":"library","sectionId":"library-actions","itemId":"alpha"}',
+      'name-click:{"tabId":"library","sectionId":"library-actions","itemId":"alpha","event":{"type":"click"}}',
     )
   })
 
@@ -220,6 +268,20 @@ test.describe('ExtensionManager foundation', () => {
     await expect(customItem).toHaveCount(1)
     await expect(customItem).toHaveAttribute('data-card-id', 'custom-alpha')
     await expect(customItem.getByTestId('custom-rendered-custom-alpha')).toContainText('Custom item: Custom Alpha')
+    await expect(customItem.getByTestId('custom-slot-context')).toHaveText('custom/custom-section/custom-alpha/0')
+    await expect(customItem.getByTestId('custom-rendered-custom-alpha')).toHaveAttribute(
+      'data-slot-context',
+      JSON.stringify({
+        tabId: 'custom',
+        tabLabel: 'Custom content',
+        sectionId: 'custom-section',
+        sectionTitle: 'Custom items',
+        itemId: 'custom-alpha',
+        itemName: 'Custom Alpha',
+        itemDescription: 'Custom description',
+        index: 0,
+      }),
+    )
   })
 
   test('emits header action and close output', async ({ mount }) => {
@@ -228,7 +290,7 @@ test.describe('ExtensionManager foundation', () => {
     await component.getByTestId('header-action').click()
     await expect(component.getByTestId('header-action-count')).toHaveText('1')
 
-    const closeButton = component.getByRole('button', { name: /close|关闭/i })
+    const closeButton = component.getByTestId('manager-host').getByRole('button', { name: /close|关闭/i })
     await expect(closeButton).toHaveCount(1)
     await closeButton.click()
     await expect(component.getByTestId('event-log')).toContainText('close')
