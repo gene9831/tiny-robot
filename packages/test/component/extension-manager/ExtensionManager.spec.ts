@@ -8,6 +8,7 @@ test.describe('ExtensionManager foundation', () => {
     await expect(component.getByRole('tab', { name: /Library/ })).toHaveAttribute('aria-selected', 'true')
     await expect(component.getByRole('tab', { name: /Marketplace/ })).toHaveAttribute('aria-selected', 'false')
     await expect(component.getByTestId('section-header-library-library-actions')).toBeVisible()
+    await expect(component.getByTestId('section-header-library-library-state')).toHaveAttribute('aria-expanded', 'true')
   })
 
   test('honors default-active-tab and renders the selected tab sections', async ({ mount }) => {
@@ -78,7 +79,7 @@ test.describe('ExtensionManager foundation', () => {
     await component.getByTestId('disable-market-tab').click()
     await expect(marketTab).toHaveAttribute('aria-disabled', 'true')
 
-    await marketTab.click()
+    await marketTab.dispatchEvent('click')
     await expect(component.getByTestId('active-tab-model')).toHaveText('library')
     await expect(libraryTab).toHaveAttribute('aria-selected', 'true')
     await expect(component.getByTestId('event-log')).not.toContainText('tab-change:market')

@@ -13,10 +13,15 @@ import type {
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionManager from '../../../components/src/extension-manager/index.vue'
 
-const props = defineProps<{
-  defaultActiveTab?: string
-  defaultExpanded?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    defaultActiveTab?: string
+    defaultExpanded?: boolean
+  }>(),
+  {
+    defaultExpanded: undefined,
+  },
+)
 
 const alphaActions: ExtensionCardAction[] = [
   { id: 'toggle-alpha', type: 'switch', label: 'Enable Alpha', checked: true },
