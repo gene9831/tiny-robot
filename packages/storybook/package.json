@@ -1,0 +1,26 @@
+{
+  "name": "@opentiny/tiny-robot-storybook",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "storybook": "STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6006",
+    "build-storybook": "STORYBOOK_DISABLE_TELEMETRY=1 storybook build",
+    "type-check": "vue-tsc -b"
+  },
+  "dependencies": {
+    "@opentiny/tiny-robot": "workspace:*",
+    "@opentiny/tiny-robot-svgs": "workspace:*",
+    "vue": "^3.5.38"
+  },
+  "devDependencies": {
+    "@storybook/addon-docs": "^10.4.6",
+    "@storybook/vue3-vite": "^10.4.6",
+    "@types/node": "^24.13.2",
+    "@vue/tsconfig": "^0.9.1",
+    "storybook": "^10.4.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12",
+    "vue-tsc": "^3.2.8"
+  }
+}
