@@ -134,6 +134,28 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
   },
 ])
 
+const itemSlotPreviewTabs: ExtensionManagerTab[] = [
+  {
+    id: 'slot-preview',
+    label: 'Preview',
+    sections: [
+      {
+        id: 'custom-item',
+        title: 'Custom item content',
+        items: [
+          {
+            id: 'slot-item',
+            name: 'Custom item preview',
+            description: 'This compact Manager renders its item through the item slot.',
+          },
+        ],
+        columns: 1,
+        collapsible: false,
+      },
+    ],
+  },
+]
+
 const eventOutput = computed(() =>
   lastEvent.value === undefined
     ? 'Interact with a card, tab, section, or header action.'
@@ -226,13 +248,6 @@ const setAllSectionsExpanded = (expanded: boolean) => {
     tabs.value.flatMap((tab) => tab.sections.map((section) => [section.id, expanded])),
   )
 }
-
-const toCardProps = (item: ExtensionManagerItem) => {
-  const { id, ...cardProps } = item
-
-  void id
-  return cardProps
-}
 </script>
 
 <template>
@@ -316,20 +331,6 @@ const toCardProps = (item: ExtensionManagerItem) => {
         </button>
       </template>
 
-      <template #item="{ tab, section, item, index }">
-        <div class="storybook-manager-playground__item-slot">
-          <div class="storybook-manager-playground__item-context">
-            <span>Custom item slot · {{ index + 1 }}</span>
-            <code>{{ tab.id }}/{{ section.id }}/{{ item.id }}</code>
-          </div>
-          <ExtensionManager.Card
-            v-bind="toCardProps(item)"
-            @action="handleAction(tab.id, section.id, item.id, $event)"
-            @name-click="handleNameClick(tab.id, section.id, item.id, $event)"
-          />
-        </div>
-      </template>
-
       <template #loading="{ tab, section }">
         <div class="storybook-manager-playground__state">Loading {{ tab.label }} / {{ section.title }} locally…</div>
       </template>
@@ -351,6 +352,23 @@ const toCardProps = (item: ExtensionManagerItem) => {
       <span>Use the lifecycle control to reopen the local playground.</span>
       <button type="button" @click="isClosed = false">Reopen Manager</button>
     </div>
+
+    <section class="storybook-manager-playground__item-slot-preview">
+      <div class="storybook-manager-playground__item-slot-intro">
+        <strong>Custom item slot preview</strong>
+        <span>The main Manager above uses default Cards for contextual event routing.</span>
+      </div>
+
+      <ExtensionManager :tabs="itemSlotPreviewTabs" title="Item slot content">
+        <template #item="{ tab, section, item, index }">
+          <article class="storybook-manager-playground__custom-item">
+            <strong>{{ item.name }}</strong>
+            <span>{{ item.description }}</span>
+            <code>{{ tab.id }}/{{ section.id }}/{{ item.id }} · index {{ index }}</code>
+          </article>
+        </template>
+      </ExtensionManager>
+    </section>
 
     <section class="storybook-manager-playground__events" aria-live="polite">
       <div>
@@ -463,22 +481,46 @@ const toCardProps = (item: ExtensionManagerItem) => {
   font-weight: 400;
 }
 
-.storybook-manager-playground__item-slot {
+.storybook-manager-playground__item-slot-preview {
+  display: grid;
+  gap: 8px;
+  width: min(560px, 100%);
+}
+
+.storybook-manager-playground__item-slot-intro {
+  display: grid;
+  gap: 4px;
+  color: #52607a;
+  font-size: 12px;
+}
+
+.storybook-manager-playground__custom-item {
   display: grid;
   gap: 6px;
-}
-
-.storybook-manager-playground__item-context {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: #7082a1;
-  font-size: 11px;
-}
-
-.storybook-manager-playground__item-context code {
+  min-height: 84px;
+  padding: 12px;
+  border: 1px dashed #9eb4d6;
+  border-radius: 8px;
+  background: #fff;
   color: #52607a;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+}
+
+.storybook-manager-playground__custom-item strong {
+  color: #243f75;
+  font-size: 14px;
+}
+
+.storybook-manager-playground__custom-item code {
+  overflow: hidden;
+  color: #7082a1;
+  font:
+    11px/1.4 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .storybook-manager-playground__state {
