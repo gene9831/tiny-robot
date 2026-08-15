@@ -68,7 +68,7 @@ const handleNameClick = (event: ExtensionCardGridNameClickEvent) => emit('name-c
       </div>
     </div>
 
-    <div class="extension-manager-section__body">
+    <div v-if="props.section.collapsible !== true || props.expanded" class="extension-manager-section__body">
       <div v-if="props.section.loading" class="extension-manager-section__state">
         <slot name="loading">Loading...</slot>
       </div>
