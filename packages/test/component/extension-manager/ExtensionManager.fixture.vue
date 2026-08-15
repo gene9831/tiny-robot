@@ -116,11 +116,13 @@ const customTabs: ExtensionManagerTab[] = [
 ]
 
 const tabs = ref<ExtensionManagerTab[]>(createTabs())
-const activeTab = ref<string | undefined>()
+const activeTab = ref<string | undefined>(props.defaultActiveTab ?? 'library')
 const expandedSections = ref<Record<string, boolean>>({})
 const eventLog = ref<string[]>([])
+const slotEventLog = ref<string[]>([])
 const headerActionCount = ref(0)
 const customManagerVisible = ref(false)
+const slotPropagationVisible = ref(false)
 
 const sourceSnapshot = computed(() => JSON.stringify(tabs.value))
 
@@ -165,6 +167,14 @@ const handleRetry = ({ tabId, sectionId }: ExtensionManagerRetryEvent) => {
 
 const handleClose = () => {
   record('close')
+}
+
+const handleSlotActiveTabUpdate = (tabId: string | undefined) => {
+  slotEventLog.value.push(`update:active-tab:${tabId ?? 'undefined'}`)
+}
+
+const handleSlotTabChange = ({ tabId }: ExtensionManagerTabChangeEvent) => {
+  slotEventLog.value.push(`tab-change:${tabId}`)
 }
 
 const getSection = (sectionId: string): ExtensionManagerSection => {
@@ -238,7 +248,7 @@ const setExternalExpandedSections = () => {
       </template>
 
       <template #tab="{ tab, active, select }">
-        <span :data-testid="`tab-slot-${tab.id}`" @click.stop="select">
+        <span :data-testid="`tab-slot-${tab.id}`" @click="select">
           {{ tab.label }}<span v-if="active"> selected</span>
         </span>
       </template>
@@ -299,13 +309,33 @@ const setExternalExpandedSections = () => {
     <button type="button" data-testid="show-custom-item-manager" @click="customManagerVisible = true">
       Show custom item manager
     </button>
+    <button type="button" data-testid="show-slot-propagation-manager" @click="slotPropagationVisible = true">
+      Show slot propagation manager
+    </button>
   </div>
 
   <output data-testid="active-tab-model">{{ activeTab ?? '' }}</output>
   <output data-testid="expanded-sections-model">{{ JSON.stringify(expandedSections) }}</output>
   <output data-testid="header-action-count">{{ headerActionCount }}</output>
   <output data-testid="event-log">{{ eventLog.join('|') }}</output>
+  <output data-testid="slot-event-log">{{ slotEventLog.join('|') }}</output>
   <output data-testid="source-snapshot">{{ sourceSnapshot }}</output>
+
+  <div v-if="slotPropagationVisible" data-testid="slot-propagation-manager">
+    <ExtensionManager
+      :tabs="tabs"
+      active-tab="library"
+      :show-header="false"
+      @update:active-tab="handleSlotActiveTabUpdate"
+      @tab-change="handleSlotTabChange"
+    >
+      <template #tab="{ tab, active, select }">
+        <span :data-testid="`propagation-tab-slot-${tab.id}`" @click="select">
+          {{ tab.label }}<span v-if="active"> selected</span>
+        </span>
+      </template>
+    </ExtensionManager>
+  </div>
 
   <div v-if="customManagerVisible" data-testid="custom-manager">
     <ExtensionManager :tabs="customTabs" :show-header="false">

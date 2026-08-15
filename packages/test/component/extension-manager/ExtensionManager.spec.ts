@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/experimental-ct-vue'
 import ExtensionManagerFixture from './ExtensionManager.fixture.vue'
+import ExtensionManagerUncontrolledFixture from './ExtensionManagerUncontrolled.fixture.vue'
 
 test.describe('ExtensionManager foundation', () => {
   test('selects the first enabled tab by default', async ({ mount }) => {
@@ -40,6 +41,55 @@ test.describe('ExtensionManager foundation', () => {
     await expect(component.getByRole('tab', { name: /Marketplace/ })).toHaveAttribute('aria-selected', 'true')
     await expect(component.getByTestId('event-log')).toContainText('tab-change:market')
     await expect(component.getByTestId('event-log')).toContainText('update:active-tab:market')
+  })
+
+  test('does not duplicate tab selection when a tab slot calls select without stopping the click', async ({
+    mount,
+  }) => {
+    const component = await mount(ExtensionManagerFixture)
+
+    await component.getByTestId('show-slot-propagation-manager').click()
+    await component.getByTestId('slot-propagation-manager').getByTestId('propagation-tab-slot-market').click()
+
+    const eventLog = (await component.getByTestId('slot-event-log').textContent()) ?? ''
+    expect(eventLog.match(/tab-change:market/g)?.length).toBe(1)
+    expect(eventLog.match(/update:active-tab:market/g)?.length).toBe(1)
+  })
+
+  test('emits a complete controlled expansion record from an initially partial input', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+
+    await component.getByTestId('section-header-library-library-actions').click()
+
+    await expect(component.getByTestId('event-log')).toContainText(
+      'update:expanded-sections:{"library-actions":false,"library-empty":false,"library-state":true,"market-main":true,"market-empty":true,"market-loading":true,"market-error":true}',
+    )
+  })
+
+  test('associates each tab with the active tabpanel through stable ARIA ids', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const libraryTab = component.getByRole('tab', { name: /Library/ })
+    const marketTab = component.getByRole('tab', { name: /Marketplace/ })
+
+    const libraryTabId = await libraryTab.getAttribute('id')
+    const libraryPanelId = await libraryTab.getAttribute('aria-controls')
+    expect(libraryTabId).toBeTruthy()
+    expect(libraryPanelId).toBeTruthy()
+    expect(libraryPanelId).not.toBe(libraryTabId)
+    await expect(component.getByRole('tabpanel')).toHaveAttribute('id', libraryPanelId!)
+    await expect(component.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', libraryTabId!)
+
+    const marketTabId = await marketTab.getAttribute('id')
+    const marketPanelId = await marketTab.getAttribute('aria-controls')
+    expect(marketTabId).toBeTruthy()
+    expect(marketPanelId).toBeTruthy()
+    expect(marketTabId).not.toBe(libraryTabId)
+    expect(marketPanelId).not.toBe(libraryPanelId)
+
+    await component.getByTestId('tab-slot-market').click()
+
+    await expect(component.getByRole('tabpanel')).toHaveAttribute('id', marketPanelId!)
+    await expect(component.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', marketTabId!)
   })
 
   test('follows externally controlled active-tab updates', async ({ mount }) => {
@@ -201,6 +251,9 @@ test.describe('ExtensionManager foundation', () => {
         'library-empty': false,
         'library-state': true,
         'market-main': true,
+        'market-empty': true,
+        'market-loading': true,
+        'market-error': true,
       }),
     )
   })
@@ -317,5 +370,71 @@ test.describe('ExtensionManager foundation', () => {
     await expect(component.getByTestId('source-snapshot')).toHaveText(sourceBefore)
     await expect(component.getByTestId('event-log')).toContainText('action:')
     await expect(component.getByTestId('event-log')).toContainText('name-click:')
+  })
+})
+
+test.describe('ExtensionManager uncontrolled foundation', () => {
+  test('uses internal active and expansion state without v-model bindings', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('uncontrolled-manager')
+    const dashTab = manager.getByRole('tab', { name: /Dash tab/ })
+    const slashTab = manager.getByRole('tab', { name: /Slash tab/ })
+    const dashSection = manager.getByTestId('uncontrolled-section-header-a-b-dash-section')
+
+    await expect(dashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(dashSection).toHaveAttribute('aria-expanded', 'false')
+
+    await dashSection.click()
+
+    await expect(dashSection).toHaveAttribute('aria-expanded', 'true')
+    await expect(component.getByTestId('uncontrolled-event-log')).toContainText(
+      'update:expanded-sections:{"__proto__":true,"dash-section":true}',
+    )
+    await expect(component.getByTestId('uncontrolled-event-log')).toContainText('section-toggle:a-b/dash-section/true')
+
+    await component.getByTestId('disable-default-tab').click()
+
+    await expect(slashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(dashTab).toHaveAttribute('aria-disabled', 'true')
+    await expect(component.getByTestId('uncontrolled-event-log')).toContainText('update:active-tab:a/b')
+  })
+
+  test('keeps arbitrary tab ids collision-safe in tabpanel associations', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('uncontrolled-manager')
+    const tabs = manager.getByRole('tab')
+
+    const ids = await tabs.evaluateAll((elements) => elements.map((element) => element.id))
+    const controls = await tabs.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('aria-controls')),
+    )
+
+    expect(ids.every((id) => id.length > 0)).toBe(true)
+    expect(controls.every((id) => typeof id === 'string' && id.length > 0)).toBe(true)
+    expect(new Set(ids).size).toBe(2)
+    expect(new Set(controls).size).toBe(2)
+    expect(ids[0]).not.toBe(ids[1])
+    expect(controls[0]).not.toBe(controls[1])
+    await expect(manager.getByRole('tabpanel')).toHaveAttribute('id', controls[1]!)
+    await expect(manager.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', ids[1]!)
+
+    await manager.getByTestId('uncontrolled-tab-slot-a/b').click()
+
+    await expect(manager.getByRole('tabpanel')).toHaveAttribute('id', controls[0]!)
+    await expect(manager.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', ids[0]!)
+  })
+
+  test('resolves a canonical section key before a crafted internal state key', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('identity-manager')
+
+    await expect(manager.getByRole('button', { name: 'Canonical', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    await expect(manager.getByRole('button', { name: 'Prototype identity', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
   })
 })

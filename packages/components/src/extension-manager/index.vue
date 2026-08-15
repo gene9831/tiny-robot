@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IconClose } from '@opentiny/tiny-robot-svgs'
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { useExtensionManagerState } from './composables/useExtensionManagerState'
 import ExtensionManagerSection from './components/ExtensionManagerSection.vue'
 import ExtensionManagerTabs from './components/ExtensionManagerTabs.vue'
@@ -25,82 +25,15 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 const emit = defineEmits<ExtensionManagerEmits>()
 const slots = defineSlots<ExtensionManagerSlots>()
 
-type SectionIdentity = {
-  tabId: string
-  sectionId: string
-  stateKey: string
-  publicKey: string
-}
-
-const hasOwn = (record: Record<string, boolean>, key: string) => Object.prototype.hasOwnProperty.call(record, key)
-
-const setRecordValue = (record: Record<string, boolean>, key: string, value: boolean) => {
-  Object.defineProperty(record, key, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  })
-}
-
 const encodeSectionPart = (value: string) => `${value.length}:${value}`
 
 const getSectionStateKey = (tabId: string, sectionId: string) =>
   `extension-manager/section/${encodeSectionPart(tabId)}/${encodeSectionPart(sectionId)}`
 
-const getSectionPublicKey = (tabId: string, sectionId: string): string => {
-  const sectionIdCounts = new Map<string, number>()
-  const entries: SectionIdentity[] = []
-
-  for (const tab of props.tabs) {
-    for (const section of tab.sections) {
-      sectionIdCounts.set(section.id, (sectionIdCounts.get(section.id) ?? 0) + 1)
-      entries.push({
-        tabId: tab.id,
-        sectionId: section.id,
-        stateKey: getSectionStateKey(tab.id, section.id),
-        publicKey: '',
-      })
-    }
-  }
-
-  const stateKeys = new Set(entries.map((entry) => entry.stateKey))
-  const usedPublicKeys = new Set<string>()
-
-  for (const entry of entries) {
-    const canUseSectionId =
-      sectionIdCounts.get(entry.sectionId) === 1 &&
-      !stateKeys.has(entry.sectionId) &&
-      !usedPublicKeys.has(entry.sectionId)
-    const publicKey = canUseSectionId ? entry.sectionId : entry.stateKey
-
-    usedPublicKeys.add(publicKey)
-
-    if (entry.tabId === tabId && entry.sectionId === sectionId) return publicKey
-  }
-
-  return sectionId
-}
-
-let pendingSectionToggle: { tabId: string; sectionId: string } | undefined
-
-const normalizeControlledExpandedSections = (next: Record<string, boolean>) => {
-  const current = props.expandedSections
-  const pending = pendingSectionToggle
-
-  if (current === undefined || pending === undefined) return next
-
-  const publicKey = getSectionPublicKey(pending.tabId, pending.sectionId)
-  const normalized: Record<string, boolean> = {}
-
-  for (const [key, value] of Object.entries(current)) {
-    if (hasOwn(next, key)) setRecordValue(normalized, key, next[key] ?? value)
-  }
-
-  if (hasOwn(next, publicKey)) setRecordValue(normalized, publicKey, next[publicKey]!)
-
-  return normalized
-}
+const managerId = useId()
+const managerIdPrefix = `extension-manager-${managerId}`
+const getTabDomId = (tabId: string) => `${managerIdPrefix}-tab-${encodeSectionPart(tabId)}`
+const getTabPanelDomId = (tabId: string) => `${managerIdPrefix}-tabpanel-${encodeSectionPart(tabId)}`
 
 const stateEmit = ((event: string, payload?: unknown) => {
   switch (event) {
@@ -111,7 +44,7 @@ const stateEmit = ((event: string, payload?: unknown) => {
       emit('tab-change', payload as { tabId: string })
       break
     case 'update:expanded-sections':
-      emit('update:expanded-sections', normalizeControlledExpandedSections(payload as Record<string, boolean>))
+      emit('update:expanded-sections', payload as Record<string, boolean>)
       break
     case 'section-toggle':
       emit('section-toggle', payload as { tabId: string; sectionId: string; expanded: boolean })
@@ -139,9 +72,7 @@ const handleClose = () => emit('close')
 const handleSectionToggle = (tabId: string, section: ExtensionManagerSectionData) => {
   if (activeTab.value?.id !== tabId) return
 
-  pendingSectionToggle = { tabId, sectionId: section.id }
   toggleSection(tabId, section)
-  pendingSectionToggle = undefined
 }
 
 const handleRetry = (tabId: string, sectionId: string) => {
@@ -185,13 +116,24 @@ const handleNameClick = (tabId: string, sectionId: string, event: ExtensionCardG
       </div>
     </div>
 
-    <ExtensionManagerTabs :tabs="props.tabs" :active-tab-id="activeTabId" @select="selectTab">
+    <ExtensionManagerTabs
+      :tabs="props.tabs"
+      :active-tab-id="activeTabId"
+      :id-prefix="managerIdPrefix"
+      @select="selectTab"
+    >
       <template v-if="slots.tab" #tab="{ tab, active, select }">
         <slot name="tab" :tab="tab" :active="active" :select="select" />
       </template>
     </ExtensionManagerTabs>
 
-    <div v-if="hasActiveTab" class="extension-manager__sections">
+    <div
+      v-if="hasActiveTab"
+      class="extension-manager__sections"
+      role="tabpanel"
+      :id="getTabPanelDomId(activeTabId!)"
+      :aria-labelledby="getTabDomId(activeTabId!)"
+    >
       <ExtensionManagerSection
         v-for="section in activeTab?.sections"
         :key="getSectionStateKey(activeTabId!, section.id)"

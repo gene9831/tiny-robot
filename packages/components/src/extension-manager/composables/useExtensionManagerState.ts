@@ -122,8 +122,8 @@ export const useExtensionManagerState = (
     const stateKey = identity?.stateKey ?? getSectionStateKey(tabId, sectionId)
     const publicKey = identity?.publicKey ?? sectionId
 
-    if (hasOwn(record, stateKey)) return record[stateKey]
     if (hasOwn(record, publicKey)) return record[publicKey]
+    if (hasOwn(record, stateKey)) return record[stateKey]
 
     return undefined
   }

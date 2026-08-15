@@ -8,6 +8,7 @@ defineOptions({ name: 'ExtensionManagerTabs' })
 const props = defineProps<{
   tabs: ExtensionManagerTab[]
   activeTabId?: string
+  idPrefix: string
 }>()
 
 const emit = defineEmits<{
@@ -17,6 +18,10 @@ const emit = defineEmits<{
 const slots = defineSlots<{
   tab?: (props: { tab: ExtensionManagerTab; active: boolean; select: () => void }) => VNode[]
 }>()
+
+const encodeTabPart = (value: string) => `${value.length}:${value}`
+const getTabDomId = (tabId: string) => `${props.idPrefix}-tab-${encodeTabPart(tabId)}`
+const getTabPanelDomId = (tabId: string) => `${props.idPrefix}-tabpanel-${encodeTabPart(tabId)}`
 
 const tabElements = new Map<string, HTMLButtonElement>()
 
@@ -108,14 +113,18 @@ const handleKeydown = (tabId: string, event: KeyboardEvent) => {
       class="extension-manager-tabs__tab"
       type="button"
       role="tab"
+      :id="getTabDomId(tab.id)"
       :aria-selected="tab.id === activeEnabledTabId"
       :aria-disabled="tab.disabled ? 'true' : undefined"
+      :aria-controls="getTabPanelDomId(tab.id)"
       :tabindex="tab.id === activeEnabledTabId ? 0 : -1"
       @click="selectTab(tab.id)"
       @keydown="handleKeydown(tab.id, $event)"
     >
       <template v-if="slots.tab">
-        <slot name="tab" :tab="tab" :active="tab.id === activeEnabledTabId" :select="() => selectTab(tab.id)" />
+        <span class="extension-manager-tabs__slot" @click.stop>
+          <slot name="tab" :tab="tab" :active="tab.id === activeEnabledTabId" :select="() => selectTab(tab.id)" />
+        </span>
       </template>
       <template v-else>{{ tab.label }}</template>
       <span v-if="tab.badge !== undefined" class="extension-manager-tabs__badge">{{ tab.badge }}</span>
