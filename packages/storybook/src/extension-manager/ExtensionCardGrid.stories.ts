@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { IconEditPen, IconSparkles } from '@opentiny/tiny-robot-svgs'
 import { markRaw } from 'vue'
@@ -22,7 +22,7 @@ const CardGrid = ExtensionManager.CardGrid
 const editIcon = markRaw(IconEditPen)
 const sparklesIcon = markRaw(IconSparkles)
 
-const defaultItems: CardGridItem[] = [
+const defaultItems: ExtensionCardGridItem[] = [
   {
     id: 'alpha',
     name: 'Alpha extension',

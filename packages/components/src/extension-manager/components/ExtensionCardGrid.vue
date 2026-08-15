@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed, useSlots, watch } from 'vue'
-import type { CardGridEmits, CardGridItem, CardGridProps, CardGridSlots, ExtensionCardActionEvent } from '../index.type'
+import type {
+  ExtensionCardActionEvent,
+  ExtensionCardGridEmits,
+  ExtensionCardGridItem,
+  ExtensionCardGridProps,
+  ExtensionCardGridSlots,
+} from '../index.type'
 import ExtensionCard from './ExtensionCard.vue'
 
-const props = withDefaults(defineProps<CardGridProps>(), {
+const props = withDefaults(defineProps<ExtensionCardGridProps>(), {
   columns: 2,
   emptyText: '暂无内容',
 })
 
 const slots = useSlots()
-defineSlots<CardGridSlots>()
+defineSlots<ExtensionCardGridSlots>()
 
-const emit = defineEmits<CardGridEmits>()
+const emit = defineEmits<ExtensionCardGridEmits>()
 
 const normalizedColumns = computed(() => {
   const columns = props.columns
@@ -23,7 +29,7 @@ const normalizedColumns = computed(() => {
   return normalizedColumns > 0 ? normalizedColumns : 2
 })
 
-const getCardProps = (item: CardGridItem) => {
+const getCardProps = (item: ExtensionCardGridItem) => {
   const { id, ...cardProps } = item
 
   void id

@@ -2,13 +2,13 @@
 import { computed, ref } from 'vue'
 import { IconEditPen } from '@opentiny/tiny-robot-svgs'
 import type {
-  CardGridActionEvent,
-  CardGridItem,
-  CardGridNameClickEvent,
+  ExtensionCardGridActionEvent,
+  ExtensionCardGridItem,
+  ExtensionCardGridNameClickEvent,
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionCardGrid from '../../../components/src/extension-manager/components/ExtensionCardGrid.vue'
 
-const items: CardGridItem[] = [
+const items: ExtensionCardGridItem[] = [
   {
     id: 'alpha',
     name: 'Alpha extension',
@@ -59,12 +59,12 @@ const items: CardGridItem[] = [
   },
 ]
 
-const columnItems: CardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
+const columnItems: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
   id: `column-${index}`,
   name: `Column ${index}`,
 }))
 
-const emptyItems: CardGridItem[] = []
+const emptyItems: ExtensionCardGridItem[] = []
 const columnCases = [
   { testId: 'columns-one', columns: 1 },
   { testId: 'columns-sub-unit', columns: 0.5 },
@@ -76,8 +76,8 @@ const columnCases = [
   { testId: 'columns-infinity', columns: Number.POSITIVE_INFINITY },
 ]
 
-const actionEvents = ref<CardGridActionEvent[]>([])
-const lastNameClick = ref<CardGridNameClickEvent>()
+const actionEvents = ref<ExtensionCardGridActionEvent[]>([])
+const lastNameClick = ref<ExtensionCardGridNameClickEvent>()
 
 const actionSummary = computed(() =>
   actionEvents.value
@@ -85,21 +85,21 @@ const actionSummary = computed(() =>
     .join('|'),
 )
 
-const serializeItem = (item: CardGridItem) =>
+const serializeItem = (item: ExtensionCardGridItem) =>
   JSON.stringify(item, (key, value) => {
     if (key === 'icon' && value && typeof value !== 'string') return '[component]'
     return value
   })
 
-const handleAction = (event: CardGridActionEvent) => {
+const handleAction = (event: ExtensionCardGridActionEvent) => {
   actionEvents.value.push(event)
 }
 
-const handleNameClick = (event: CardGridNameClickEvent) => {
+const handleNameClick = (event: ExtensionCardGridNameClickEvent) => {
   lastNameClick.value = event
 }
 
-const createDuplicateItems = (id: string): CardGridItem[] => [
+const createDuplicateItems = (id: string): ExtensionCardGridItem[] => [
   { id, name: `${id} first` },
   { id, name: `${id} second` },
 ]

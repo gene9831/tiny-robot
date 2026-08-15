@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import type { CardGridActionEvent, CardGridItem, CardGridNameClickEvent } from '@opentiny/tiny-robot'
+import type {
+  ExtensionCardGridActionEvent,
+  ExtensionCardGridItem,
+  ExtensionCardGridNameClickEvent,
+} from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { computed, markRaw, ref } from 'vue'
 import { IconSparkles } from '@opentiny/tiny-robot-svgs'
 
-const items: CardGridItem[] = [
+const items: ExtensionCardGridItem[] = [
   {
     id: 'alpha',
     name: 'Alpha extension',
@@ -25,11 +29,11 @@ const events = ref<string[]>([])
 
 const eventSummary = computed(() => events.value.join('\n') || 'No Grid event yet.')
 
-const handleAction = (event: CardGridActionEvent) => {
+const handleAction = (event: ExtensionCardGridActionEvent) => {
   events.value.push(`${event.itemId}:action:${event.action.id}:${event.action.type}:${event.action.checked ?? ''}`)
 }
 
-const handleNameClick = (event: CardGridNameClickEvent) => {
+const handleNameClick = (event: ExtensionCardGridNameClickEvent) => {
   events.value.push(`${event.itemId}:name-click`)
 }
 </script>

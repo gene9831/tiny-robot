@@ -152,34 +152,34 @@ export interface ExtensionCardEmits {
   (e: 'action', payload: ExtensionCardActionEvent): void
 }
 
-export type CardGridItem = ExtensionCardProps & {
+export type ExtensionCardGridItem = ExtensionCardProps & {
   id: string
 }
 
-export interface CardGridProps {
-  items: CardGridItem[]
+export interface ExtensionCardGridProps {
+  items: ExtensionCardGridItem[]
   columns?: number
   emptyText?: string
 }
 
-export interface CardGridSlots {
-  item?: (props: { item: CardGridItem; index: number }) => VNode[]
+export interface ExtensionCardGridSlots {
+  item?: (props: { item: ExtensionCardGridItem; index: number }) => VNode[]
   empty?: () => VNode[]
 }
 
-export interface CardGridActionEvent {
+export interface ExtensionCardGridActionEvent {
   itemId: string
   action: ExtensionCardActionEvent
 }
 
-export interface CardGridNameClickEvent {
+export interface ExtensionCardGridNameClickEvent {
   itemId: string
   event: MouseEvent | KeyboardEvent
 }
 
-export interface CardGridEmits {
-  (e: 'action', payload: CardGridActionEvent): void
-  (e: 'name-click', payload: CardGridNameClickEvent): void
+export interface ExtensionCardGridEmits {
+  (e: 'action', payload: ExtensionCardGridActionEvent): void
+  (e: 'name-click', payload: ExtensionCardGridNameClickEvent): void
 }
 
 export interface ExtensionKindOption {

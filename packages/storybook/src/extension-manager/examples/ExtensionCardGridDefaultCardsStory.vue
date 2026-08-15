@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { IconEditPen, IconSparkles } from '@opentiny/tiny-robot-svgs'
 import { markRaw } from 'vue'
@@ -7,7 +7,7 @@ import { markRaw } from 'vue'
 const editIcon = markRaw(IconEditPen)
 const sparklesIcon = markRaw(IconSparkles)
 
-const items: CardGridItem[] = [
+const items: ExtensionCardGridItem[] = [
   {
     id: 'alpha',
     name: 'Alpha extension',

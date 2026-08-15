@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 
-const items: CardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
+const items: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index) => ({
   id: `column-${index}`,
   name: `Column ${index}`,
   description: 'A compact CardGrid item.',

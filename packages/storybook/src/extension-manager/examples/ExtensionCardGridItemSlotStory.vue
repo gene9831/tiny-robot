@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 
-const items: CardGridItem[] = [
+const items: ExtensionCardGridItem[] = [
   {
     id: 'alpha',
     name: 'Alpha extension',
@@ -18,7 +18,7 @@ const items: CardGridItem[] = [
   },
 ]
 
-const serializeItem = (item: CardGridItem) =>
+const serializeItem = (item: ExtensionCardGridItem) =>
   JSON.stringify(item, (key, value) => {
     if (key === 'icon' && value && typeof value !== 'string') return '[component]'
     return value

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 
-const items: CardGridItem[] = []
+const items: ExtensionCardGridItem[] = []
 </script>
 
 <template>

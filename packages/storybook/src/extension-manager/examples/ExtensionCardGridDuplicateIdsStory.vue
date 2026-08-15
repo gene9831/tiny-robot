@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { CardGridItem } from '@opentiny/tiny-robot'
+import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { ref } from 'vue'
 
 const visible = ref(false)
-const items = ref<CardGridItem[]>([
+const items = ref<ExtensionCardGridItem[]>([
   { id: 'duplicate-initial', name: 'First duplicate' },
   { id: 'duplicate-initial', name: 'Second duplicate' },
 ])
