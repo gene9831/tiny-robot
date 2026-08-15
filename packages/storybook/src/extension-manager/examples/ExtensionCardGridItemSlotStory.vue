@@ -7,7 +7,7 @@ const items: CardGridItem[] = [
     id: 'alpha',
     name: 'Alpha extension',
     description: 'The full item is available to the consumer slot.',
-    icon: 'https://example.com/alpha-icon.png',
+    icon: 'https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Development/puzzle-line.svg',
     primaryActionsLimit: 1,
   },
   {

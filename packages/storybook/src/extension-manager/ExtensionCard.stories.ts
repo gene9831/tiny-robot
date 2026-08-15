@@ -1,14 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 import { ExtensionManager } from '@opentiny/tiny-robot'
-import { IconDelete, IconEditPen, IconSparkles } from '@opentiny/tiny-robot-svgs'
-import { markRaw } from 'vue'
+import ExtensionCardActionsStory from './examples/ExtensionCardActionsStory.vue'
+import extensionCardActionsSource from './examples/ExtensionCardActionsStory.vue?raw'
 import ExtensionCardCustomActionStory from './examples/ExtensionCardCustomActionStory.vue'
+import extensionCardCustomActionSource from './examples/ExtensionCardCustomActionStory.vue?raw'
+import ExtensionCardIconModesStory from './examples/ExtensionCardIconModesStory.vue'
+import extensionCardIconModesSource from './examples/ExtensionCardIconModesStory.vue?raw'
+import ExtensionCardOverflowWithoutIconsStory from './examples/ExtensionCardOverflowWithoutIconsStory.vue'
+import extensionCardOverflowWithoutIconsSource from './examples/ExtensionCardOverflowWithoutIconsStory.vue?raw'
 import ExtensionCardPlaygroundStory from './examples/ExtensionCardPlaygroundStory.vue'
+import extensionCardPlaygroundSource from './examples/ExtensionCardPlaygroundStory.vue?raw'
+import ExtensionCardProgressModesStory from './examples/ExtensionCardProgressModesStory.vue'
+import extensionCardProgressModesSource from './examples/ExtensionCardProgressModesStory.vue?raw'
 
 const Card = ExtensionManager.Card
-const sparklesIcon = markRaw(IconSparkles)
-const editIcon = markRaw(IconEditPen)
-const deleteIcon = markRaw(IconDelete)
 
 const meta = {
   title: 'Extension Manager/ExtensionCard',
@@ -64,83 +69,88 @@ export const Basic: Story = {
   args: {
     name: 'Search extension',
     description: 'Direct presentation props are enough for a compact summary card.',
-    icon: 'https://example.com/search-extension.png',
+    icon: 'https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Development/puzzle-line.svg',
   },
 }
 
 export const IconModes: Story = {
   parameters: {
     controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardIconModesSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
   render: () => ({
-    components: { Card },
-    setup() {
-      return { sparklesIcon }
-    },
-    template: `
-      <div class="storybook-card-stack">
-        <Card name="String icon" description="A string icon is rendered as an image." icon="https://example.com/icon.png" />
-        <Card name="Component icon" description="A component icon is rendered with component :is." :icon="sparklesIcon" />
-        <Card name="Placeholder icon" description="Omitting icon keeps the first-character placeholder." />
-      </div>
-    `,
+    components: { ExtensionCardIconModesStory },
+    template: '<ExtensionCardIconModesStory />',
   }),
 }
 
 export const Actions: Story = {
-  args: {
-    name: 'Action states',
-    description: 'Hidden actions are removed before partitioning; disabled and danger states remain visible.',
-    icon: sparklesIcon,
-    actions: [
-      { id: 'enabled', type: 'switch', label: '启用扩展', checked: true, icon: sparklesIcon },
-      { id: 'configure', type: 'button', label: '配置', icon: editIcon },
-      { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'storybook' } },
-      { id: 'delete', type: 'button', label: '删除', icon: deleteIcon, danger: true },
-      { id: 'hidden', type: 'button', label: '隐藏操作', hidden: true },
-      { id: 'disabled', type: 'button', label: '暂不可用', disabled: true },
-    ],
-    primaryActionsLimit: 2,
-    overflowMenuLabel: '扩展操作',
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardActionsSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
+  render: () => ({
+    components: { ExtensionCardActionsStory },
+    template: '<ExtensionCardActionsStory />',
+  }),
 }
 
 export const OverflowWithoutIcons: Story = {
   parameters: {
     controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardOverflowWithoutIconsSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
-  args: {
-    name: 'Overflow icon policy',
-    description: 'The menu can keep labels and events while omitting every action icon and icon slot.',
-    actions: [
-      { id: 'edit', type: 'button', label: '编辑', icon: editIcon },
-      { id: 'remove', type: 'button', label: '移除', icon: deleteIcon, danger: true },
-    ],
-    primaryActionsLimit: 0,
-    overflowMenuLabel: '无图标溢出菜单',
-    overflowMenuShowIcons: false,
-  },
+  render: () => ({
+    components: { ExtensionCardOverflowWithoutIconsStory },
+    template: '<ExtensionCardOverflowWithoutIconsStory />',
+  }),
 }
 
 export const ProgressModes: Story = {
   parameters: {
     controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardProgressModesSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
   render: () => ({
-    components: { Card },
-    template: `
-      <div class="storybook-card-stack">
-        <Card name="Determinate progress" description="Numeric values are clamped to 0..100." :progress="45" />
-        <Card name="Indeterminate progress" description="The caller can show activity without exposing a percentage." progress="indeterminate" />
-        <Card name="No progress" description="Omitting progress hides the progress bar." />
-      </div>
-    `,
+    components: { ExtensionCardProgressModesStory },
+    template: '<ExtensionCardProgressModesStory />',
   }),
 }
 
 export const CustomPrimaryAction: Story = {
   parameters: {
     controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardCustomActionSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
   render: () => ({
     components: { ExtensionCardCustomActionStory },
@@ -151,6 +161,13 @@ export const CustomPrimaryAction: Story = {
 export const Playground: Story = {
   parameters: {
     controls: { disable: true },
+    docs: {
+      source: {
+        code: extensionCardPlaygroundSource,
+        language: 'html',
+        type: 'code',
+      },
+    },
   },
   render: () => ({
     components: { ExtensionCardPlaygroundStory },
