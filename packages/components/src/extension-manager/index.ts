@@ -2,11 +2,9 @@ import type { App } from 'vue'
 import ExtensionManager from './index.vue'
 import ExtensionManagerRoot from './ExtensionManagerRoot.vue'
 import { ExtensionCard, ExtensionCardGrid, ExtensionFilter, McpDetail, McpForm } from './components'
-import ExtensionManagerContent from './components/ExtensionManagerContent.vue'
 
 ExtensionManager.name = 'ExtensionManager'
 ExtensionManagerRoot.name = 'ExtensionManagerRoot'
-ExtensionManagerContent.name = 'ExtensionManagerContent'
 ExtensionCard.name = 'ExtensionCard'
 ExtensionCardGrid.name = 'ExtensionCardGrid'
 ExtensionFilter.name = 'ExtensionFilter'
@@ -16,7 +14,6 @@ McpForm.name = 'McpForm'
 const install = function <T>(app: App<T>) {
   app.component(ExtensionManager.name!, ExtensionManager)
   app.component(ExtensionManagerRoot.name!, ExtensionManagerRoot)
-  app.component(ExtensionManagerContent.name!, ExtensionManagerContent)
   app.component(ExtensionCard.name!, ExtensionCard)
   app.component(ExtensionCardGrid.name!, ExtensionCardGrid)
   app.component(ExtensionFilter.name!, ExtensionFilter)
