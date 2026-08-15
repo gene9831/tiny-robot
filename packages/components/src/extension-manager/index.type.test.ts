@@ -12,6 +12,17 @@ import type {
   ExtensionCardActionEvent,
   ExtensionCardProps,
   ExtensionIntent,
+  ExtensionManagerActionEvent,
+  ExtensionManagerEmits,
+  ExtensionManagerItem,
+  ExtensionManagerNameClickEvent,
+  ExtensionManagerProps,
+  ExtensionManagerRetryEvent,
+  ExtensionManagerSection,
+  ExtensionManagerSectionToggleEvent,
+  ExtensionManagerSlots,
+  ExtensionManagerTab,
+  ExtensionManagerTabChangeEvent,
   ExtensionRootProps,
   ExtensionScope,
   ExtensionSearchFn,
@@ -106,6 +117,178 @@ declare const cardGridEmit: ExtensionCardGridEmits
 cardGridEmit('action', cardGridActionEvent)
 cardGridEmit('name-click', cardGridNameClickEvent)
 
+const managerItem: ExtensionManagerItem = {
+  ...cardProps,
+  id: 'manager-item',
+}
+
+const managerSection: ExtensionManagerSection = {
+  id: 'installed',
+  title: 'Installed',
+  items: [managerItem],
+  columns: 2,
+  collapsible: true,
+  defaultExpanded: true,
+  loading: false,
+  error: undefined,
+  emptyText: 'No installed extensions',
+}
+const managerEmptySection: ExtensionManagerSection = {
+  id: 'available',
+  title: 'Available',
+  items: [],
+  collapsible: false,
+  loading: true,
+  error: new Error('Catalog unavailable'),
+  emptyText: 'No available extensions',
+}
+const secondManagerSection: ExtensionManagerSection = {
+  id: 'installed-secondary',
+  title: 'Installed secondary',
+  items: [managerItem],
+}
+const secondManagerEmptySection: ExtensionManagerSection = {
+  id: 'available-secondary',
+  title: 'Available secondary',
+  items: [],
+}
+
+const managerTab: ExtensionManagerTab = {
+  id: 'catalog',
+  label: 'Catalog',
+  disabled: false,
+  badge: 2,
+  sections: [managerSection, managerEmptySection],
+}
+const secondManagerTab: ExtensionManagerTab = {
+  id: 'updates',
+  label: 'Updates',
+  badge: 'new',
+  sections: [secondManagerSection, secondManagerEmptySection],
+}
+
+const managerProps: ExtensionManagerProps = {
+  tabs: [managerTab, secondManagerTab],
+  activeTab: 'catalog',
+  defaultActiveTab: 'updates',
+  expandedSections: { installed: true, available: false },
+  defaultExpanded: false,
+  title: 'Extensions',
+  showHeader: true,
+  showCloseButton: true,
+  emptyText: 'No enabled tabs',
+}
+
+const managerTabChangeEvent: ExtensionManagerTabChangeEvent = {
+  tabId: managerTab.id,
+}
+const managerSectionToggleEvent: ExtensionManagerSectionToggleEvent = {
+  tabId: managerTab.id,
+  sectionId: managerSection.id,
+  expanded: true,
+}
+const managerActionEvent: ExtensionManagerActionEvent = {
+  tabId: managerTab.id,
+  sectionId: managerSection.id,
+  itemId: managerItem.id,
+  action: event,
+}
+const managerNameClickEvent: ExtensionManagerNameClickEvent = {
+  tabId: managerTab.id,
+  sectionId: managerSection.id,
+  itemId: managerItem.id,
+  event: {} as MouseEvent,
+}
+const managerRetryEvent: ExtensionManagerRetryEvent = {
+  tabId: managerTab.id,
+  sectionId: managerSection.id,
+}
+
+const managerSlots: ExtensionManagerSlots = {
+  'header-actions': () => [],
+  tab: ({ tab, active, select }) => {
+    const tabId: string = tab.id
+    const isActive: boolean = active
+    select()
+
+    void tabId
+    void isActive
+    return []
+  },
+  'section-header': ({ tab, section, expanded, toggle }) => {
+    const tabId: string = tab.id
+    const sectionId: string = section.id
+    const isExpanded: boolean = expanded
+    toggle()
+
+    void tabId
+    void sectionId
+    void isExpanded
+    return []
+  },
+  item: ({ tab, section, item, index }) => {
+    const tabId: string = tab.id
+    const sectionId: string = section.id
+    const itemId: string = item.id
+    const itemIndex: number = index
+
+    void tabId
+    void sectionId
+    void itemId
+    void itemIndex
+    return []
+  },
+  loading: ({ tab, section }) => {
+    const tabId: string = tab.id
+    const sectionId: string = section.id
+
+    void tabId
+    void sectionId
+    return []
+  },
+  error: ({ tab, section, error: sectionError, retry }) => {
+    const tabId: string = tab.id
+    const sectionId: string = section.id
+    const errorValue: unknown = sectionError
+    retry()
+
+    void tabId
+    void sectionId
+    void errorValue
+    return []
+  },
+  empty: ({ tab, section }) => {
+    const tabId: string = tab.id
+    const sectionId: string = section.id
+
+    void tabId
+    void sectionId
+    return []
+  },
+}
+
+declare const managerEmit: ExtensionManagerEmits
+managerEmit('update:active-tab', managerTab.id)
+managerEmit('update:active-tab', undefined)
+managerEmit('tab-change', managerTabChangeEvent)
+managerEmit('update:expanded-sections', { installed: true, available: false })
+managerEmit('section-toggle', managerSectionToggleEvent)
+managerEmit('action', managerActionEvent)
+managerEmit('name-click', managerNameClickEvent)
+managerEmit('retry', managerRetryEvent)
+managerEmit('close')
+// @ts-expect-error Close does not accept a payload.
+managerEmit('close', managerTab.id)
+
+// @ts-expect-error Manager items retain Grid-owned identity.
+const managerItemWithoutId: ExtensionManagerItem = { name: 'Missing Manager identity' }
+const oldManagerFacadeProps = {
+  extensions: [input],
+  operationStates: {},
+}
+// @ts-expect-error The old extensions/operationStates facade is not the Manager contract.
+const oldManagerProps: ExtensionManagerProps = oldManagerFacadeProps
+
 // @ts-expect-error Card no longer accepts an Extension item.
 const oldCardProps: ExtensionCardProps = { item: extension }
 // @ts-expect-error Grid identity is not a Card prop.
@@ -143,6 +326,23 @@ void cardGridDefaultProps
 void cardGridSlots
 void cardGridActionEvent
 void cardGridNameClickEvent
+void managerItem
+void managerSection
+void managerEmptySection
+void secondManagerSection
+void secondManagerEmptySection
+void managerTab
+void secondManagerTab
+void managerProps
+void managerTabChangeEvent
+void managerSectionToggleEvent
+void managerActionEvent
+void managerNameClickEvent
+void managerRetryEvent
+void managerSlots
+void managerItemWithoutId
+void oldManagerFacadeProps
+void oldManagerProps
 void oldCardProps
 void cardPropsWithGridId
 void cardGridItemWithoutId

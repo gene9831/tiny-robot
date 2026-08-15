@@ -182,6 +182,105 @@ export interface ExtensionCardGridEmits {
   (e: 'name-click', payload: ExtensionCardGridNameClickEvent): void
 }
 
+export type ExtensionManagerItem = ExtensionCardGridItem
+
+export interface ExtensionManagerSection {
+  id: string
+  title: string
+  items: ExtensionManagerItem[]
+  columns?: number
+  collapsible?: boolean
+  defaultExpanded?: boolean
+  loading?: boolean
+  error?: unknown
+  emptyText?: string
+}
+
+export interface ExtensionManagerTab {
+  id: string
+  label: string
+  disabled?: boolean
+  badge?: string | number
+  sections: ExtensionManagerSection[]
+}
+
+export interface ExtensionManagerProps {
+  tabs: ExtensionManagerTab[]
+  activeTab?: string
+  defaultActiveTab?: string
+  expandedSections?: Record<string, boolean>
+  defaultExpanded?: boolean
+  title?: string
+  showHeader?: boolean
+  showCloseButton?: boolean
+  emptyText?: string
+}
+
+export interface ExtensionManagerSlots {
+  'header-actions'?: () => VNode[]
+  tab?: (props: { tab: ExtensionManagerTab; active: boolean; select: () => void }) => VNode[]
+  'section-header'?: (props: {
+    tab: ExtensionManagerTab
+    section: ExtensionManagerSection
+    expanded: boolean
+    toggle: () => void
+  }) => VNode[]
+  item?: (props: {
+    tab: ExtensionManagerTab
+    section: ExtensionManagerSection
+    item: ExtensionManagerItem
+    index: number
+  }) => VNode[]
+  loading?: (props: { tab: ExtensionManagerTab; section: ExtensionManagerSection }) => VNode[]
+  error?: (props: {
+    tab: ExtensionManagerTab
+    section: ExtensionManagerSection
+    error: unknown
+    retry: () => void
+  }) => VNode[]
+  empty?: (props: { tab: ExtensionManagerTab; section: ExtensionManagerSection }) => VNode[]
+}
+
+export interface ExtensionManagerTabChangeEvent {
+  tabId: string
+}
+
+export interface ExtensionManagerSectionToggleEvent {
+  tabId: string
+  sectionId: string
+  expanded: boolean
+}
+
+export interface ExtensionManagerActionEvent {
+  tabId: string
+  sectionId: string
+  itemId: string
+  action: ExtensionCardActionEvent
+}
+
+export interface ExtensionManagerNameClickEvent {
+  tabId: string
+  sectionId: string
+  itemId: string
+  event: MouseEvent | KeyboardEvent
+}
+
+export interface ExtensionManagerRetryEvent {
+  tabId: string
+  sectionId: string
+}
+
+export interface ExtensionManagerEmits {
+  (e: 'update:active-tab', tabId: string | undefined): void
+  (e: 'tab-change', event: ExtensionManagerTabChangeEvent): void
+  (e: 'update:expanded-sections', expandedSections: Record<string, boolean>): void
+  (e: 'section-toggle', event: ExtensionManagerSectionToggleEvent): void
+  (e: 'action', event: ExtensionManagerActionEvent): void
+  (e: 'name-click', event: ExtensionManagerNameClickEvent): void
+  (e: 'retry', event: ExtensionManagerRetryEvent): void
+  (e: 'close'): void
+}
+
 export interface ExtensionKindOption {
   value: ExtensionKind
   label: string
@@ -229,47 +328,6 @@ export interface ExtensionRootEmits {
   (e: 'delete', intent: ExtensionIntent): void
   (e: 'tool-toggle', intent: ExtensionToolToggleIntent): void
   (e: 'refresh', scope: ExtensionScope): void
-}
-
-export interface ExtensionManagerProps
-  extends
-    ExtensionRootProps,
-    Pick<
-      ExtensionFilterProps,
-      | 'activeKind'
-      | 'defaultActiveKind'
-      | 'query'
-      | 'tag'
-      | 'kindLabels'
-      | 'searchPlaceholder'
-      | 'tagPlaceholder'
-      | 'showSearch'
-      | 'showTagFilter'
-      | 'searchFn'
-    > {
-  title?: string
-  installedTitle?: string
-  availableTitle?: string
-  showHeader?: boolean
-  showCloseButton?: boolean
-  showCustomAddButton?: boolean
-  customAddButtonText?: string
-  visible?: boolean
-  /** Loading state for the installed section in the prebuilt facade. */
-  loading?: boolean
-  /** Loading state for the available section in the prebuilt facade. */
-  availableLoading?: boolean
-  /** Load failure for the installed section in the prebuilt facade. */
-  error?: unknown
-  /** Load failure for the available section in the prebuilt facade. */
-  availableError?: unknown
-}
-
-export interface ExtensionManagerEmits extends ExtensionRootEmits {
-  (e: 'update:visible', visible: boolean): void
-  (e: 'update:active-kind', kind: ExtensionKind): void
-  (e: 'update:query', query: string): void
-  (e: 'update:tag', tag: string): void
 }
 
 export interface ExtensionIntent {
