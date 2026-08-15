@@ -42,6 +42,18 @@ const cloneRecord = (record: Record<string, boolean>) => {
   return clone
 }
 
+const filterRecord = (record: Record<string, boolean>, allowedKeys: Set<string>) => {
+  let hasRemovedKey = false
+  const filtered: Record<string, boolean> = {}
+
+  for (const [key, value] of Object.entries(record)) {
+    if (allowedKeys.has(key)) setRecordValue(filtered, key, value)
+    else hasRemovedKey = true
+  }
+
+  return hasRemovedKey ? filtered : record
+}
+
 const encodeSectionPart = (value: string) => `${value.length}:${value}`
 
 const getSectionStateKey = (tabId: string, sectionId: string) =>
@@ -92,6 +104,15 @@ export const useExtensionManagerState = (
       }
     })
   })
+
+  watch(
+    sectionIdentities,
+    (identities) => {
+      const currentStateKeys = new Set(identities.map((identity) => identity.stateKey))
+      uncontrolledExpandedSections.value = filterRecord(uncontrolledExpandedSections.value, currentStateKeys)
+    },
+    { immediate: true, flush: 'sync' },
+  )
 
   const getSectionIdentity = (tabId: string, sectionId: string) =>
     sectionIdentities.value.find((identity) => identity.tabId === tabId && identity.sectionId === sectionId)
