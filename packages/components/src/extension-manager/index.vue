@@ -34,6 +34,15 @@ type SectionIdentity = {
 
 const hasOwn = (record: Record<string, boolean>, key: string) => Object.prototype.hasOwnProperty.call(record, key)
 
+const setRecordValue = (record: Record<string, boolean>, key: string, value: boolean) => {
+  Object.defineProperty(record, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  })
+}
+
 const encodeSectionPart = (value: string) => `${value.length}:${value}`
 
 const getSectionStateKey = (tabId: string, sectionId: string) =>
@@ -85,10 +94,10 @@ const normalizeControlledExpandedSections = (next: Record<string, boolean>) => {
   const normalized: Record<string, boolean> = {}
 
   for (const [key, value] of Object.entries(current)) {
-    if (hasOwn(next, key)) normalized[key] = next[key] ?? value
+    if (hasOwn(next, key)) setRecordValue(normalized, key, next[key] ?? value)
   }
 
-  if (hasOwn(next, publicKey)) normalized[publicKey] = next[publicKey]!
+  if (hasOwn(next, publicKey)) setRecordValue(normalized, publicKey, next[publicKey]!)
 
   return normalized
 }
@@ -185,7 +194,7 @@ const handleNameClick = (tabId: string, sectionId: string, event: ExtensionCardG
     <div v-if="hasActiveTab" class="extension-manager__sections">
       <ExtensionManagerSection
         v-for="section in activeTab?.sections"
-        :key="`${activeTabId}/${section.id}`"
+        :key="getSectionStateKey(activeTabId!, section.id)"
         :tab-id="activeTabId!"
         :section="section"
         :expanded="getSectionExpanded(activeTabId!, section.id, section)"

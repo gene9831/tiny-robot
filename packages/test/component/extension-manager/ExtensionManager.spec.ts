@@ -155,15 +155,20 @@ test.describe('ExtensionManager foundation', () => {
     const component = await mount(ExtensionManagerFixture)
     const actionHeader = component.getByTestId('section-header-library-library-actions')
     const emptyHeader = component.getByTestId('section-header-library-library-empty')
+    const emptyBody = component.locator(
+      '[data-tab-id="library"][data-section-id="library-empty"] .extension-manager-section__body',
+    )
 
     await expect(actionHeader).toHaveAttribute('aria-expanded', 'true')
     await expect(emptyHeader).toHaveAttribute('aria-expanded', 'false')
+    await expect(emptyBody).toHaveCount(0)
 
     await actionHeader.click()
     await emptyHeader.click()
 
     await expect(actionHeader).toHaveAttribute('aria-expanded', 'false')
     await expect(emptyHeader).toHaveAttribute('aria-expanded', 'true')
+    await expect(emptyBody).toBeVisible()
     await expect(component.getByTestId('empty-slot-library-library-empty')).toBeVisible()
     await expect(component.getByTestId('expanded-sections-model')).toContainText('"library-actions":false')
     await expect(component.getByTestId('expanded-sections-model')).toContainText('"library-empty":true')
