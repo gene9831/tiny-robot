@@ -38,7 +38,7 @@ ExtensionManager.install(app)
 
 <template>
   <div data-testid="manager-surface">
-    <Manager :tabs="managerTabs" :show-header="false" />
+    <Manager :tabs="managerTabs" />
   </div>
   <output data-testid="manager-name">{{ Manager.name }}</output>
   <output data-testid="manager-list">{{ hasList }}</output>

@@ -140,10 +140,8 @@ const managerProps: ExtensionManagerProps = {
   tabs: [managerTab, secondManagerTab],
   activeTab: 'catalog',
   defaultActiveTab: 'updates',
-  defaultExpanded: false,
   columns: 3,
   title: 'Extensions',
-  showHeader: true,
   showCloseButton: true,
   emptyText: 'No enabled tabs',
 }
@@ -243,6 +241,18 @@ const oldControlledManagerProps: ExtensionManagerProps = {
   expandedSections: { catalog: { installed: true, available: false } },
 }
 
+const oldDefaultExpandedProps: ExtensionManagerProps = {
+  tabs: [managerTab],
+  // @ts-expect-error Section expansion is always initialized and managed internally.
+  defaultExpanded: false,
+}
+
+const oldShowHeaderProps: ExtensionManagerProps = {
+  tabs: [managerTab],
+  // @ts-expect-error Header visibility is derived from its content.
+  showHeader: false,
+}
+
 // @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
 const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
 
@@ -298,6 +308,8 @@ void managerItemWithoutId
 void oldManagerFacadeProps
 void oldManagerProps
 void oldControlledManagerProps
+void oldDefaultExpandedProps
+void oldShowHeaderProps
 void oldCardProps
 void cardPropsWithGridId
 void cardGridItemWithoutId

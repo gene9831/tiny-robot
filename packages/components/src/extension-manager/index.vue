@@ -19,9 +19,7 @@ import type { ExtensionManagerSectionState } from './components/ExtensionManager
 defineOptions({ name: 'ExtensionManager' })
 
 const props = withDefaults(defineProps<ExtensionManagerProps>(), {
-  showHeader: true,
   showCloseButton: false,
-  defaultExpanded: true,
   emptyText: '暂无内容',
 })
 
@@ -66,6 +64,7 @@ const { activeTab, activeTabId, selectTab, isSectionExpanded, toggleSection } = 
 )
 
 const hasActiveTab = computed(() => activeTab.value !== undefined)
+const hasHeader = computed(() => Boolean(props.title || slots['header-actions'] || props.showCloseButton))
 
 const toCardGridItem = (item: ExtensionManagerItem): ExtensionCardGridItem => {
   const { installed, ...cardItem } = item
@@ -121,9 +120,9 @@ const handleNameClick = (
 
 <template>
   <div class="extension-manager">
-    <div v-if="props.showHeader" class="extension-manager__header">
+    <div v-if="hasHeader" class="extension-manager__header">
       <div v-if="props.title" class="extension-manager__title">{{ props.title }}</div>
-      <div class="extension-manager__header-actions">
+      <div v-if="slots['header-actions'] || props.showCloseButton" class="extension-manager__header-actions">
         <slot v-if="slots['header-actions']" name="header-actions" />
         <button
           v-if="props.showCloseButton"

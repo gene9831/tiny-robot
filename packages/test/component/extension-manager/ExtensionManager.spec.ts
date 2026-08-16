@@ -66,7 +66,10 @@ test.describe('ExtensionManager section model', () => {
 
     await component.getByTestId('show-item-slot-manager').click()
 
-    const itemSlot = component.getByTestId('item-slot-manager').getByTestId('item-slot-context')
+    const itemSlotManager = component.getByTestId('item-slot-manager')
+    await expect(itemSlotManager.locator('.extension-manager__header')).toHaveCount(0)
+
+    const itemSlot = itemSlotManager.getByTestId('item-slot-context')
     await expect(itemSlot).toHaveCount(3)
     expect(await itemSlot.allTextContents()).toEqual(['false', 'false', 'false'])
   })
@@ -116,12 +119,12 @@ test.describe('ExtensionManager uncontrolled state', () => {
     const dashSection = manager.getByTestId('uncontrolled-section-header-a-b-installed')
 
     await expect(dashTab).toHaveAttribute('aria-selected', 'true')
-    await expect(dashSection).toHaveAttribute('aria-expanded', 'false')
+    await expect(dashSection).toHaveAttribute('aria-expanded', 'true')
 
     await dashSection.click()
 
-    await expect(dashSection).toHaveAttribute('aria-expanded', 'true')
-    await expect(component.getByTestId('uncontrolled-event-log')).toContainText('section-toggle:a-b/installed/true')
+    await expect(dashSection).toHaveAttribute('aria-expanded', 'false')
+    await expect(component.getByTestId('uncontrolled-event-log')).toContainText('section-toggle:a-b/installed/false')
 
     await component.getByTestId('disable-default-tab').click()
 

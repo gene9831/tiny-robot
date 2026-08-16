@@ -200,10 +200,8 @@ export interface ExtensionManagerProps {
   tabs: ExtensionManagerTab[]
   activeTab?: string
   defaultActiveTab?: string
-  defaultExpanded?: boolean
   columns?: number
   title?: string
-  showHeader?: boolean
   showCloseButton?: boolean
   emptyText?: string
 }

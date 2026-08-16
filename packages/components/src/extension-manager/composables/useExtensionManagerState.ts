@@ -71,14 +71,8 @@ const setSectionOverride = (
   setRecordValue(sectionRecord, sectionKey, expanded)
 }
 
-const getDefaultExpanded = (props: Readonly<ExtensionManagerProps>) => props.defaultExpanded ?? true
-
-const getExpanded = (
-  props: Readonly<ExtensionManagerProps>,
-  record: SectionExpansionState,
-  tabId: string,
-  sectionKey: ExtensionManagerSectionKey,
-) => getSectionOverride(record, tabId, sectionKey) ?? getDefaultExpanded(props)
+const getExpanded = (record: SectionExpansionState, tabId: string, sectionKey: ExtensionManagerSectionKey) =>
+  getSectionOverride(record, tabId, sectionKey) ?? true
 
 export const useExtensionManagerState = (
   props: Readonly<ExtensionManagerProps>,
@@ -152,7 +146,7 @@ export const useExtensionManagerState = (
   )
 
   const isSectionExpanded = (tabId: string, sectionKey: ExtensionManagerSectionKey) => {
-    return getExpanded(props, sectionExpansionState.value, tabId, sectionKey)
+    return getExpanded(sectionExpansionState.value, tabId, sectionKey)
   }
 
   const selectTab = (tabId: string) => {

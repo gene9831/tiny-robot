@@ -51,7 +51,6 @@ const identityTabs: ExtensionManagerTab[] = [
     <ExtensionManager
       :tabs="tabs"
       default-active-tab="a-b"
-      :default-expanded="false"
       empty-text="No uncontrolled tabs"
       @update:active-tab="handleActiveTabUpdate"
       @section-toggle="handleSectionToggle"
@@ -80,7 +79,7 @@ const identityTabs: ExtensionManagerTab[] = [
   <output data-testid="uncontrolled-event-log">{{ eventLog.join('|') }}</output>
 
   <div data-testid="identity-manager">
-    <ExtensionManager :tabs="identityTabs" :show-header="false">
+    <ExtensionManager :tabs="identityTabs">
       <template #section-header="{ tab, sectionKey, title, expanded, toggle }">
         <button
           type="button"

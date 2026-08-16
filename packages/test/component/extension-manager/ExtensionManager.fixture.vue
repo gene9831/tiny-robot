@@ -141,7 +141,7 @@ const setExternalActiveTab = (tabId: string) => {
   </button>
 
   <div v-if="showItemSlotManager" data-testid="item-slot-manager">
-    <ExtensionManager :tabs="tabs" :show-header="false">
+    <ExtensionManager :tabs="tabs">
       <template #item="{ item }">
         <span data-testid="item-slot-context">{{ 'installed' in item }}</span>
       </template>
