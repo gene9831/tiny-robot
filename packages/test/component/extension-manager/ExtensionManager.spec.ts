@@ -9,8 +9,12 @@ test.describe('ExtensionManager section model', () => {
 
     await expect(manager.locator('[data-section-key="installed"]')).toHaveCount(1)
     await expect(manager.locator('[data-section-key="available"]')).toHaveCount(1)
-    await expect(manager.getByTestId('section-header-library-installed')).toHaveText('已安装 (1)')
-    await expect(manager.getByTestId('section-header-library-available')).toHaveText('可安装 (2)')
+    await expect(
+      manager.locator('section[data-section-key="installed"]').getByRole('button', { name: '已安装', exact: true }),
+    ).toHaveCount(1)
+    await expect(
+      manager.locator('section[data-section-key="available"]').getByRole('button', { name: '可安装', exact: true }),
+    ).toHaveCount(1)
 
     const installedIds = await manager
       .locator('[data-section-key="installed"] li[data-card-id]')
@@ -29,8 +33,12 @@ test.describe('ExtensionManager section model', () => {
     await component.getByTestId('set-active-market').click()
 
     const manager = component.getByTestId('manager-host')
-    await expect(manager.getByTestId('section-header-market-installed')).toHaveText('已安装 (1)')
-    await expect(manager.getByTestId('section-header-market-available')).toHaveText('可安装 (0)')
+    await expect(
+      manager.locator('section[data-section-key="installed"]').getByRole('button', { name: '已安装', exact: true }),
+    ).toHaveCount(1)
+    await expect(
+      manager.locator('section[data-section-key="available"]').getByRole('button', { name: '可安装', exact: true }),
+    ).toHaveCount(1)
     await expect(manager.getByTestId('empty-slot-market-available')).toHaveText('Empty available')
   })
 
@@ -42,20 +50,18 @@ test.describe('ExtensionManager section model', () => {
 
     await expect(manager.locator('[data-section-key="installed"] li[data-card-id="beta"]')).toHaveCount(1)
     await expect(manager.locator('[data-section-key="available"] li[data-card-id="beta"]')).toHaveCount(0)
-    await expect(manager.getByTestId('section-header-library-installed')).toHaveText('已安装 (2)')
-    await expect(manager.getByTestId('section-header-library-available')).toHaveText('可安装 (1)')
   })
 
-  test('uses section header and empty slot context without exposing section configuration props', async ({ mount }) => {
+  test('uses default section headers and empty slot context', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
     const manager = component.getByTestId('manager-host')
 
-    await expect(manager.getByTestId('section-header-context-library-installed')).toHaveText(
-      'library/installed/已安装/1',
-    )
-    await expect(manager.getByTestId('section-header-context-library-available')).toHaveText(
-      'library/available/可安装/2',
-    )
+    await expect(
+      manager.locator('section[data-section-key="installed"]').getByRole('button', { name: '已安装', exact: true }),
+    ).toHaveText('已安装')
+    await expect(
+      manager.locator('section[data-section-key="available"]').getByRole('button', { name: '可安装', exact: true }),
+    ).toHaveText('可安装')
 
     await component.getByTestId('set-active-market').click()
     await expect(manager.getByTestId('empty-slot-context-market-available')).toHaveText('market/available/可安装')
@@ -77,21 +83,27 @@ test.describe('ExtensionManager section model', () => {
   test('preserves collapse state per tab and section key', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
     const manager = component.getByTestId('manager-host')
-    const libraryInstalled = manager.getByTestId('section-header-library-installed')
-    const libraryAvailable = manager.getByTestId('section-header-library-available')
+    const libraryInstalled = manager
+      .locator('section[data-tab-id="library"][data-section-key="installed"]')
+      .getByRole('button', { name: '已安装', exact: true })
+    const libraryAvailable = manager
+      .locator('section[data-tab-id="library"][data-section-key="available"]')
+      .getByRole('button', { name: '可安装', exact: true })
 
     await libraryInstalled.click()
     await expect(libraryInstalled).toHaveAttribute('aria-expanded', 'false')
     await expect(libraryAvailable).toHaveAttribute('aria-expanded', 'true')
 
     await component.getByTestId('set-active-market').click()
-    const marketInstalled = manager.getByTestId('section-header-market-installed')
+    const marketInstalled = manager
+      .locator('section[data-tab-id="market"][data-section-key="installed"]')
+      .getByRole('button', { name: '已安装', exact: true })
     await expect(marketInstalled).toHaveAttribute('aria-expanded', 'true')
 
     await marketInstalled.click()
     await component.getByTestId('set-active-library').click()
-    await expect(manager.getByTestId('section-header-library-installed')).toHaveAttribute('aria-expanded', 'false')
-    await expect(manager.getByTestId('section-header-market-installed')).toHaveCount(0)
+    await expect(libraryInstalled).toHaveAttribute('aria-expanded', 'false')
+    await expect(manager.locator('section[data-tab-id="market"]')).toHaveCount(0)
   })
 
   test('routes Card action and name-click events with section keys', async ({ mount }) => {
@@ -116,7 +128,9 @@ test.describe('ExtensionManager uncontrolled state', () => {
     const manager = component.getByTestId('uncontrolled-manager')
     const dashTab = manager.getByRole('tab', { name: /Dash tab/ })
     const slashTab = manager.getByRole('tab', { name: /Slash tab/ })
-    const dashSection = manager.getByTestId('uncontrolled-section-header-a-b-installed')
+    const dashSection = manager
+      .locator('section[data-tab-id="a-b"][data-section-key="installed"]')
+      .getByRole('button', { name: '已安装', exact: true })
 
     await expect(dashTab).toHaveAttribute('aria-selected', 'true')
     await expect(dashSection).toHaveAttribute('aria-expanded', 'true')
@@ -136,7 +150,9 @@ test.describe('ExtensionManager uncontrolled state', () => {
   test('keeps arbitrary tab ids safe in the nested expansion model', async ({ mount }) => {
     const component = await mount(ExtensionManagerUncontrolledFixture)
     const manager = component.getByTestId('identity-manager')
-    const slashSection = manager.getByTestId('identity-section-header-a/b-installed')
+    const slashSection = manager
+      .locator('section[data-tab-id="a/b"][data-section-key="installed"]')
+      .getByRole('button', { name: '已安装', exact: true })
 
     await expect(slashSection).toHaveAttribute('aria-expanded', 'true')
     await slashSection.click()
@@ -144,6 +160,10 @@ test.describe('ExtensionManager uncontrolled state', () => {
 
     await manager.getByRole('tab', { name: /Dash identity tab/ }).click()
 
-    await expect(manager.getByTestId('identity-section-header-a-b-installed')).toHaveAttribute('aria-expanded', 'true')
+    await expect(
+      manager
+        .locator('section[data-tab-id="a-b"][data-section-key="installed"]')
+        .getByRole('button', { name: '已安装', exact: true }),
+    ).toHaveAttribute('aria-expanded', 'true')
   })
 })

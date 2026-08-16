@@ -164,18 +164,6 @@ const handleNameClick = (
         @action="handleAction(activeTabId!, section.key, $event)"
         @name-click="handleNameClick(activeTabId!, section.key, $event)"
       >
-        <template v-if="slots['section-header']" #section-header="{ sectionKey, title, expanded, toggle, count }">
-          <slot
-            name="section-header"
-            :tab="activeTab!"
-            :section-key="sectionKey"
-            :title="title"
-            :expanded="expanded"
-            :toggle="toggle"
-            :count="count"
-          />
-        </template>
-
         <template v-if="slots.item" #item="{ item, index }">
           <slot name="item" :tab="activeTab!" :section-key="section.key" :item="item" :index="index" />
         </template>

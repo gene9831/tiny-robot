@@ -209,14 +209,6 @@ export interface ExtensionManagerProps {
 export interface ExtensionManagerSlots {
   'header-actions'?: () => VNode[]
   tab?: (props: { tab: ExtensionManagerTab; active: boolean; select: () => void }) => VNode[]
-  'section-header'?: (props: {
-    tab: ExtensionManagerTab
-    sectionKey: ExtensionManagerSectionKey
-    title: string
-    expanded: boolean
-    toggle: () => void
-    count: number
-  }) => VNode[]
   item?: (props: {
     tab: ExtensionManagerTab
     sectionKey: ExtensionManagerSectionKey

@@ -60,17 +60,6 @@ const identityTabs: ExtensionManagerTab[] = [
           {{ tab.label }}<span v-if="active"> selected</span>
         </span>
       </template>
-
-      <template #section-header="{ tab, sectionKey, title, expanded, toggle }">
-        <button
-          type="button"
-          :data-testid="'uncontrolled-section-header-' + tab.id + '-' + sectionKey"
-          :aria-expanded="expanded"
-          @click="toggle"
-        >
-          {{ title }}
-        </button>
-      </template>
     </ExtensionManager>
   </div>
 
@@ -79,17 +68,6 @@ const identityTabs: ExtensionManagerTab[] = [
   <output data-testid="uncontrolled-event-log">{{ eventLog.join('|') }}</output>
 
   <div data-testid="identity-manager">
-    <ExtensionManager :tabs="identityTabs">
-      <template #section-header="{ tab, sectionKey, title, expanded, toggle }">
-        <button
-          type="button"
-          :data-testid="'identity-section-header-' + tab.id + '-' + sectionKey"
-          :aria-expanded="expanded"
-          @click="toggle"
-        >
-          {{ title }}
-        </button>
-      </template>
-    </ExtensionManager>
+    <ExtensionManager :tabs="identityTabs"> </ExtensionManager>
   </div>
 </template>

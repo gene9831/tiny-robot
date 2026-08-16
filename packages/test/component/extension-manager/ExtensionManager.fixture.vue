@@ -106,20 +106,6 @@ const setExternalActiveTab = (tabId: string) => {
       @action="handleAction"
       @name-click="handleNameClick"
     >
-      <template #section-header="{ tab, sectionKey, title, expanded, toggle, count }">
-        <button
-          type="button"
-          :data-testid="'section-header-' + tab.id + '-' + sectionKey"
-          :aria-expanded="expanded"
-          @click="toggle"
-        >
-          {{ title }} ({{ count }})
-        </button>
-        <span :data-testid="'section-header-context-' + tab.id + '-' + sectionKey">
-          {{ tab.id }}/{{ sectionKey }}/{{ title }}/{{ count }}
-        </span>
-      </template>
-
       <template #empty="{ tab, sectionKey, title }">
         <span :data-testid="'empty-slot-' + tab.id + '-' + sectionKey">Empty {{ sectionKey }}</span>
         <span :data-testid="'empty-slot-context-' + tab.id + '-' + sectionKey">

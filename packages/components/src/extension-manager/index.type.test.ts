@@ -179,20 +179,6 @@ const managerSlots: ExtensionManagerSlots = {
     void isActive
     return []
   },
-  'section-header': ({ tab, sectionKey, title, expanded, toggle, count }) => {
-    const tabId: string = tab.id
-    const sectionTitle: string = title
-    const isExpanded: boolean = expanded
-    const itemCount: number = count
-    toggle()
-
-    void tabId
-    void sectionKey
-    void sectionTitle
-    void isExpanded
-    void itemCount
-    return []
-  },
   item: ({ tab, sectionKey, item, index }) => {
     const tabId: string = tab.id
     const itemId: string = item.id

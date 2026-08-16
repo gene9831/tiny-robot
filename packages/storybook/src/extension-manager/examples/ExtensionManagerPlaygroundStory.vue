@@ -159,18 +159,6 @@ const handleClose = () => {
         <button type="button" @click="handleHeaderAction">Header action</button>
       </template>
 
-      <template #section-header="{ tab, title, expanded, toggle, count }">
-        <button
-          type="button"
-          class="storybook-manager-playground__section-header"
-          :aria-expanded="expanded"
-          @click="toggle"
-        >
-          <span>{{ tab.label }} / {{ title }}</span>
-          <small>{{ count }} items</small>
-        </button>
-      </template>
-
       <template #empty="{ title }">
         <span>{{ title }} is empty.</span>
       </template>
@@ -216,24 +204,6 @@ const handleClose = () => {
 .storybook-manager-playground__closed {
   margin: 0;
   color: var(--tr-text-secondary);
-}
-
-.storybook-manager-playground__section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.storybook-manager-playground__section-header small {
-  color: var(--tr-text-tertiary);
 }
 
 .storybook-manager-playground__events {

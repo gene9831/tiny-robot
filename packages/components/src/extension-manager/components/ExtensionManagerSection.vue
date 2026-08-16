@@ -14,13 +14,6 @@ const props = defineProps<{
 }>()
 
 const slots = defineSlots<{
-  'section-header'?: (props: {
-    sectionKey: ExtensionManagerSectionState['key']
-    title: string
-    expanded: boolean
-    toggle: () => void
-    count: number
-  }) => VNode[]
   item?: (props: { item: ExtensionManagerSectionState['items'][number]; index: number }) => VNode[]
   empty?: () => VNode[]
 }>()
@@ -41,24 +34,7 @@ const handleNameClick = (event: ExtensionCardGridNameClickEvent) => emit('name-c
 <template>
   <section class="extension-manager-section" :data-tab-id="props.tabId" :data-section-key="props.section.key">
     <div class="extension-manager-section__header">
-      <template v-if="slots['section-header']">
-        <slot
-          name="section-header"
-          :section-key="props.section.key"
-          :title="props.section.title"
-          :expanded="props.expanded"
-          :toggle="toggle"
-          :count="props.section.items.length"
-        />
-      </template>
-
-      <button
-        v-else
-        class="extension-manager-section__title"
-        type="button"
-        :aria-expanded="props.expanded"
-        @click="toggle"
-      >
+      <button class="extension-manager-section__title" type="button" :aria-expanded="props.expanded" @click="toggle">
         <IconArrowDown class="extension-manager-section__arrow" :class="{ 'is-expanded': props.expanded }" />
         <span>{{ props.section.title }}</span>
       </button>
