@@ -260,6 +260,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   height: 100%;
   border-radius: inherit;
   background: var(--tr-extension-card-progress-bar-color);
+  transition: width 240ms ease-out;
 }
 
 .tr-extension-card__progress-bar.is-indeterminate {
@@ -274,6 +275,16 @@ const handleNameKeydown = (event: KeyboardEvent) => {
 
   100% {
     transform: translateX(260%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-extension-card__progress-bar {
+    transition: none;
+  }
+
+  .tr-extension-card__progress-bar.is-indeterminate {
+    animation: none;
   }
 }
 </style>
