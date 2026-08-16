@@ -104,9 +104,9 @@ const setExternalActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
 
-const removeSelectedTag = () => {
+const removeLibraryTag = (tagValue: string) => {
   tabs.value = tabs.value.map((tab) =>
-    tab.id === activeTab.value ? { ...tab, tags: (tab.tags ?? []).filter((tag) => tag.value !== 'recommended') } : tab,
+    tab.id === activeTab.value ? { ...tab, tags: (tab.tags ?? []).filter((tag) => tag.value !== tagValue) } : tab,
   )
 }
 
@@ -147,7 +147,12 @@ const removeMarketTab = () => {
     Set active library
   </button>
   <button type="button" data-testid="install-beta" @click="installBeta">Install beta</button>
-  <button type="button" data-testid="remove-selected-tag" @click="removeSelectedTag">Remove selected tag</button>
+  <button type="button" data-testid="remove-recommended-tag" @click="removeLibraryTag('recommended')">
+    Remove recommended tag
+  </button>
+  <button type="button" data-testid="remove-writing-tag" @click="removeLibraryTag('writing')">
+    Remove writing tag
+  </button>
   <button type="button" data-testid="empty-library" @click="emptyLibrary">Empty library</button>
   <button type="button" data-testid="remove-market-tab" @click="removeMarketTab">Remove market tab</button>
   <button type="button" data-testid="show-item-slot-manager" @click="showItemSlotManager = true">
@@ -158,6 +163,7 @@ const removeMarketTab = () => {
     <ExtensionManager :tabs="tabs">
       <template #item="{ item }">
         <span data-testid="item-slot-context">{{ 'installed' in item }}</span>
+        <span data-testid="item-slot-keys">{{ JSON.stringify(Object.keys(item)) }}</span>
       </template>
     </ExtensionManager>
   </div>

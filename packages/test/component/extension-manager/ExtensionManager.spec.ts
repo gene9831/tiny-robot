@@ -197,16 +197,13 @@ test.describe('ExtensionManager Filter acceptance', () => {
     const component = await mount(ExtensionManagerFixture)
     const manager = component.getByTestId('manager-host')
 
-    await manager.getByTestId('filter-tag').selectOption('recommended')
+    await manager.getByTestId('filter-search').fill('description')
+    const availableIds = await manager
+      .locator('[data-section-key="available"] li[data-card-id]')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-card-id')))
     await expect(manager.locator('[data-section-key="installed"] li[data-card-id]')).toHaveCount(1)
-    await expect(manager.locator('[data-section-key="installed"] li[data-card-id]')).toHaveAttribute(
-      'data-card-id',
-      'alpha',
-    )
-    await expect(manager.locator('[data-section-key="available"] li[data-card-id]')).toHaveAttribute(
-      'data-card-id',
-      'gamma',
-    )
+    await expect(manager.locator('[data-section-key="available"] li[data-card-id]')).toHaveCount(2)
+    expect(availableIds).toEqual(['beta', 'gamma'])
   })
 
   test('keeps static tags, disables the selector without tags, and keeps the filter row for empty tabs', async ({
@@ -217,9 +214,9 @@ test.describe('ExtensionManager Filter acceptance', () => {
 
     await expect(manager.getByTestId('filter-tag').locator('option')).toHaveCount(3)
     await manager.getByTestId('filter-tag').selectOption('recommended')
-    await component.getByTestId('remove-selected-tag').click()
+    await component.getByTestId('remove-recommended-tag').click()
     await manager.getByTestId('filter-tag').selectOption('writing')
-    await component.getByTestId('remove-selected-tag').click()
+    await component.getByTestId('remove-writing-tag').click()
     await expect(manager.getByTestId('filter-tag')).toBeDisabled()
     await component.getByTestId('set-active-market').click()
     await expect(manager.getByTestId('filter-tag')).toBeEnabled()
@@ -238,7 +235,7 @@ test.describe('ExtensionManager Filter acceptance', () => {
     await component.getByTestId('set-active-market').click()
     await expect(manager.getByTestId('filter-search')).toHaveValue('')
     await component.getByTestId('set-active-library').click()
-    await component.getByTestId('remove-selected-tag').click()
+    await component.getByTestId('remove-recommended-tag').click()
     await expect(manager.getByTestId('filter-tag')).toHaveValue('')
     await expect(manager.getByTestId('filter-search')).toHaveValue('alpha')
     await component.getByTestId('remove-market-tab').click()
@@ -248,7 +245,12 @@ test.describe('ExtensionManager Filter acceptance', () => {
   test('does not expose item tags in the item slot Card/Grid boundary', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
     await component.getByTestId('show-item-slot-manager').click()
-    await expect(component.getByTestId('item-slot-manager').getByTestId('item-slot-context')).toHaveCount(3)
-    await expect(component.getByTestId('item-slot-manager').locator('[data-item-tags]')).toHaveCount(0)
+    const itemSlotManager = component.getByTestId('item-slot-manager')
+    await expect(itemSlotManager.locator('.extension-manager__header')).toHaveCount(0)
+    await expect(itemSlotManager.getByTestId('item-slot-context')).toHaveCount(3)
+    await expect(itemSlotManager.getByTestId('item-slot-keys')).toHaveCount(3)
+    for (const keys of await itemSlotManager.getByTestId('item-slot-keys').allTextContents()) {
+      expect(JSON.parse(keys)).not.toContain('tags')
+    }
   })
 })
