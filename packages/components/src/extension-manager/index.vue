@@ -2,8 +2,11 @@
 import { IconClose } from '@opentiny/tiny-robot-svgs'
 import { computed, useId } from 'vue'
 import { useExtensionManagerState } from './composables/useExtensionManagerState'
+import { useExtensionManagerFilterState } from './composables/useExtensionManagerFilterState'
+import { useFilter } from './composables/useFilter'
 import ExtensionManagerSection from './components/ExtensionManagerSection.vue'
 import ExtensionManagerTabs from './components/ExtensionManagerTabs.vue'
+import ExtensionFilterControls from './components/ExtensionFilterControls.vue'
 import type {
   ExtensionCardGridActionEvent,
   ExtensionCardGridNameClickEvent,
@@ -63,18 +66,30 @@ const { activeTab, activeTabId, selectTab, isSectionExpanded, toggleSection } = 
   stateEmit,
 )
 
+const { getFilterState } = useExtensionManagerFilterState(() => props.tabs)
+const deriveTags = (items: readonly ExtensionManagerItem[]) => {
+  const values = new Set(items.flatMap((item) => item.tags ?? []))
+  return [...values].map((value) => ({ value, label: value }))
+}
+const filter = useFilter<ExtensionManagerItem>({
+  items: () => activeTab.value?.items ?? [],
+  tags: () => activeTab.value?.tags ?? deriveTags(activeTab.value?.items ?? []),
+  state: () => getFilterState(activeTabId.value),
+})
+
 const hasActiveTab = computed(() => activeTab.value !== undefined)
 const hasHeader = computed(() => Boolean(props.title || slots['header-actions'] || props.showCloseButton))
 
 const toCardGridItem = (item: ExtensionManagerItem): ExtensionCardGridItem => {
-  const { installed, ...cardItem } = item
+  const { installed, tags, ...cardItem } = item
 
   void installed
+  void tags
   return cardItem
 }
 
 const activeSections = computed<ExtensionManagerSectionState[]>(() => {
-  const items = activeTab.value?.items ?? []
+  const items = filter.filteredItems.value
 
   return SECTION_DEFINITIONS.map(({ key, title }) => ({
     key,
@@ -146,6 +161,8 @@ const handleNameClick = (
         <slot name="tab" :tab="tab" :active="active" :select="select" />
       </template>
     </ExtensionManagerTabs>
+
+    <ExtensionFilterControls v-bind="filter.controls.value" />
 
     <div
       v-if="hasActiveTab"
