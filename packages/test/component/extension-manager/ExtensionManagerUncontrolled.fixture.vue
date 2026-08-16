@@ -7,27 +7,12 @@ const tabs = ref<ExtensionManagerTab[]>([
   {
     id: 'a/b',
     label: 'Slash tab',
-    sections: [
-      {
-        id: '__proto__',
-        title: 'Prototype section',
-        items: [],
-        collapsible: true,
-        defaultExpanded: true,
-      },
-    ],
+    items: [{ id: 'slash-installed', name: 'Slash installed', installed: true }],
   },
   {
     id: 'a-b',
     label: 'Dash tab',
-    sections: [
-      {
-        id: 'dash-section',
-        title: 'Dash section',
-        items: [],
-        collapsible: true,
-      },
-    ],
+    items: [{ id: 'dash-installed', name: 'Dash installed', installed: true }],
   },
 ])
 
@@ -36,72 +21,38 @@ const eventLog = ref<string[]>([])
 const record = (event: string) => eventLog.value.push(event)
 
 const handleActiveTabUpdate = (tabId: string | undefined) => {
-  record(`update:active-tab:${tabId ?? 'undefined'}`)
+  record('update:active-tab:' + (tabId ?? 'undefined'))
 }
 
-const handleExpandedSectionsUpdate = (expanded: Record<string, boolean>) => {
-  record(`update:expanded-sections:${JSON.stringify(expanded)}`)
+const handleExpandedSectionsUpdate = (expanded: Record<string, Record<string, boolean>>) => {
+  record('update:expanded-sections:' + JSON.stringify(expanded))
 }
 
-const handleSectionToggle = (event: { tabId: string; sectionId: string; expanded: boolean }) => {
-  record(`section-toggle:${event.tabId}/${event.sectionId}/${event.expanded}`)
+const handleSectionToggle = (event: { tabId: string; sectionKey: string; expanded: boolean }) => {
+  record('section-toggle:' + event.tabId + '/' + event.sectionKey + '/' + event.expanded)
 }
 
 const disableDefaultTab = () => {
   tabs.value = tabs.value.map((tab) => (tab.id === 'a-b' ? { ...tab, disabled: true } : tab))
 }
 
-const craftedCanonicalStateKey = 'extension-manager/section/8:identity/9:canonical'
-
 const identityTabs: ExtensionManagerTab[] = [
   {
-    id: 'identity',
-    label: 'Identity tab',
-    sections: [
-      {
-        id: 'canonical',
-        title: 'Canonical',
-        items: [],
-        collapsible: true,
-        defaultExpanded: true,
-      },
-      {
-        id: craftedCanonicalStateKey,
-        title: 'Crafted state key',
-        items: [],
-        collapsible: true,
-        defaultExpanded: true,
-      },
-      {
-        id: '__proto__',
-        title: 'Prototype identity',
-        items: [],
-        collapsible: true,
-        defaultExpanded: true,
-      },
-    ],
+    id: 'a/b',
+    label: 'Slash identity tab',
+    items: [{ id: 'identity-slash', name: 'Identity slash', installed: true }],
+  },
+  {
+    id: 'a-b',
+    label: 'Dash identity tab',
+    items: [{ id: 'identity-dash', name: 'Identity dash', installed: true }],
   },
 ]
 
-const identityExpandedSections: Record<string, boolean> = {}
-Object.defineProperty(identityExpandedSections, 'canonical', {
-  configurable: true,
-  enumerable: true,
-  value: false,
-  writable: true,
-})
-Object.defineProperty(identityExpandedSections, craftedCanonicalStateKey, {
-  configurable: true,
-  enumerable: true,
-  value: true,
-  writable: true,
-})
-Object.defineProperty(identityExpandedSections, '__proto__', {
-  configurable: true,
-  enumerable: true,
-  value: false,
-  writable: true,
-})
+const identityExpandedSections: Record<string, Record<string, boolean>> = {
+  'a/b': { installed: false, available: true },
+  'a-b': { installed: true, available: false },
+}
 </script>
 
 <template>
@@ -116,7 +67,7 @@ Object.defineProperty(identityExpandedSections, '__proto__', {
       @section-toggle="handleSectionToggle"
     >
       <template #tab="{ tab, active, select }">
-        <span :data-testid="`uncontrolled-tab-slot-${tab.id}`" @click="select">
+        <span :data-testid="'uncontrolled-tab-slot-' + tab.id" @click="select">
           {{ tab.label }}<span v-if="active"> selected</span>
         </span>
       </template>
@@ -124,7 +75,7 @@ Object.defineProperty(identityExpandedSections, '__proto__', {
       <template #section-header="{ tab, section, expanded, toggle }">
         <button
           type="button"
-          :data-testid="`uncontrolled-section-header-${tab.id}-${section.id}`"
+          :data-testid="'uncontrolled-section-header-' + tab.id + '-' + section.key"
           :aria-expanded="expanded"
           @click="toggle"
         >
@@ -143,7 +94,7 @@ Object.defineProperty(identityExpandedSections, '__proto__', {
       <template #section-header="{ tab, section, expanded, toggle }">
         <button
           type="button"
-          :data-testid="`identity-section-header-${tab.id}-${section.id}`"
+          :data-testid="'identity-section-header-' + tab.id + '-' + section.key"
           :aria-expanded="expanded"
           @click="toggle"
         >

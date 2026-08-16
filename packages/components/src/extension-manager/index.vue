@@ -7,9 +7,13 @@ import ExtensionManagerTabs from './components/ExtensionManagerTabs.vue'
 import type {
   ExtensionCardGridActionEvent,
   ExtensionCardGridNameClickEvent,
+  ExtensionCardGridItem,
   ExtensionManagerEmits,
+  ExtensionManagerExpandedSections,
+  ExtensionManagerItem,
   ExtensionManagerProps,
   ExtensionManagerSection as ExtensionManagerSectionData,
+  ExtensionManagerSectionKey,
   ExtensionManagerSlots,
 } from './index.type'
 
@@ -25,15 +29,23 @@ const props = withDefaults(defineProps<ExtensionManagerProps>(), {
 const emit = defineEmits<ExtensionManagerEmits>()
 const slots = defineSlots<ExtensionManagerSlots>()
 
-const encodeSectionPart = (value: string) => `${value.length}:${value}`
+const SECTION_DEFINITIONS: readonly {
+  key: ExtensionManagerSectionKey
+  title: string
+}[] = [
+  { key: 'installed', title: '已安装' },
+  { key: 'available', title: '可安装' },
+]
 
-const getSectionStateKey = (tabId: string, sectionId: string) =>
-  `extension-manager/section/${encodeSectionPart(tabId)}/${encodeSectionPart(sectionId)}`
+const encodeSectionPart = (value: string) => value.length + ':' + value
+
+const getSectionStateKey = (tabId: string, sectionKey: ExtensionManagerSectionKey) =>
+  'extension-manager/section/' + encodeSectionPart(tabId) + '/' + encodeSectionPart(sectionKey)
 
 const managerId = useId()
-const managerIdPrefix = `extension-manager-${managerId}`
-const getTabDomId = (tabId: string) => `${managerIdPrefix}-tab-${encodeSectionPart(tabId)}`
-const getTabPanelDomId = (tabId: string) => `${managerIdPrefix}-tabpanel-${encodeSectionPart(tabId)}`
+const managerIdPrefix = 'extension-manager-' + managerId
+const getTabDomId = (tabId: string) => managerIdPrefix + '-tab-' + encodeSectionPart(tabId)
+const getTabPanelDomId = (tabId: string) => managerIdPrefix + '-tabpanel-' + encodeSectionPart(tabId)
 
 const stateEmit = ((event: string, payload?: unknown) => {
   switch (event) {
@@ -44,10 +56,10 @@ const stateEmit = ((event: string, payload?: unknown) => {
       emit('tab-change', payload as { tabId: string })
       break
     case 'update:expanded-sections':
-      emit('update:expanded-sections', payload as Record<string, boolean>)
+      emit('update:expanded-sections', payload as ExtensionManagerExpandedSections)
       break
     case 'section-toggle':
-      emit('section-toggle', payload as { tabId: string; sectionId: string; expanded: boolean })
+      emit('section-toggle', payload as { tabId: string; sectionKey: ExtensionManagerSectionKey; expanded: boolean })
       break
   }
 }) as unknown as ExtensionManagerEmits
@@ -59,39 +71,52 @@ const { activeTab, activeTabId, selectTab, isSectionExpanded, toggleSection } = 
 
 const hasActiveTab = computed(() => activeTab.value !== undefined)
 
-const getSectionExpanded = (
-  tabId: string,
-  sectionId: string,
-  section: (typeof props.tabs)[number]['sections'][number],
-) => {
-  return isSectionExpanded(tabId, sectionId, section)
+const toCardGridItem = (item: ExtensionManagerItem): ExtensionCardGridItem => {
+  const { installed, ...cardItem } = item
+
+  void installed
+  return cardItem
 }
+
+const activeSections = computed<ExtensionManagerSectionData[]>(() => {
+  const items = activeTab.value?.items ?? []
+
+  return SECTION_DEFINITIONS.map(({ key, title }) => ({
+    key,
+    title,
+    columns: props.columns,
+    items: items.filter((item) => (item.installed === true ? 'installed' : 'available') === key).map(toCardGridItem),
+  }))
+})
+
+const getSectionExpanded = (tabId: string, sectionKey: ExtensionManagerSectionKey) =>
+  isSectionExpanded(tabId, sectionKey)
 
 const handleClose = () => emit('close')
 
-const handleSectionToggle = (tabId: string, section: ExtensionManagerSectionData) => {
+const handleSectionToggle = (tabId: string, sectionKey: ExtensionManagerSectionKey) => {
   if (activeTab.value?.id !== tabId) return
 
-  toggleSection(tabId, section)
+  toggleSection(tabId, sectionKey)
 }
 
-const handleRetry = (tabId: string, sectionId: string) => {
-  emit('retry', { tabId, sectionId })
-}
-
-const handleAction = (tabId: string, sectionId: string, event: ExtensionCardGridActionEvent) => {
+const handleAction = (tabId: string, sectionKey: ExtensionManagerSectionKey, event: ExtensionCardGridActionEvent) => {
   emit('action', {
     tabId,
-    sectionId,
+    sectionKey,
     itemId: event.itemId,
     action: event.action,
   })
 }
 
-const handleNameClick = (tabId: string, sectionId: string, event: ExtensionCardGridNameClickEvent) => {
+const handleNameClick = (
+  tabId: string,
+  sectionKey: ExtensionManagerSectionKey,
+  event: ExtensionCardGridNameClickEvent,
+) => {
   emit('name-click', {
     tabId,
-    sectionId,
+    sectionKey,
     itemId: event.itemId,
     event: event.event,
   })
@@ -135,30 +160,28 @@ const handleNameClick = (tabId: string, sectionId: string, event: ExtensionCardG
       :aria-labelledby="getTabDomId(activeTabId!)"
     >
       <ExtensionManagerSection
-        v-for="section in activeTab?.sections"
-        :key="getSectionStateKey(activeTabId!, section.id)"
+        v-for="section in activeSections"
+        :key="getSectionStateKey(activeTabId!, section.key)"
         :tab-id="activeTabId!"
         :section="section"
-        :expanded="getSectionExpanded(activeTabId!, section.id, section)"
-        @section-toggle="handleSectionToggle(activeTabId!, section)"
-        @retry="handleRetry(activeTabId!, section.id)"
-        @action="handleAction(activeTabId!, section.id, $event)"
-        @name-click="handleNameClick(activeTabId!, section.id, $event)"
+        :expanded="getSectionExpanded(activeTabId!, section.key)"
+        @section-toggle="handleSectionToggle(activeTabId!, section.key)"
+        @action="handleAction(activeTabId!, section.key, $event)"
+        @name-click="handleNameClick(activeTabId!, section.key, $event)"
       >
-        <template v-if="slots['section-header']" #section-header="{ section: sectionValue, expanded, toggle }">
-          <slot name="section-header" :tab="activeTab!" :section="sectionValue" :expanded="expanded" :toggle="toggle" />
+        <template v-if="slots['section-header']" #section-header="{ section: sectionValue, expanded, toggle, count }">
+          <slot
+            name="section-header"
+            :tab="activeTab!"
+            :section="sectionValue"
+            :expanded="expanded"
+            :toggle="toggle"
+            :count="count"
+          />
         </template>
 
         <template v-if="slots.item" #item="{ item, index }">
           <slot name="item" :tab="activeTab!" :section="section" :item="item" :index="index" />
-        </template>
-
-        <template v-if="slots.loading" #loading>
-          <slot name="loading" :tab="activeTab!" :section="section" />
-        </template>
-
-        <template v-if="slots.error" #error="{ error, retry }">
-          <slot name="error" :tab="activeTab!" :section="section" :error="error" :retry="retry" />
         </template>
 
         <template v-if="slots.empty" #empty>

@@ -13,12 +13,13 @@ import type {
   ExtensionCardProps,
   ExtensionIntent,
   ExtensionManagerActionEvent,
+  ExtensionManagerExpandedSections,
   ExtensionManagerEmits,
   ExtensionManagerItem,
   ExtensionManagerNameClickEvent,
   ExtensionManagerProps,
-  ExtensionManagerRetryEvent,
   ExtensionManagerSection,
+  ExtensionManagerSectionKey,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerSlots,
   ExtensionManagerTab,
@@ -120,36 +121,18 @@ cardGridEmit('name-click', cardGridNameClickEvent)
 const managerItem: ExtensionManagerItem = {
   ...cardProps,
   id: 'manager-item',
+  installed: true,
 }
 
 const managerSection: ExtensionManagerSection = {
-  id: 'installed',
-  title: 'Installed',
+  key: 'installed',
+  title: '已安装',
   items: [managerItem],
   columns: 2,
-  collapsible: true,
-  defaultExpanded: true,
-  loading: false,
-  error: undefined,
-  emptyText: 'No installed extensions',
 }
 const managerEmptySection: ExtensionManagerSection = {
-  id: 'available',
-  title: 'Available',
-  items: [],
-  collapsible: false,
-  loading: true,
-  error: new Error('Catalog unavailable'),
-  emptyText: 'No available extensions',
-}
-const secondManagerSection: ExtensionManagerSection = {
-  id: 'installed-secondary',
-  title: 'Installed secondary',
-  items: [managerItem],
-}
-const secondManagerEmptySection: ExtensionManagerSection = {
-  id: 'available-secondary',
-  title: 'Available secondary',
+  key: 'available',
+  title: '可安装',
   items: [],
 }
 
@@ -158,21 +141,26 @@ const managerTab: ExtensionManagerTab = {
   label: 'Catalog',
   disabled: false,
   badge: 2,
-  sections: [managerSection, managerEmptySection],
+  items: [managerItem],
 }
 const secondManagerTab: ExtensionManagerTab = {
   id: 'updates',
   label: 'Updates',
   badge: 'new',
-  sections: [secondManagerSection, secondManagerEmptySection],
+  items: [],
 }
 
+const managerExpandedSections: ExtensionManagerExpandedSections = {
+  catalog: { installed: true, available: false },
+  updates: { installed: false, available: true },
+}
 const managerProps: ExtensionManagerProps = {
   tabs: [managerTab, secondManagerTab],
   activeTab: 'catalog',
   defaultActiveTab: 'updates',
-  expandedSections: { installed: true, available: false },
+  expandedSections: managerExpandedSections,
   defaultExpanded: false,
+  columns: 3,
   title: 'Extensions',
   showHeader: true,
   showCloseButton: true,
@@ -184,25 +172,22 @@ const managerTabChangeEvent: ExtensionManagerTabChangeEvent = {
 }
 const managerSectionToggleEvent: ExtensionManagerSectionToggleEvent = {
   tabId: managerTab.id,
-  sectionId: managerSection.id,
+  sectionKey: managerSection.key,
   expanded: true,
 }
 const managerActionEvent: ExtensionManagerActionEvent = {
   tabId: managerTab.id,
-  sectionId: managerSection.id,
+  sectionKey: managerSection.key,
   itemId: managerItem.id,
   action: event,
 }
 const managerNameClickEvent: ExtensionManagerNameClickEvent = {
   tabId: managerTab.id,
-  sectionId: managerSection.id,
+  sectionKey: managerSection.key,
   itemId: managerItem.id,
   event: {} as MouseEvent,
 }
-const managerRetryEvent: ExtensionManagerRetryEvent = {
-  tabId: managerTab.id,
-  sectionId: managerSection.id,
-}
+const managerSectionKey: ExtensionManagerSectionKey = 'available'
 
 const managerSlots: ExtensionManagerSlots = {
   'header-actions': () => [],
@@ -217,52 +202,35 @@ const managerSlots: ExtensionManagerSlots = {
   },
   'section-header': ({ tab, section, expanded, toggle }) => {
     const tabId: string = tab.id
-    const sectionId: string = section.id
+    const sectionKey: ExtensionManagerSectionKey = section.key
     const isExpanded: boolean = expanded
+    const count: number = section.items.length
     toggle()
 
     void tabId
-    void sectionId
+    void sectionKey
     void isExpanded
+    void count
     return []
   },
   item: ({ tab, section, item, index }) => {
     const tabId: string = tab.id
-    const sectionId: string = section.id
+    const sectionKey: ExtensionManagerSectionKey = section.key
     const itemId: string = item.id
     const itemIndex: number = index
 
     void tabId
-    void sectionId
+    void sectionKey
     void itemId
     void itemIndex
     return []
   },
-  loading: ({ tab, section }) => {
-    const tabId: string = tab.id
-    const sectionId: string = section.id
-
-    void tabId
-    void sectionId
-    return []
-  },
-  error: ({ tab, section, error: sectionError, retry }) => {
-    const tabId: string = tab.id
-    const sectionId: string = section.id
-    const errorValue: unknown = sectionError
-    retry()
-
-    void tabId
-    void sectionId
-    void errorValue
-    return []
-  },
   empty: ({ tab, section }) => {
     const tabId: string = tab.id
-    const sectionId: string = section.id
+    const sectionKey: ExtensionManagerSectionKey = section.key
 
     void tabId
-    void sectionId
+    void sectionKey
     return []
   },
 }
@@ -271,11 +239,10 @@ declare const managerEmit: ExtensionManagerEmits
 managerEmit('update:active-tab', managerTab.id)
 managerEmit('update:active-tab', undefined)
 managerEmit('tab-change', managerTabChangeEvent)
-managerEmit('update:expanded-sections', { installed: true, available: false })
+managerEmit('update:expanded-sections', { catalog: { installed: true, available: false } })
 managerEmit('section-toggle', managerSectionToggleEvent)
 managerEmit('action', managerActionEvent)
 managerEmit('name-click', managerNameClickEvent)
-managerEmit('retry', managerRetryEvent)
 managerEmit('close')
 // @ts-expect-error Close does not accept a payload.
 managerEmit('close', managerTab.id)
@@ -288,6 +255,9 @@ const oldManagerFacadeProps = {
 }
 // @ts-expect-error The old extensions/operationStates facade is not the Manager contract.
 const oldManagerProps: ExtensionManagerProps = oldManagerFacadeProps
+
+// @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
+const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
 
 // @ts-expect-error Card no longer accepts an Extension item.
 const oldCardProps: ExtensionCardProps = { item: extension }
@@ -329,16 +299,16 @@ void cardGridNameClickEvent
 void managerItem
 void managerSection
 void managerEmptySection
-void secondManagerSection
-void secondManagerEmptySection
 void managerTab
 void secondManagerTab
+void managerExpandedSections
 void managerProps
 void managerTabChangeEvent
 void managerSectionToggleEvent
 void managerActionEvent
 void managerNameClickEvent
-void managerRetryEvent
+void managerSectionKey
+void oldTreeManagerTab
 void managerSlots
 void managerItemWithoutId
 void oldManagerFacadeProps

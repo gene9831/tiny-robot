@@ -182,18 +182,19 @@ export interface ExtensionCardGridEmits {
   (e: 'name-click', payload: ExtensionCardGridNameClickEvent): void
 }
 
-export type ExtensionManagerItem = ExtensionCardGridItem
+export type ExtensionManagerSectionKey = 'installed' | 'available'
+
+export type ExtensionManagerExpandedSections = Record<string, Partial<Record<ExtensionManagerSectionKey, boolean>>>
+
+export type ExtensionManagerItem = ExtensionCardGridItem & {
+  installed?: boolean
+}
 
 export interface ExtensionManagerSection {
-  id: string
+  key: ExtensionManagerSectionKey
   title: string
-  items: ExtensionManagerItem[]
+  items: ExtensionCardGridItem[]
   columns?: number
-  collapsible?: boolean
-  defaultExpanded?: boolean
-  loading?: boolean
-  error?: unknown
-  emptyText?: string
 }
 
 export interface ExtensionManagerTab {
@@ -201,15 +202,16 @@ export interface ExtensionManagerTab {
   label: string
   disabled?: boolean
   badge?: string | number
-  sections: ExtensionManagerSection[]
+  items: ExtensionManagerItem[]
 }
 
 export interface ExtensionManagerProps {
   tabs: ExtensionManagerTab[]
   activeTab?: string
   defaultActiveTab?: string
-  expandedSections?: Record<string, boolean>
+  expandedSections?: ExtensionManagerExpandedSections
   defaultExpanded?: boolean
+  columns?: number
   title?: string
   showHeader?: boolean
   showCloseButton?: boolean
@@ -224,19 +226,13 @@ export interface ExtensionManagerSlots {
     section: ExtensionManagerSection
     expanded: boolean
     toggle: () => void
+    count: number
   }) => VNode[]
   item?: (props: {
     tab: ExtensionManagerTab
     section: ExtensionManagerSection
-    item: ExtensionManagerItem
+    item: ExtensionCardGridItem
     index: number
-  }) => VNode[]
-  loading?: (props: { tab: ExtensionManagerTab; section: ExtensionManagerSection }) => VNode[]
-  error?: (props: {
-    tab: ExtensionManagerTab
-    section: ExtensionManagerSection
-    error: unknown
-    retry: () => void
   }) => VNode[]
   empty?: (props: { tab: ExtensionManagerTab; section: ExtensionManagerSection }) => VNode[]
 }
@@ -247,37 +243,31 @@ export interface ExtensionManagerTabChangeEvent {
 
 export interface ExtensionManagerSectionToggleEvent {
   tabId: string
-  sectionId: string
+  sectionKey: ExtensionManagerSectionKey
   expanded: boolean
 }
 
 export interface ExtensionManagerActionEvent {
   tabId: string
-  sectionId: string
+  sectionKey: ExtensionManagerSectionKey
   itemId: string
   action: ExtensionCardActionEvent
 }
 
 export interface ExtensionManagerNameClickEvent {
   tabId: string
-  sectionId: string
+  sectionKey: ExtensionManagerSectionKey
   itemId: string
   event: MouseEvent | KeyboardEvent
-}
-
-export interface ExtensionManagerRetryEvent {
-  tabId: string
-  sectionId: string
 }
 
 export interface ExtensionManagerEmits {
   (e: 'update:active-tab', tabId: string | undefined): void
   (e: 'tab-change', event: ExtensionManagerTabChangeEvent): void
-  (e: 'update:expanded-sections', expandedSections: Record<string, boolean>): void
+  (e: 'update:expanded-sections', expandedSections: ExtensionManagerExpandedSections): void
   (e: 'section-toggle', event: ExtensionManagerSectionToggleEvent): void
   (e: 'action', event: ExtensionManagerActionEvent): void
   (e: 'name-click', event: ExtensionManagerNameClickEvent): void
-  (e: 'retry', event: ExtensionManagerRetryEvent): void
   (e: 'close'): void
 }
 

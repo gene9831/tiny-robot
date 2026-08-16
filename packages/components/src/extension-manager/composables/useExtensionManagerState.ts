@@ -1,31 +1,28 @@
 import { computed, ref, watch, type ComputedRef } from 'vue'
 import type {
   ExtensionManagerEmits,
+  ExtensionManagerExpandedSections,
   ExtensionManagerProps,
-  ExtensionManagerSection,
+  ExtensionManagerSectionKey,
   ExtensionManagerTab,
 } from '../index.type'
 
 type ExtensionManagerState = {
   activeTabId: ComputedRef<string | undefined>
   activeTab: ComputedRef<ExtensionManagerTab | undefined>
-  expandedSections: ComputedRef<Record<string, boolean>>
+  expandedSections: ComputedRef<ExtensionManagerExpandedSections>
   selectTab: (tabId: string) => void
-  isSectionExpanded: (tabId: string, sectionId: string, section: ExtensionManagerSection) => boolean
-  toggleSection: (tabId: string, section: ExtensionManagerSection) => void
+  isSectionExpanded: (tabId: string, sectionKey: ExtensionManagerSectionKey) => boolean
+  toggleSection: (tabId: string, sectionKey: ExtensionManagerSectionKey) => void
 }
 
-interface SectionIdentity {
-  tabId: string
-  sectionId: string
-  section: ExtensionManagerSection
-  stateKey: string
-  publicKey: string
-}
+const SECTION_KEYS: readonly ExtensionManagerSectionKey[] = ['installed', 'available']
 
-const hasOwn = (record: Record<string, boolean>, key: string) => Object.prototype.hasOwnProperty.call(record, key)
+const hasOwn = (record: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(record, key)
 
-const setRecordValue = (record: Record<string, boolean>, key: string, value: boolean) => {
+const createSafeRecord = <T>() => Object.create(null) as T
+
+const setRecordValue = <T extends object, K extends PropertyKey, V>(record: T, key: K, value: V) => {
   Object.defineProperty(record, key, {
     configurable: true,
     enumerable: true,
@@ -34,132 +31,104 @@ const setRecordValue = (record: Record<string, boolean>, key: string, value: boo
   })
 }
 
-const cloneRecord = (record: Record<string, boolean>) => {
-  const clone: Record<string, boolean> = {}
+const cloneExpandedSections = (record: ExtensionManagerExpandedSections): ExtensionManagerExpandedSections => {
+  const clone = createSafeRecord<ExtensionManagerExpandedSections>()
 
-  for (const [key, value] of Object.entries(record)) setRecordValue(clone, key, value)
+  for (const [tabId, sectionRecord] of Object.entries(record)) {
+    const sectionClone = createSafeRecord<Partial<Record<ExtensionManagerSectionKey, boolean>>>()
+
+    for (const [sectionKey, expanded] of Object.entries(sectionRecord ?? {})) {
+      if (sectionKey === 'installed' || sectionKey === 'available') {
+        setRecordValue(sectionClone, sectionKey, expanded)
+      }
+    }
+
+    setRecordValue(clone, tabId, sectionClone)
+  }
 
   return clone
 }
 
-const filterRecord = (record: Record<string, boolean>, allowedKeys: Set<string>) => {
-  let hasRemovedKey = false
-  const filtered: Record<string, boolean> = {}
+const getSectionOverride = (
+  record: ExtensionManagerExpandedSections,
+  tabId: string,
+  sectionKey: ExtensionManagerSectionKey,
+) => {
+  if (!hasOwn(record, tabId)) return undefined
 
-  for (const [key, value] of Object.entries(record)) {
-    if (allowedKeys.has(key)) setRecordValue(filtered, key, value)
-    else hasRemovedKey = true
-  }
+  const sectionRecord = record[tabId]
+  if (sectionRecord === undefined || !hasOwn(sectionRecord, sectionKey)) return undefined
 
-  return hasRemovedKey ? filtered : record
+  return sectionRecord[sectionKey]
 }
 
-const encodeSectionPart = (value: string) => `${value.length}:${value}`
+const setSectionOverride = (
+  record: ExtensionManagerExpandedSections,
+  tabId: string,
+  sectionKey: ExtensionManagerSectionKey,
+  expanded: boolean,
+) => {
+  const sectionRecord =
+    hasOwn(record, tabId) && record[tabId] !== undefined
+      ? record[tabId]!
+      : createSafeRecord<Partial<Record<ExtensionManagerSectionKey, boolean>>>()
 
-const getSectionStateKey = (tabId: string, sectionId: string) =>
-  `extension-manager/section/${encodeSectionPart(tabId)}/${encodeSectionPart(sectionId)}`
+  if (!hasOwn(record, tabId)) setRecordValue(record, tabId, sectionRecord)
+  setRecordValue(sectionRecord, sectionKey, expanded)
+}
+
+const getDefaultExpanded = (props: Readonly<ExtensionManagerProps>) => props.defaultExpanded ?? true
+
+const getExpanded = (
+  props: Readonly<ExtensionManagerProps>,
+  record: ExtensionManagerExpandedSections,
+  tabId: string,
+  sectionKey: ExtensionManagerSectionKey,
+) => getSectionOverride(record, tabId, sectionKey) ?? getDefaultExpanded(props)
+
+const normalizeExpandedSections = (
+  props: Readonly<ExtensionManagerProps>,
+  record: ExtensionManagerExpandedSections,
+): ExtensionManagerExpandedSections => {
+  const normalized = createSafeRecord<ExtensionManagerExpandedSections>()
+
+  for (const tab of props.tabs) {
+    const sectionRecord = createSafeRecord<Partial<Record<ExtensionManagerSectionKey, boolean>>>()
+
+    for (const sectionKey of SECTION_KEYS) {
+      setRecordValue(sectionRecord, sectionKey, getExpanded(props, record, tab.id, sectionKey))
+    }
+
+    setRecordValue(normalized, tab.id, sectionRecord)
+  }
+
+  return normalized
+}
 
 export const useExtensionManagerState = (
   props: Readonly<ExtensionManagerProps>,
   emit: ExtensionManagerEmits,
 ): ExtensionManagerState => {
   const uncontrolledActiveTabId = ref(props.defaultActiveTab)
-  const uncontrolledExpandedSections = ref<Record<string, boolean>>({})
+  const uncontrolledExpandedSections = ref<ExtensionManagerExpandedSections>(createSafeRecord())
 
   const enabledTabs = computed(() => props.tabs.filter((tab) => !tab.disabled))
   const firstEnabledTabId = computed(() => enabledTabs.value[0]?.id)
 
-  const sectionIdentities = computed<SectionIdentity[]>(() => {
-    const sectionIdCounts = new Map<string, number>()
-
-    for (const tab of props.tabs) {
-      for (const section of tab.sections) {
-        sectionIdCounts.set(section.id, (sectionIdCounts.get(section.id) ?? 0) + 1)
-      }
-    }
-
-    const entries = props.tabs.flatMap((tab) =>
-      tab.sections.map((section) => ({
-        tabId: tab.id,
-        section,
-        sectionId: section.id,
-        stateKey: getSectionStateKey(tab.id, section.id),
-      })),
-    )
-    const stateKeys = new Set(entries.map((entry) => entry.stateKey))
-    const usedPublicKeys = new Set<string>()
-
-    return entries.map((entry) => {
-      const canUseSectionId =
-        sectionIdCounts.get(entry.sectionId) === 1 &&
-        !stateKeys.has(entry.sectionId) &&
-        !usedPublicKeys.has(entry.sectionId)
-      const publicKey = canUseSectionId ? entry.sectionId : entry.stateKey
-
-      usedPublicKeys.add(publicKey)
-
-      return {
-        ...entry,
-        publicKey,
-      }
-    })
-  })
-
   watch(
-    sectionIdentities,
-    (identities) => {
-      const currentStateKeys = new Set(identities.map((identity) => identity.stateKey))
-      uncontrolledExpandedSections.value = filterRecord(uncontrolledExpandedSections.value, currentStateKeys)
+    () => props.tabs.map((tab) => tab.id),
+    (tabIds) => {
+      const allowedTabIds = new Set(tabIds)
+      const next = createSafeRecord<ExtensionManagerExpandedSections>()
+
+      for (const [tabId, sectionRecord] of Object.entries(uncontrolledExpandedSections.value)) {
+        if (allowedTabIds.has(tabId)) setRecordValue(next, tabId, sectionRecord)
+      }
+
+      uncontrolledExpandedSections.value = next
     },
-    { immediate: true, flush: 'sync' },
+    { immediate: true },
   )
-
-  const getSectionIdentity = (tabId: string, sectionId: string) =>
-    sectionIdentities.value.find((identity) => identity.tabId === tabId && identity.sectionId === sectionId)
-
-  const readSectionOverride = (tabId: string, sectionId: string, record: Record<string, boolean>) => {
-    const identity = getSectionIdentity(tabId, sectionId)
-    const stateKey = identity?.stateKey ?? getSectionStateKey(tabId, sectionId)
-    const publicKey = identity?.publicKey ?? sectionId
-
-    if (hasOwn(record, publicKey)) return record[publicKey]
-    if (hasOwn(record, stateKey)) return record[stateKey]
-
-    return undefined
-  }
-
-  const getDefaultExpanded = (section: ExtensionManagerSection) =>
-    section.defaultExpanded ?? props.defaultExpanded ?? true
-
-  const getSectionExpanded = (
-    identity: SectionIdentity | undefined,
-    tabId: string,
-    section: ExtensionManagerSection,
-    record: Record<string, boolean>,
-  ) => {
-    if (section.collapsible !== true) return true
-
-    const override =
-      identity === undefined
-        ? readSectionOverride(tabId, section.id, record)
-        : readSectionOverride(identity.tabId, identity.sectionId, record)
-
-    return override ?? getDefaultExpanded(section)
-  }
-
-  const toPublicExpandedRecord = (record: Record<string, boolean>) => {
-    const publicRecord: Record<string, boolean> = {}
-
-    for (const identity of sectionIdentities.value) {
-      setRecordValue(
-        publicRecord,
-        identity.publicKey,
-        getSectionExpanded(identity, identity.tabId, identity.section, record),
-      )
-    }
-
-    return publicRecord
-  }
 
   const normalizedUncontrolledActiveTab = (nextEnabledTabs: ExtensionManagerTab[]) => {
     if (nextEnabledTabs.some((tab) => tab.id === uncontrolledActiveTabId.value)) return
@@ -207,22 +176,16 @@ export const useExtensionManagerState = (
     { immediate: true },
   )
 
-  const expandedSections = computed<Record<string, boolean>>(() =>
-    props.expandedSections === undefined
-      ? toPublicExpandedRecord(uncontrolledExpandedSections.value)
-      : toPublicExpandedRecord(props.expandedSections),
+  const expandedSections = computed<ExtensionManagerExpandedSections>(() =>
+    normalizeExpandedSections(
+      props,
+      props.expandedSections === undefined ? uncontrolledExpandedSections.value : props.expandedSections,
+    ),
   )
 
-  const isSectionExpanded = (tabId: string, sectionId: string, section: ExtensionManagerSection) => {
-    const record = props.expandedSections
-    const identity = getSectionIdentity(tabId, sectionId)
-
-    return getSectionExpanded(
-      identity,
-      tabId,
-      section,
-      record === undefined ? uncontrolledExpandedSections.value : record,
-    )
+  const isSectionExpanded = (tabId: string, sectionKey: ExtensionManagerSectionKey) => {
+    const record = props.expandedSections ?? uncontrolledExpandedSections.value
+    return getExpanded(props, record, tabId, sectionKey)
   }
 
   const selectTab = (tabId: string) => {
@@ -235,26 +198,23 @@ export const useExtensionManagerState = (
     emit('tab-change', { tabId: tab.id })
   }
 
-  const toggleSection = (tabId: string, section: ExtensionManagerSection) => {
-    if (section.collapsible !== true) return
+  const toggleSection = (tabId: string, sectionKey: ExtensionManagerSectionKey) => {
+    if (!props.tabs.some((tab) => tab.id === tabId)) return
 
-    const identity = getSectionIdentity(tabId, section.id)
-    if (!identity) return
-
-    const expanded = !isSectionExpanded(tabId, section.id, section)
+    const expanded = !isSectionExpanded(tabId, sectionKey)
 
     if (props.expandedSections === undefined) {
-      const nextUncontrolledExpandedSections = cloneRecord(uncontrolledExpandedSections.value)
-      setRecordValue(nextUncontrolledExpandedSections, identity.stateKey, expanded)
+      const nextUncontrolledExpandedSections = cloneExpandedSections(uncontrolledExpandedSections.value)
+      setSectionOverride(nextUncontrolledExpandedSections, tabId, sectionKey, expanded)
       uncontrolledExpandedSections.value = nextUncontrolledExpandedSections
       emit('update:expanded-sections', expandedSections.value)
     } else {
-      const nextExpandedSections = cloneRecord(expandedSections.value)
-      setRecordValue(nextExpandedSections, identity.publicKey, expanded)
+      const nextExpandedSections = cloneExpandedSections(expandedSections.value)
+      setSectionOverride(nextExpandedSections, tabId, sectionKey, expanded)
       emit('update:expanded-sections', nextExpandedSections)
     }
 
-    emit('section-toggle', { tabId, sectionId: section.id, expanded })
+    emit('section-toggle', { tabId, sectionKey, expanded })
   }
 
   return {

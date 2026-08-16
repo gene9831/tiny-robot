@@ -11,7 +11,7 @@ const Card = ExtensionManager.Card
 const CardGrid = ExtensionManager.CardGrid
 const McpDetail = ExtensionManager.McpDetail
 const McpForm = ExtensionManager.McpForm
-const managerTabs: ExtensionManagerTab[] = [{ id: 'library', label: 'Library', sections: [] }]
+const managerTabs: ExtensionManagerTab[] = [{ id: 'library', label: 'Library', items: [] }]
 const hasList = 'List' in ExtensionManager
 const standalonePrimitiveExports = [
   'ExtensionRoot',
