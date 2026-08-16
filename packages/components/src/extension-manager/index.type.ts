@@ -184,8 +184,14 @@ export interface ExtensionCardGridEmits {
 
 export type ExtensionManagerSectionKey = 'installed' | 'available'
 
+export interface ExtensionManagerTagOption {
+  value: string
+  label: string
+}
+
 export type ExtensionManagerItem = ExtensionCardGridItem & {
   installed?: boolean
+  tags?: string[]
 }
 
 export interface ExtensionManagerTab {
@@ -193,6 +199,7 @@ export interface ExtensionManagerTab {
   label: string
   disabled?: boolean
   badge?: string | number
+  tags?: ExtensionManagerTagOption[]
   items: ExtensionManagerItem[]
 }
 

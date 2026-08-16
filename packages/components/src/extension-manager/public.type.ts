@@ -24,6 +24,7 @@ export type {
   ExtensionManagerSectionKey,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerSlots,
+  ExtensionManagerTagOption,
   ExtensionManagerTab,
   ExtensionManagerTabChangeEvent,
 } from './index.type'

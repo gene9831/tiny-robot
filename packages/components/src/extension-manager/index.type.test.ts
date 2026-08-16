@@ -20,6 +20,7 @@ import type {
   ExtensionManagerSectionKey,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerSlots,
+  ExtensionManagerTagOption,
   ExtensionManagerTab,
   ExtensionManagerTabChangeEvent,
   ExtensionRootProps,
@@ -120,6 +121,20 @@ const managerItem: ExtensionManagerItem = {
   ...cardProps,
   id: 'manager-item',
   installed: true,
+}
+
+const managerTag: ExtensionManagerTagOption = { value: 'recommended', label: '推荐' }
+const taggedManagerItem: ExtensionManagerItem = {
+  id: 'tagged',
+  name: 'Tagged extension',
+  tags: ['recommended'],
+}
+
+const taggedManagerTab: ExtensionManagerTab = {
+  id: 'catalog',
+  label: 'Catalog',
+  tags: [managerTag],
+  items: [taggedManagerItem],
 }
 
 const managerTab: ExtensionManagerTab = {
@@ -281,6 +296,7 @@ void cardGridActionEvent
 void cardGridNameClickEvent
 void managerItem
 void managerTab
+void taggedManagerTab
 void secondManagerTab
 void managerProps
 void managerTabChangeEvent
