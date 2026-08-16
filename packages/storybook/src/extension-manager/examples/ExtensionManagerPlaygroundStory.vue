@@ -32,6 +32,10 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
     id: 'workspace',
     label: 'Workspace',
     badge: 2,
+    tags: [
+      { value: 'local', label: 'Local' },
+      { value: 'featured', label: 'Featured' },
+    ],
     items: [
       {
         id: 'alpha',
@@ -41,11 +45,13 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
         actions: alphaActions.value,
         primaryActionsLimit: 2,
         nameClickable: true,
+        tags: ['local', 'featured'],
       },
       {
         id: 'gamma',
         name: 'Gamma extension',
         description: 'An available extension that keeps the original item order.',
+        tags: ['local'],
       },
     ],
   },
@@ -53,6 +59,10 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
     id: 'catalog',
     label: 'Catalog',
     badge: 1,
+    tags: [
+      { value: 'remote', label: 'Remote' },
+      { value: 'recommended', label: 'Recommended' },
+    ],
     items: [
       {
         id: 'beta',
@@ -60,8 +70,14 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
         description: 'The second tab has its own installed and available sections.',
         installed: false,
         nameClickable: true,
+        tags: ['remote', 'recommended'],
       },
     ],
+  },
+  {
+    id: 'empty',
+    label: 'Empty',
+    items: [],
   },
 ])
 
@@ -134,6 +150,7 @@ const handleClose = () => {
         <select v-model="activeTab" aria-label="Active tab">
           <option value="workspace">Workspace</option>
           <option value="catalog">Catalog</option>
+          <option value="empty">Empty (no tags)</option>
         </select>
       </label>
       <button type="button" @click="handleHeaderAction">Header action</button>
