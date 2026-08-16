@@ -58,7 +58,7 @@ test.describe('ExtensionManager section model', () => {
     )
 
     await component.getByTestId('set-active-market').click()
-    await expect(manager.getByTestId('empty-slot-context-market-available')).toHaveText('market/available')
+    await expect(manager.getByTestId('empty-slot-context-market-available')).toHaveText('market/available/可安装')
   })
 
   test('keeps installed metadata out of the Card/Grid item boundary', async ({ mount }) => {
@@ -89,8 +89,6 @@ test.describe('ExtensionManager section model', () => {
     await component.getByTestId('set-active-library').click()
     await expect(manager.getByTestId('section-header-library-installed')).toHaveAttribute('aria-expanded', 'false')
     await expect(manager.getByTestId('section-header-market-installed')).toHaveCount(0)
-    await expect(component.getByTestId('expanded-sections-model')).toContainText('"library"')
-    await expect(component.getByTestId('expanded-sections-model')).toContainText('"market"')
   })
 
   test('routes Card action and name-click events with section keys', async ({ mount }) => {
@@ -106,18 +104,6 @@ test.describe('ExtensionManager section model', () => {
     await expect(component.getByTestId('event-log')).toContainText(
       'name-click:{"tabId":"library","sectionKey":"installed","itemId":"alpha","event":{"type":"click"}}',
     )
-  })
-
-  test('supports controlled active and expanded state with tab-section records', async ({ mount }) => {
-    const component = await mount(ExtensionManagerFixture)
-    const manager = component.getByTestId('manager-host')
-
-    await component.getByTestId('set-active-market').click()
-    await expect(manager.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', /market/)
-
-    await component.getByTestId('set-external-expanded-sections').click()
-    await expect(manager.getByTestId('section-header-market-installed')).toHaveAttribute('aria-expanded', 'false')
-    await expect(manager.getByTestId('section-header-market-available')).toHaveAttribute('aria-expanded', 'true')
   })
 })
 
@@ -135,9 +121,6 @@ test.describe('ExtensionManager uncontrolled state', () => {
     await dashSection.click()
 
     await expect(dashSection).toHaveAttribute('aria-expanded', 'true')
-    await expect(component.getByTestId('uncontrolled-event-log')).toContainText(
-      'update:expanded-sections:{"a/b":{"installed":false,"available":false},"a-b":{"installed":true,"available":false}}',
-    )
     await expect(component.getByTestId('uncontrolled-event-log')).toContainText('section-toggle:a-b/installed/true')
 
     await component.getByTestId('disable-default-tab').click()
@@ -150,8 +133,11 @@ test.describe('ExtensionManager uncontrolled state', () => {
   test('keeps arbitrary tab ids safe in the nested expansion model', async ({ mount }) => {
     const component = await mount(ExtensionManagerUncontrolledFixture)
     const manager = component.getByTestId('identity-manager')
+    const slashSection = manager.getByTestId('identity-section-header-a/b-installed')
 
-    await expect(manager.getByTestId('identity-section-header-a/b-installed')).toHaveAttribute('aria-expanded', 'false')
+    await expect(slashSection).toHaveAttribute('aria-expanded', 'true')
+    await slashSection.click()
+    await expect(slashSection).toHaveAttribute('aria-expanded', 'false')
 
     await manager.getByRole('tab', { name: /Dash identity tab/ }).click()
 

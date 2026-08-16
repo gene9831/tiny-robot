@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import type {
   ExtensionCardAction,
   ExtensionManagerActionEvent,
-  ExtensionManagerExpandedSections,
   ExtensionManagerNameClickEvent,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerTab,
@@ -51,7 +50,6 @@ const createTabs = (): ExtensionManagerTab[] => [
 
 const tabs = ref<ExtensionManagerTab[]>(createTabs())
 const activeTab = ref<string | undefined>('library')
-const expandedSections = ref<ExtensionManagerExpandedSections>({})
 const eventLog = ref<string[]>([])
 const showItemSlotManager = ref(false)
 
@@ -59,10 +57,6 @@ const record = (event: string) => eventLog.value.push(event)
 
 const handleActiveTabUpdate = (tabId: string | undefined) => {
   record('update:active-tab:' + (tabId ?? 'undefined'))
-}
-
-const handleExpandedSectionsUpdate = (value: ExtensionManagerExpandedSections) => {
-  record('update:expanded-sections:' + JSON.stringify(value))
 }
 
 const handleTabChange = ({ tabId }: { tabId: string }) => {
@@ -98,13 +92,6 @@ const installBeta = () => {
 const setExternalActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
-
-const setExternalExpandedSections = () => {
-  expandedSections.value = {
-    library: { installed: true, available: false },
-    market: { installed: false, available: true },
-  }
-}
 </script>
 
 <template>
@@ -112,32 +99,32 @@ const setExternalExpandedSections = () => {
     <ExtensionManager
       :tabs="tabs"
       v-model:active-tab="activeTab"
-      v-model:expanded-sections="expandedSections"
       title="Extension manager"
       @update:active-tab="handleActiveTabUpdate"
-      @update:expanded-sections="handleExpandedSectionsUpdate"
       @tab-change="handleTabChange"
       @section-toggle="handleSectionToggle"
       @action="handleAction"
       @name-click="handleNameClick"
     >
-      <template #section-header="{ tab, section, expanded, toggle }">
+      <template #section-header="{ tab, sectionKey, title, expanded, toggle, count }">
         <button
           type="button"
-          :data-testid="'section-header-' + tab.id + '-' + section.key"
+          :data-testid="'section-header-' + tab.id + '-' + sectionKey"
           :aria-expanded="expanded"
           @click="toggle"
         >
-          {{ section.title }} ({{ section.items.length }})
+          {{ title }} ({{ count }})
         </button>
-        <span :data-testid="'section-header-context-' + tab.id + '-' + section.key">
-          {{ tab.id }}/{{ section.key }}/{{ section.title }}/{{ section.items.length }}
+        <span :data-testid="'section-header-context-' + tab.id + '-' + sectionKey">
+          {{ tab.id }}/{{ sectionKey }}/{{ title }}/{{ count }}
         </span>
       </template>
 
-      <template #empty="{ tab, section }">
-        <span :data-testid="'empty-slot-' + tab.id + '-' + section.key">Empty {{ section.key }}</span>
-        <span :data-testid="'empty-slot-context-' + tab.id + '-' + section.key"> {{ tab.id }}/{{ section.key }} </span>
+      <template #empty="{ tab, sectionKey, title }">
+        <span :data-testid="'empty-slot-' + tab.id + '-' + sectionKey">Empty {{ sectionKey }}</span>
+        <span :data-testid="'empty-slot-context-' + tab.id + '-' + sectionKey">
+          {{ tab.id }}/{{ sectionKey }}/{{ title }}
+        </span>
       </template>
     </ExtensionManager>
   </div>
@@ -147,9 +134,6 @@ const setExternalExpandedSections = () => {
   </button>
   <button type="button" data-testid="set-active-library" @click="setExternalActiveTab('library')">
     Set active library
-  </button>
-  <button type="button" data-testid="set-external-expanded-sections" @click="setExternalExpandedSections">
-    Set expanded sections
   </button>
   <button type="button" data-testid="install-beta" @click="installBeta">Install beta</button>
   <button type="button" data-testid="show-item-slot-manager" @click="showItemSlotManager = true">
@@ -164,6 +148,5 @@ const setExternalExpandedSections = () => {
     </ExtensionManager>
   </div>
 
-  <output data-testid="expanded-sections-model">{{ JSON.stringify(expandedSections) }}</output>
   <output data-testid="event-log">{{ eventLog.join('|') }}</output>
 </template>

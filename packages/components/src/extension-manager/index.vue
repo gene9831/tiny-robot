@@ -9,13 +9,12 @@ import type {
   ExtensionCardGridNameClickEvent,
   ExtensionCardGridItem,
   ExtensionManagerEmits,
-  ExtensionManagerExpandedSections,
   ExtensionManagerItem,
   ExtensionManagerProps,
-  ExtensionManagerSection as ExtensionManagerSectionData,
   ExtensionManagerSectionKey,
   ExtensionManagerSlots,
 } from './index.type'
+import type { ExtensionManagerSectionState } from './components/ExtensionManagerSection.types'
 
 defineOptions({ name: 'ExtensionManager' })
 
@@ -55,9 +54,6 @@ const stateEmit = ((event: string, payload?: unknown) => {
     case 'tab-change':
       emit('tab-change', payload as { tabId: string })
       break
-    case 'update:expanded-sections':
-      emit('update:expanded-sections', payload as ExtensionManagerExpandedSections)
-      break
     case 'section-toggle':
       emit('section-toggle', payload as { tabId: string; sectionKey: ExtensionManagerSectionKey; expanded: boolean })
       break
@@ -78,7 +74,7 @@ const toCardGridItem = (item: ExtensionManagerItem): ExtensionCardGridItem => {
   return cardItem
 }
 
-const activeSections = computed<ExtensionManagerSectionData[]>(() => {
+const activeSections = computed<ExtensionManagerSectionState[]>(() => {
   const items = activeTab.value?.items ?? []
 
   return SECTION_DEFINITIONS.map(({ key, title }) => ({
@@ -169,11 +165,12 @@ const handleNameClick = (
         @action="handleAction(activeTabId!, section.key, $event)"
         @name-click="handleNameClick(activeTabId!, section.key, $event)"
       >
-        <template v-if="slots['section-header']" #section-header="{ section: sectionValue, expanded, toggle, count }">
+        <template v-if="slots['section-header']" #section-header="{ sectionKey, title, expanded, toggle, count }">
           <slot
             name="section-header"
             :tab="activeTab!"
-            :section="sectionValue"
+            :section-key="sectionKey"
+            :title="title"
             :expanded="expanded"
             :toggle="toggle"
             :count="count"
@@ -181,11 +178,11 @@ const handleNameClick = (
         </template>
 
         <template v-if="slots.item" #item="{ item, index }">
-          <slot name="item" :tab="activeTab!" :section="section" :item="item" :index="index" />
+          <slot name="item" :tab="activeTab!" :section-key="section.key" :item="item" :index="index" />
         </template>
 
         <template v-if="slots.empty" #empty>
-          <slot name="empty" :tab="activeTab!" :section="section" />
+          <slot name="empty" :tab="activeTab!" :section-key="section.key" :title="section.title" />
         </template>
       </ExtensionManagerSection>
     </div>

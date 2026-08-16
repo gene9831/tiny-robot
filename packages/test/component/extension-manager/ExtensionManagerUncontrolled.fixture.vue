@@ -24,10 +24,6 @@ const handleActiveTabUpdate = (tabId: string | undefined) => {
   record('update:active-tab:' + (tabId ?? 'undefined'))
 }
 
-const handleExpandedSectionsUpdate = (expanded: Record<string, Record<string, boolean>>) => {
-  record('update:expanded-sections:' + JSON.stringify(expanded))
-}
-
 const handleSectionToggle = (event: { tabId: string; sectionKey: string; expanded: boolean }) => {
   record('section-toggle:' + event.tabId + '/' + event.sectionKey + '/' + event.expanded)
 }
@@ -48,11 +44,6 @@ const identityTabs: ExtensionManagerTab[] = [
     items: [{ id: 'identity-dash', name: 'Identity dash', installed: true }],
   },
 ]
-
-const identityExpandedSections: Record<string, Record<string, boolean>> = {
-  'a/b': { installed: false, available: true },
-  'a-b': { installed: true, available: false },
-}
 </script>
 
 <template>
@@ -63,7 +54,6 @@ const identityExpandedSections: Record<string, Record<string, boolean>> = {
       :default-expanded="false"
       empty-text="No uncontrolled tabs"
       @update:active-tab="handleActiveTabUpdate"
-      @update:expanded-sections="handleExpandedSectionsUpdate"
       @section-toggle="handleSectionToggle"
     >
       <template #tab="{ tab, active, select }">
@@ -72,14 +62,14 @@ const identityExpandedSections: Record<string, Record<string, boolean>> = {
         </span>
       </template>
 
-      <template #section-header="{ tab, section, expanded, toggle }">
+      <template #section-header="{ tab, sectionKey, title, expanded, toggle }">
         <button
           type="button"
-          :data-testid="'uncontrolled-section-header-' + tab.id + '-' + section.key"
+          :data-testid="'uncontrolled-section-header-' + tab.id + '-' + sectionKey"
           :aria-expanded="expanded"
           @click="toggle"
         >
-          {{ section.title }}
+          {{ title }}
         </button>
       </template>
     </ExtensionManager>
@@ -90,15 +80,15 @@ const identityExpandedSections: Record<string, Record<string, boolean>> = {
   <output data-testid="uncontrolled-event-log">{{ eventLog.join('|') }}</output>
 
   <div data-testid="identity-manager">
-    <ExtensionManager :tabs="identityTabs" :expanded-sections="identityExpandedSections" :show-header="false">
-      <template #section-header="{ tab, section, expanded, toggle }">
+    <ExtensionManager :tabs="identityTabs" :show-header="false">
+      <template #section-header="{ tab, sectionKey, title, expanded, toggle }">
         <button
           type="button"
-          :data-testid="'identity-section-header-' + tab.id + '-' + section.key"
+          :data-testid="'identity-section-header-' + tab.id + '-' + sectionKey"
           :aria-expanded="expanded"
           @click="toggle"
         >
-          {{ section.title }}
+          {{ title }}
         </button>
       </template>
     </ExtensionManager>

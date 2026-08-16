@@ -184,17 +184,8 @@ export interface ExtensionCardGridEmits {
 
 export type ExtensionManagerSectionKey = 'installed' | 'available'
 
-export type ExtensionManagerExpandedSections = Record<string, Partial<Record<ExtensionManagerSectionKey, boolean>>>
-
 export type ExtensionManagerItem = ExtensionCardGridItem & {
   installed?: boolean
-}
-
-export interface ExtensionManagerSection {
-  key: ExtensionManagerSectionKey
-  title: string
-  items: ExtensionCardGridItem[]
-  columns?: number
 }
 
 export interface ExtensionManagerTab {
@@ -209,7 +200,6 @@ export interface ExtensionManagerProps {
   tabs: ExtensionManagerTab[]
   activeTab?: string
   defaultActiveTab?: string
-  expandedSections?: ExtensionManagerExpandedSections
   defaultExpanded?: boolean
   columns?: number
   title?: string
@@ -223,18 +213,19 @@ export interface ExtensionManagerSlots {
   tab?: (props: { tab: ExtensionManagerTab; active: boolean; select: () => void }) => VNode[]
   'section-header'?: (props: {
     tab: ExtensionManagerTab
-    section: ExtensionManagerSection
+    sectionKey: ExtensionManagerSectionKey
+    title: string
     expanded: boolean
     toggle: () => void
     count: number
   }) => VNode[]
   item?: (props: {
     tab: ExtensionManagerTab
-    section: ExtensionManagerSection
+    sectionKey: ExtensionManagerSectionKey
     item: ExtensionCardGridItem
     index: number
   }) => VNode[]
-  empty?: (props: { tab: ExtensionManagerTab; section: ExtensionManagerSection }) => VNode[]
+  empty?: (props: { tab: ExtensionManagerTab; sectionKey: ExtensionManagerSectionKey; title: string }) => VNode[]
 }
 
 export interface ExtensionManagerTabChangeEvent {
@@ -264,7 +255,6 @@ export interface ExtensionManagerNameClickEvent {
 export interface ExtensionManagerEmits {
   (e: 'update:active-tab', tabId: string | undefined): void
   (e: 'tab-change', event: ExtensionManagerTabChangeEvent): void
-  (e: 'update:expanded-sections', expandedSections: ExtensionManagerExpandedSections): void
   (e: 'section-toggle', event: ExtensionManagerSectionToggleEvent): void
   (e: 'action', event: ExtensionManagerActionEvent): void
   (e: 'name-click', event: ExtensionManagerNameClickEvent): void

@@ -2,28 +2,26 @@
 import { IconArrowDown } from '@opentiny/tiny-robot-svgs'
 import { type VNode } from 'vue'
 import ExtensionCardGrid from './ExtensionCardGrid.vue'
-import type {
-  ExtensionCardGridActionEvent,
-  ExtensionCardGridNameClickEvent,
-  ExtensionManagerSection as ExtensionManagerSectionData,
-} from '../index.type'
+import type { ExtensionCardGridActionEvent, ExtensionCardGridNameClickEvent } from '../index.type'
+import type { ExtensionManagerSectionState } from './ExtensionManagerSection.types'
 
 defineOptions({ name: 'ExtensionManagerSection' })
 
 const props = defineProps<{
   tabId: string
-  section: ExtensionManagerSectionData
+  section: ExtensionManagerSectionState
   expanded: boolean
 }>()
 
 const slots = defineSlots<{
   'section-header'?: (props: {
-    section: ExtensionManagerSectionData
+    sectionKey: ExtensionManagerSectionState['key']
+    title: string
     expanded: boolean
     toggle: () => void
     count: number
   }) => VNode[]
-  item?: (props: { item: ExtensionManagerSectionData['items'][number]; index: number }) => VNode[]
+  item?: (props: { item: ExtensionManagerSectionState['items'][number]; index: number }) => VNode[]
   empty?: () => VNode[]
 }>()
 
@@ -46,7 +44,8 @@ const handleNameClick = (event: ExtensionCardGridNameClickEvent) => emit('name-c
       <template v-if="slots['section-header']">
         <slot
           name="section-header"
-          :section="props.section"
+          :section-key="props.section.key"
+          :title="props.section.title"
           :expanded="props.expanded"
           :toggle="toggle"
           :count="props.section.items.length"

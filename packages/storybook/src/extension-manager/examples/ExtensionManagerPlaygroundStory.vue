@@ -4,7 +4,6 @@ import type {
   ExtensionCardAction,
   ExtensionCardActionEvent,
   ExtensionManagerActionEvent,
-  ExtensionManagerExpandedSections,
   ExtensionManagerNameClickEvent,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerTab,
@@ -14,10 +13,6 @@ import { ExtensionManager } from '@opentiny/tiny-robot'
 const activeTab = ref('workspace')
 const alphaInstalled = ref(true)
 const isClosed = ref(false)
-const expandedSections = ref<ExtensionManagerExpandedSections>({
-  workspace: { installed: true, available: true },
-  catalog: { installed: true, available: true },
-})
 const lastEvent = ref<Record<string, unknown>>()
 const eventHistory = ref<Record<string, unknown>[]>([])
 const headerActionCount = ref(0)
@@ -120,11 +115,6 @@ const handleSectionToggle = ({ tabId, sectionKey, expanded }: ExtensionManagerSe
   recordEvent({ type: 'section-toggle', tabId, sectionKey, expanded })
 }
 
-const handleExpandedSectionsUpdate = (value: ExtensionManagerExpandedSections) => {
-  expandedSections.value = value
-  recordEvent({ type: 'expanded-sections', value })
-}
-
 const handleHeaderAction = () => {
   headerActionCount.value += 1
   recordEvent({ type: 'header-action', count: headerActionCount.value })
@@ -133,13 +123,6 @@ const handleHeaderAction = () => {
 const handleClose = () => {
   isClosed.value = true
   recordEvent({ type: 'close' })
-}
-
-const setAllSectionsExpanded = (expanded: boolean) => {
-  expandedSections.value = {
-    workspace: { installed: expanded, available: expanded },
-    catalog: { installed: expanded, available: expanded },
-  }
 }
 </script>
 
@@ -153,8 +136,6 @@ const setAllSectionsExpanded = (expanded: boolean) => {
           <option value="catalog">Catalog</option>
         </select>
       </label>
-      <button type="button" @click="setAllSectionsExpanded(true)">Expand sections</button>
-      <button type="button" @click="setAllSectionsExpanded(false)">Collapse sections</button>
       <button type="button" @click="handleHeaderAction">Header action</button>
       <span>{{ headerActionCount }} header actions</span>
     </div>
@@ -164,14 +145,12 @@ const setAllSectionsExpanded = (expanded: boolean) => {
     <ExtensionManager
       v-else
       v-model:active-tab="activeTab"
-      v-model:expanded-sections="expandedSections"
       :tabs="tabs"
       title="Extension manager playground"
       :columns="1"
       show-close-button
       @tab-change="handleTabChange"
       @section-toggle="handleSectionToggle"
-      @update:expanded-sections="handleExpandedSectionsUpdate"
       @action="handleAction"
       @name-click="handleNameClick"
       @close="handleClose"
@@ -180,20 +159,20 @@ const setAllSectionsExpanded = (expanded: boolean) => {
         <button type="button" @click="handleHeaderAction">Header action</button>
       </template>
 
-      <template #section-header="{ tab, section, expanded, toggle, count }">
+      <template #section-header="{ tab, title, expanded, toggle, count }">
         <button
           type="button"
           class="storybook-manager-playground__section-header"
           :aria-expanded="expanded"
           @click="toggle"
         >
-          <span>{{ tab.label }} / {{ section.title }}</span>
+          <span>{{ tab.label }} / {{ title }}</span>
           <small>{{ count }} items</small>
         </button>
       </template>
 
-      <template #empty="{ section }">
-        <span>{{ section.title }} is empty.</span>
+      <template #empty="{ title }">
+        <span>{{ title }} is empty.</span>
       </template>
     </ExtensionManager>
 

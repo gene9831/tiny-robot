@@ -13,12 +13,10 @@ import type {
   ExtensionCardProps,
   ExtensionIntent,
   ExtensionManagerActionEvent,
-  ExtensionManagerExpandedSections,
   ExtensionManagerEmits,
   ExtensionManagerItem,
   ExtensionManagerNameClickEvent,
   ExtensionManagerProps,
-  ExtensionManagerSection,
   ExtensionManagerSectionKey,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerSlots,
@@ -124,18 +122,6 @@ const managerItem: ExtensionManagerItem = {
   installed: true,
 }
 
-const managerSection: ExtensionManagerSection = {
-  key: 'installed',
-  title: '已安装',
-  items: [managerItem],
-  columns: 2,
-}
-const managerEmptySection: ExtensionManagerSection = {
-  key: 'available',
-  title: '可安装',
-  items: [],
-}
-
 const managerTab: ExtensionManagerTab = {
   id: 'catalog',
   label: 'Catalog',
@@ -150,15 +136,10 @@ const secondManagerTab: ExtensionManagerTab = {
   items: [],
 }
 
-const managerExpandedSections: ExtensionManagerExpandedSections = {
-  catalog: { installed: true, available: false },
-  updates: { installed: false, available: true },
-}
 const managerProps: ExtensionManagerProps = {
   tabs: [managerTab, secondManagerTab],
   activeTab: 'catalog',
   defaultActiveTab: 'updates',
-  expandedSections: managerExpandedSections,
   defaultExpanded: false,
   columns: 3,
   title: 'Extensions',
@@ -170,24 +151,24 @@ const managerProps: ExtensionManagerProps = {
 const managerTabChangeEvent: ExtensionManagerTabChangeEvent = {
   tabId: managerTab.id,
 }
+const managerSectionKey: ExtensionManagerSectionKey = 'installed'
 const managerSectionToggleEvent: ExtensionManagerSectionToggleEvent = {
   tabId: managerTab.id,
-  sectionKey: managerSection.key,
+  sectionKey: managerSectionKey,
   expanded: true,
 }
 const managerActionEvent: ExtensionManagerActionEvent = {
   tabId: managerTab.id,
-  sectionKey: managerSection.key,
+  sectionKey: managerSectionKey,
   itemId: managerItem.id,
   action: event,
 }
 const managerNameClickEvent: ExtensionManagerNameClickEvent = {
   tabId: managerTab.id,
-  sectionKey: managerSection.key,
+  sectionKey: managerSectionKey,
   itemId: managerItem.id,
   event: {} as MouseEvent,
 }
-const managerSectionKey: ExtensionManagerSectionKey = 'available'
 
 const managerSlots: ExtensionManagerSlots = {
   'header-actions': () => [],
@@ -200,22 +181,22 @@ const managerSlots: ExtensionManagerSlots = {
     void isActive
     return []
   },
-  'section-header': ({ tab, section, expanded, toggle }) => {
+  'section-header': ({ tab, sectionKey, title, expanded, toggle, count }) => {
     const tabId: string = tab.id
-    const sectionKey: ExtensionManagerSectionKey = section.key
+    const sectionTitle: string = title
     const isExpanded: boolean = expanded
-    const count: number = section.items.length
+    const itemCount: number = count
     toggle()
 
     void tabId
     void sectionKey
+    void sectionTitle
     void isExpanded
-    void count
+    void itemCount
     return []
   },
-  item: ({ tab, section, item, index }) => {
+  item: ({ tab, sectionKey, item, index }) => {
     const tabId: string = tab.id
-    const sectionKey: ExtensionManagerSectionKey = section.key
     const itemId: string = item.id
     const itemIndex: number = index
 
@@ -225,12 +206,13 @@ const managerSlots: ExtensionManagerSlots = {
     void itemIndex
     return []
   },
-  empty: ({ tab, section }) => {
+  empty: ({ tab, sectionKey, title }) => {
     const tabId: string = tab.id
-    const sectionKey: ExtensionManagerSectionKey = section.key
+    const sectionTitle: string = title
 
     void tabId
     void sectionKey
+    void sectionTitle
     return []
   },
 }
@@ -239,7 +221,6 @@ declare const managerEmit: ExtensionManagerEmits
 managerEmit('update:active-tab', managerTab.id)
 managerEmit('update:active-tab', undefined)
 managerEmit('tab-change', managerTabChangeEvent)
-managerEmit('update:expanded-sections', { catalog: { installed: true, available: false } })
 managerEmit('section-toggle', managerSectionToggleEvent)
 managerEmit('action', managerActionEvent)
 managerEmit('name-click', managerNameClickEvent)
@@ -255,6 +236,12 @@ const oldManagerFacadeProps = {
 }
 // @ts-expect-error The old extensions/operationStates facade is not the Manager contract.
 const oldManagerProps: ExtensionManagerProps = oldManagerFacadeProps
+
+const oldControlledManagerProps: ExtensionManagerProps = {
+  tabs: [managerTab],
+  // @ts-expect-error Section expansion is internal state, not a public Manager prop.
+  expandedSections: { catalog: { installed: true, available: false } },
+}
 
 // @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
 const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
@@ -297,11 +284,8 @@ void cardGridSlots
 void cardGridActionEvent
 void cardGridNameClickEvent
 void managerItem
-void managerSection
-void managerEmptySection
 void managerTab
 void secondManagerTab
-void managerExpandedSections
 void managerProps
 void managerTabChangeEvent
 void managerSectionToggleEvent
@@ -313,6 +297,7 @@ void managerSlots
 void managerItemWithoutId
 void oldManagerFacadeProps
 void oldManagerProps
+void oldControlledManagerProps
 void oldCardProps
 void cardPropsWithGridId
 void cardGridItemWithoutId
