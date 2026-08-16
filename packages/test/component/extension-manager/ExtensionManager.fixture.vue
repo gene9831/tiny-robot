@@ -18,11 +18,16 @@ const createTabs = (): ExtensionManagerTab[] => [
   {
     id: 'library',
     label: 'Library tab',
+    tags: [
+      { value: 'recommended', label: '推荐' },
+      { value: 'writing', label: '写作' },
+    ],
     items: [
       {
         id: 'alpha',
         name: 'Alpha extension',
         description: 'Alpha description',
+        tags: ['recommended'],
         installed: true,
         actions: alphaActions,
         primaryActionsLimit: 2,
@@ -32,18 +37,24 @@ const createTabs = (): ExtensionManagerTab[] => [
         id: 'beta',
         name: 'Beta extension',
         description: 'Beta description',
+        tags: ['writing'],
         installed: false,
       },
       {
         id: 'gamma',
         name: 'Gamma extension',
         description: 'Gamma description',
+        tags: ['recommended'],
       },
     ],
   },
   {
     id: 'market',
     label: 'Market tab',
+    tags: [
+      { value: 'featured', label: '精选' },
+      { value: 'tools', label: '工具' },
+    ],
     items: [{ id: 'delta', name: 'Delta extension', installed: true }],
   },
 ]
@@ -92,6 +103,20 @@ const installBeta = () => {
 const setExternalActiveTab = (tabId: string) => {
   activeTab.value = tabId
 }
+
+const removeSelectedTag = () => {
+  tabs.value = tabs.value.map((tab) =>
+    tab.id === activeTab.value ? { ...tab, tags: (tab.tags ?? []).filter((tag) => tag.value !== 'recommended') } : tab,
+  )
+}
+
+const emptyLibrary = () => {
+  tabs.value = tabs.value.map((tab) => (tab.id === 'library' ? { ...tab, items: [] } : tab))
+}
+
+const removeMarketTab = () => {
+  tabs.value = tabs.value.filter((tab) => tab.id !== 'market')
+}
 </script>
 
 <template>
@@ -122,6 +147,9 @@ const setExternalActiveTab = (tabId: string) => {
     Set active library
   </button>
   <button type="button" data-testid="install-beta" @click="installBeta">Install beta</button>
+  <button type="button" data-testid="remove-selected-tag" @click="removeSelectedTag">Remove selected tag</button>
+  <button type="button" data-testid="empty-library" @click="emptyLibrary">Empty library</button>
+  <button type="button" data-testid="remove-market-tab" @click="removeMarketTab">Remove market tab</button>
   <button type="button" data-testid="show-item-slot-manager" @click="showItemSlotManager = true">
     Show item slot manager
   </button>

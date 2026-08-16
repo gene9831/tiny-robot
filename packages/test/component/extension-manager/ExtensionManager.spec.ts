@@ -167,3 +167,88 @@ test.describe('ExtensionManager uncontrolled state', () => {
     ).toHaveAttribute('aria-expanded', 'true')
   })
 })
+
+test.describe('ExtensionManager Filter acceptance', () => {
+  test('filters by trimmed case-insensitive name and description search', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+    const search = manager.getByTestId('filter-search')
+
+    await search.fill('  ALPHA  ')
+    await expect(manager.locator('li[data-card-id="alpha"]')).toHaveCount(1)
+    await expect(manager.locator('li[data-card-id="beta"]')).toHaveCount(0)
+    await search.fill('DESCRIPTION')
+    await expect(manager.locator('li[data-card-id]')).toHaveCount(3)
+  })
+
+  test('combines selected tag and search with AND semantics', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await manager.getByTestId('filter-tag').selectOption('recommended')
+    await manager.getByTestId('filter-search').fill('gamma')
+
+    await expect(manager.locator('li[data-card-id="gamma"]')).toHaveCount(1)
+    await expect(manager.locator('li[data-card-id="alpha"]')).toHaveCount(0)
+    await expect(manager.locator('li[data-card-id="beta"]')).toHaveCount(0)
+  })
+
+  test('preserves order and installed/available partitioning after filtering', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await manager.getByTestId('filter-tag').selectOption('recommended')
+    await expect(manager.locator('[data-section-key="installed"] li[data-card-id]')).toHaveCount(1)
+    await expect(manager.locator('[data-section-key="installed"] li[data-card-id]')).toHaveAttribute(
+      'data-card-id',
+      'alpha',
+    )
+    await expect(manager.locator('[data-section-key="available"] li[data-card-id]')).toHaveAttribute(
+      'data-card-id',
+      'gamma',
+    )
+  })
+
+  test('keeps static tags, disables the selector without tags, and keeps the filter row for empty tabs', async ({
+    mount,
+  }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await expect(manager.getByTestId('filter-tag').locator('option')).toHaveCount(3)
+    await manager.getByTestId('filter-tag').selectOption('recommended')
+    await component.getByTestId('remove-selected-tag').click()
+    await manager.getByTestId('filter-tag').selectOption('writing')
+    await component.getByTestId('remove-selected-tag').click()
+    await expect(manager.getByTestId('filter-tag')).toBeDisabled()
+    await component.getByTestId('set-active-market').click()
+    await expect(manager.getByTestId('filter-tag')).toBeEnabled()
+    await component.getByTestId('empty-library').click()
+    await expect(manager.getByTestId('filter-root')).toBeVisible()
+    await component.getByTestId('remove-market-tab').click()
+    await expect(manager.getByTestId('filter-root')).toBeVisible()
+  })
+
+  test('isolates tab filter state and clears invalid or removed tab state', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await manager.getByTestId('filter-tag').selectOption('recommended')
+    await manager.getByTestId('filter-search').fill('alpha')
+    await component.getByTestId('set-active-market').click()
+    await expect(manager.getByTestId('filter-search')).toHaveValue('')
+    await component.getByTestId('set-active-library').click()
+    await component.getByTestId('remove-selected-tag').click()
+    await expect(manager.getByTestId('filter-tag')).toHaveValue('')
+    await expect(manager.getByTestId('filter-search')).toHaveValue('alpha')
+    await component.getByTestId('remove-market-tab').click()
+    await expect(manager.getByTestId('filter-root')).toBeVisible()
+  })
+
+  test('does not expose item tags in the item slot Card/Grid boundary', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    await component.getByTestId('show-item-slot-manager').click()
+    await expect(component.getByTestId('item-slot-manager').getByTestId('item-slot-context')).toHaveCount(3)
+    await expect(component.getByTestId('item-slot-manager').locator('[data-item-tags]')).toHaveCount(0)
+  })
+})
