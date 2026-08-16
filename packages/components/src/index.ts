@@ -22,7 +22,7 @@ import ThemeProvider from './theme-provider'
 import Welcome from './welcome'
 import McpServerPicker from './mcp-server-picker'
 import McpAddForm from './mcp-add-form'
-import ExtensionManager, { useExtensionContext } from './extension-manager'
+import ExtensionManager from './extension-manager'
 import {
   ActionButton,
   SubmitButton,
@@ -55,7 +55,7 @@ export * from './theme-provider/index.type'
 export * from './welcome/index.type'
 export * from './mcp-server-picker/index.type'
 export * from './mcp-add-form/index.type'
-export * from './extension-manager/index.type'
+export * from './extension-manager/public.type'
 
 export { useSenderContentRegistration } from './shared/composables/useSenderContentRegistration'
 export type { SenderContentRegister } from './shared/composables/useSenderContentRegistration'
@@ -74,7 +74,6 @@ export { useTheme } from './theme-provider/useTheme'
 export { useSenderContext } from './sender'
 export { vDropzone } from './drag-overlay/directives/vDropzone'
 export { useAutoScroll, useTouchDevice } from './shared/composables'
-export { useExtensionContext }
 const components = [
   Attachments,
   Bubble,
