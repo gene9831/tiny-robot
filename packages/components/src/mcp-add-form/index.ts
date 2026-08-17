@@ -10,7 +10,7 @@ const install = function <T>(app: App<T>) {
 McpAddForm.install = install
 
 /**
- * @deprecated Use McpExtensionForm within the ExtensionManager composition API instead.
+ * @deprecated Use the ExtensionManager component APIs instead.
  * This entry point remains available for compatibility and will be removed in a future major release.
  */
 export default McpAddForm as typeof McpAddForm & { install: typeof install }

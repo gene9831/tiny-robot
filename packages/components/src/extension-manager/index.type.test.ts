@@ -6,12 +6,9 @@ import type {
   ExtensionCardGridNameClickEvent,
   ExtensionCardGridProps,
   ExtensionCardGridSlots,
-  Extension,
-  ExtensionContext,
   ExtensionCardAction,
   ExtensionCardActionEvent,
   ExtensionCardProps,
-  ExtensionIntent,
   ExtensionManagerActionEvent,
   ExtensionManagerEmits,
   ExtensionManagerItem,
@@ -23,18 +20,9 @@ import type {
   ExtensionManagerTagOption,
   ExtensionManagerTab,
   ExtensionManagerTabChangeEvent,
-  ExtensionRootProps,
-  ExtensionScope,
-  ExtensionSearchFn,
 } from './index.type'
 
-const input = { id: 'available', kind: 'skill', name: 'Available skill' }
-const extension: Extension = { ...input, installed: false }
-
-const rootProps: ExtensionRootProps = {
-  extensions: [input],
-  expandedSections: { installed: true, available: true },
-}
+const legacyItem = { id: 'legacy', kind: 'skill', name: 'Legacy extension' }
 
 const icon = {} as Component
 
@@ -230,7 +218,7 @@ managerEmit('close', managerTab.id)
 // @ts-expect-error Manager items retain Grid-owned identity.
 const managerItemWithoutId: ExtensionManagerItem = { name: 'Missing Manager identity' }
 const oldManagerFacadeProps = {
-  extensions: [input],
+  extensions: [legacyItem],
   operationStates: {},
 }
 // @ts-expect-error The old extensions/operationStates facade is not the Manager contract.
@@ -258,7 +246,7 @@ const oldShowHeaderProps: ExtensionManagerProps = {
 const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
 
 // @ts-expect-error Card no longer accepts an Extension item.
-const oldCardProps: ExtensionCardProps = { item: extension }
+const oldCardProps: ExtensionCardProps = { item: legacyItem }
 // @ts-expect-error Grid identity is not a Card prop.
 const cardPropsWithGridId: ExtensionCardProps = { name: 'Card without Grid identity', id: 'grid-only' }
 // @ts-expect-error ExtensionCardGridItem requires the Grid-owned id.
@@ -268,21 +256,6 @@ const unlabeledAction: ExtensionCardAction = { id: 'install', type: 'button' }
 // @ts-expect-error Domain-specific install action is not a Card action type.
 const installAction: ExtensionCardAction = { id: 'install', type: 'install', label: '安装' }
 
-const search: ExtensionSearchFn = (_query, item, scope) => item.kind === 'skill' && scope === 'available'
-
-const intent: ExtensionIntent = { id: 'available', kind: 'skill' }
-
-declare const context: ExtensionContext
-const scope: ExtensionScope = 'available'
-const availableItems: Extension[] = context.availableItems.value
-
-context.isSectionExpanded(scope)
-context.requestInstall(extension)
-
-void rootProps
-void search
-void intent
-void availableItems
 void cardProps
 void switchAction
 void buttonAction

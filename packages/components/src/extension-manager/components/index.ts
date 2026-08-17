@@ -1,5 +1,2 @@
 export { default as ExtensionCard } from './ExtensionCard.vue'
 export { default as ExtensionCardGrid } from './ExtensionCardGrid.vue'
-export { default as ExtensionFilter } from './ExtensionFilter.vue'
-export { default as McpDetail } from './McpDetail.vue'
-export { default as McpForm } from './McpForm.vue'
