@@ -157,6 +157,38 @@ test.describe('ExtensionManager uncontrolled state', () => {
     await expect(dashTab).toBeFocused()
   })
 
+  test('moves the shared indicator to the active tab', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('uncontrolled-manager')
+    const indicator = manager.locator('.extension-manager-tabs__indicator')
+    const slashTab = manager.getByRole('tab', { name: /Slash tab/ })
+    const dashTab = manager.getByRole('tab', { name: /Dash tab/ })
+
+    const expectIndicatorAt = async (tab: typeof slashTab) => {
+      await expect
+        .poll(async () => {
+          const target = await tab.evaluate((element) => ({
+            left: (element as HTMLElement).offsetLeft,
+            width: (element as HTMLElement).offsetWidth,
+          }))
+          const indicatorPosition = await indicator.evaluate((element) => ({
+            transform: (element as HTMLElement).style.transform,
+            width: (element as HTMLElement).style.width,
+          }))
+
+          return (
+            indicatorPosition.transform === `translateX(${target.left}px)` &&
+            indicatorPosition.width === `${target.width}px`
+          )
+        })
+        .toBe(true)
+    }
+
+    await expectIndicatorAt(dashTab)
+    await slashTab.click()
+    await expectIndicatorAt(slashTab)
+  })
+
   test('keeps Enter and Space activation through native tab buttons', async ({ mount }) => {
     const component = await mount(ExtensionManagerUncontrolledFixture)
     const manager = component.getByTestId('uncontrolled-manager')

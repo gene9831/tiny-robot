@@ -99,7 +99,7 @@ const handleToggle = (event: ToggleEvent) => {
 .tr-extension-card-popover__content {
   position: fixed;
   inset: auto;
-  padding: 8px;
+  padding: 6px;
   margin: 0;
   border: 0;
   border-radius: 12px;

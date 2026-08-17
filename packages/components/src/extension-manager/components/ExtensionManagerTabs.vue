@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { VNode } from 'vue'
-import { nextTick } from 'vue'
+import type { CSSProperties, VNode } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import type { ExtensionManagerTab } from '../index.type'
 
 defineOptions({ name: 'ExtensionManagerTabs' })
@@ -24,11 +24,30 @@ const getTabDomId = (tabId: string) => `${props.idPrefix}-tab-${encodeTabPart(ta
 const getTabPanelDomId = (tabId: string) => `${props.idPrefix}-tabpanel-${encodeTabPart(tabId)}`
 
 const tabElements = new Map<string, HTMLButtonElement>()
+const indicatorStyle = ref<CSSProperties>()
+
+const updateIndicator = () => {
+  const activeTab = props.activeTabId ? tabElements.get(props.activeTabId) : undefined
+
+  if (!activeTab) {
+    indicatorStyle.value = undefined
+    return
+  }
+
+  indicatorStyle.value = {
+    transform: `translateX(${activeTab.offsetLeft}px)`,
+    width: `${activeTab.offsetWidth}px`,
+  }
+}
 
 const setTabRef = (tabId: string, element: HTMLButtonElement | null) => {
   if (element) tabElements.set(tabId, element)
   else tabElements.delete(tabId)
 }
+
+watch([() => props.activeTabId, () => props.tabs.map((tab) => tab.id)], updateIndicator, { flush: 'post' })
+
+onMounted(updateIndicator)
 
 const selectTab = (tabId: string) => emit('select', tabId)
 
@@ -88,14 +107,17 @@ const handleKeydown = (tabIndex: number, event: KeyboardEvent) => {
       </template>
       <template v-else>{{ tab.label }}</template>
     </button>
+    <span v-if="indicatorStyle" class="extension-manager-tabs__indicator" :style="indicatorStyle" aria-hidden="true" />
   </div>
 </template>
 
 <style lang="less" scoped>
 .extension-manager-tabs {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
+  border-bottom: 1px solid var(--tr-mcp-server-picker-tabs-divider-color);
 }
 
 .extension-manager-tabs__tab {
@@ -117,8 +139,27 @@ const handleKeydown = (tabIndex: number, event: KeyboardEvent) => {
   font-weight: 600;
 }
 
+.extension-manager-tabs__indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--tr-mcp-server-picker-tabs-border-color-active);
+  pointer-events: none;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
+    width 200ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform, width;
+}
+
 .extension-manager-tabs__tab:focus-visible {
   outline: 2px solid var(--tr-color-primary);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .extension-manager-tabs__indicator {
+    transition: none;
+  }
 }
 </style>

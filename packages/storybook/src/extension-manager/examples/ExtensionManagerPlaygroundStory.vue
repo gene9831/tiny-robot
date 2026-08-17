@@ -1,63 +1,158 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import type {
   ExtensionCardAction,
   ExtensionCardActionEvent,
   ExtensionManagerActionEvent,
+  ExtensionManagerItem,
   ExtensionManagerNameClickEvent,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerTab,
 } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 
-const activeTab = ref('workspace')
-const alphaInstalled = ref(true)
+const activeTab = ref('mcp')
 const isClosed = ref(false)
-const lastEvent = ref<Record<string, unknown>>()
 const eventHistory = ref<Record<string, unknown>[]>([])
 const headerActionCount = ref(0)
 
-const alphaActions = computed<ExtensionCardAction[]>(() => [
-  {
-    id: 'toggle-alpha',
-    type: 'switch',
-    label: alphaInstalled.value ? 'Uninstall Alpha' : 'Install Alpha',
-    checked: alphaInstalled.value,
-  },
-  { id: 'inspect-alpha', type: 'button', label: 'Inspect Alpha' },
-])
+type PlaygroundItem = Omit<ExtensionManagerItem, 'actions'> & { enabled?: boolean }
+type PlaygroundTab = Omit<ExtensionManagerTab, 'items'> & { items: PlaygroundItem[] }
 
-const tabs = computed<ExtensionManagerTab[]>(() => [
+const getItemActions = (tabId: string, item: PlaygroundItem): ExtensionCardAction[] => {
+  if (!item.installed) {
+    const installing = item.progress !== undefined
+
+    return [
+      {
+        id: `add-${item.id}`,
+        type: 'button',
+        label: installing ? 'Adding...' : 'Add',
+        disabled: installing,
+      },
+    ]
+  }
+
+  const commonActions: ExtensionCardAction[] = [
+    { id: `inspect-${item.id}`, type: 'button', label: 'Inspect' },
+    { id: `remove-${item.id}`, type: 'button', label: 'Remove', danger: true },
+  ]
+
+  if (tabId === 'skills') return commonActions
+
+  const enabled = item.enabled ?? true
+
+  return [
+    {
+      id: `toggle-${item.id}`,
+      type: 'switch',
+      label: enabled ? `Disable ${item.name}` : `Enable ${item.name}`,
+      checked: enabled,
+    },
+    ...commonActions,
+  ]
+}
+
+const tabState = ref<PlaygroundTab[]>([
   {
-    id: 'workspace',
-    label: 'Workspace',
+    id: 'mcp',
+    label: 'MCP',
     items: [
       {
-        id: 'alpha',
-        name: 'Alpha extension',
-        description: 'Changing the switch moves this item between the derived sections.',
-        installed: alphaInstalled.value,
-        actions: alphaActions.value,
+        id: 'mcp-filesystem',
+        name: 'Filesystem MCP',
+        description: 'Read and write files from approved local directories.',
+        installed: true,
         tags: ['local', 'featured'],
       },
       {
-        id: 'gamma',
-        name: 'Gamma extension',
-        description: 'An available extension that keeps the original item order.',
-        tags: ['local'],
+        id: 'mcp-github',
+        name: 'GitHub MCP',
+        description: 'Inspect repositories, pull requests, issues, and code changes.',
+        installed: true,
+        tags: ['remote', 'developer'],
+      },
+      {
+        id: 'mcp-postgres',
+        name: 'PostgreSQL MCP',
+        description: 'Explore schemas and query connected PostgreSQL databases.',
+        installed: true,
+        tags: ['database', 'developer'],
+      },
+      {
+        id: 'mcp-slack',
+        name: 'Slack MCP',
+        description: 'Search channels and inspect workspace conversations.',
+        tags: ['remote', 'productivity'],
+      },
+      {
+        id: 'mcp-notion',
+        name: 'Notion MCP',
+        description: 'Browse team pages, databases, and project documentation.',
+        tags: ['remote', 'productivity'],
+      },
+      {
+        id: 'mcp-browser',
+        name: 'Browser MCP',
+        description: 'Give agents controlled browser navigation capabilities.',
+        tags: ['featured', 'developer'],
+      },
+      {
+        id: 'mcp-linear',
+        name: 'Linear MCP',
+        description: 'Search issues, projects, and engineering cycles.',
+        tags: ['remote', 'developer'],
       },
     ],
   },
   {
-    id: 'catalog',
-    label: 'Catalog',
+    id: 'skills',
+    label: 'Skills',
     items: [
       {
-        id: 'beta',
-        name: 'Beta extension',
-        description: 'The second tab has its own installed and available sections.',
-        installed: false,
-        tags: ['remote', 'recommended'],
+        id: 'skill-code-review',
+        name: 'Code Review',
+        description: 'Review changes for correctness, maintainability, and regressions.',
+        installed: true,
+        tags: ['developer', 'featured'],
+      },
+      {
+        id: 'skill-release-notes',
+        name: 'Release Notes',
+        description: 'Turn merged changes into concise release notes and changelogs.',
+        installed: true,
+        tags: ['developer', 'writing'],
+      },
+      {
+        id: 'skill-sql-analyst',
+        name: 'SQL Analyst',
+        description: 'Plan SQL investigations and explain query results.',
+        installed: true,
+        tags: ['database', 'analysis'],
+      },
+      {
+        id: 'skill-incident-triage',
+        name: 'Incident Triage',
+        description: 'Structure incident signals, hypotheses, and next actions.',
+        tags: ['operations', 'featured'],
+      },
+      {
+        id: 'skill-api-designer',
+        name: 'API Designer',
+        description: 'Design consistent APIs with clear contracts and trade-offs.',
+        tags: ['developer', 'design'],
+      },
+      {
+        id: 'skill-research-assistant',
+        name: 'Research Assistant',
+        description: 'Organize research questions, evidence, and concise findings.',
+        tags: ['analysis', 'writing'],
+      },
+      {
+        id: 'skill-migration-planner',
+        name: 'Migration Planner',
+        description: 'Break platform migrations into safe, verifiable stages.',
+        tags: ['developer', 'operations'],
       },
     ],
   },
@@ -68,14 +163,28 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
   },
 ])
 
-const eventOutput = computed(() =>
-  lastEvent.value === undefined
-    ? 'Interact with a card, tab, section, or header action.'
-    : JSON.stringify(lastEvent.value, null, 2),
+const tabs = computed<ExtensionManagerTab[]>(() =>
+  tabState.value.map((tab) => ({
+    ...tab,
+    items: tab.items.map((item) => ({
+      ...item,
+      actions: getItemActions(tab.id, item),
+    })),
+  })),
 )
 
+const installTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const installIntervals = new Map<string, ReturnType<typeof setInterval>>()
+
+const eventOutput = computed(() => {
+  const lastEvent = eventHistory.value[0]
+
+  return lastEvent === undefined
+    ? 'Interact with a card, tab, section, or header action.'
+    : JSON.stringify(lastEvent, null, 2)
+})
+
 const recordEvent = (event: Record<string, unknown>) => {
-  lastEvent.value = event
   eventHistory.value = [event, ...eventHistory.value].slice(0, 5)
 }
 
@@ -86,9 +195,47 @@ const serializeAction = (action: ExtensionCardActionEvent) => ({
   ...(action.payload === undefined ? {} : { payload: action.payload }),
 })
 
+const startInstall = (item: PlaygroundItem) => {
+  if (item.installed || item.progress !== undefined) return
+
+  item.progress = 'indeterminate'
+
+  const timeout = setTimeout(() => {
+    installTimeouts.delete(item.id)
+    item.progress = 0
+
+    const interval = setInterval(() => {
+      if (typeof item.progress !== 'number') return
+
+      item.progress = Math.min(100, item.progress + 5)
+      if (item.progress < 100) return
+
+      clearInterval(interval)
+      installIntervals.delete(item.id)
+      item.installed = true
+      delete item.progress
+    }, 100)
+
+    installIntervals.set(item.id, interval)
+  }, 1000)
+
+  installTimeouts.set(item.id, timeout)
+}
+
 const handleAction = ({ tabId, sectionKey, itemId, action }: ExtensionManagerActionEvent) => {
-  if (itemId === 'alpha' && action.id === 'toggle-alpha' && typeof action.checked === 'boolean') {
-    alphaInstalled.value = action.checked
+  const item = tabState.value.find((tab) => tab.id === tabId)?.items.find((item) => item.id === itemId)
+
+  if (item && action.type === 'switch' && typeof action.checked === 'boolean') {
+    item.enabled = action.checked
+  }
+
+  if (item && sectionKey === 'available' && action.id === `add-${itemId}`) {
+    startInstall(item)
+  }
+
+  if (item && sectionKey === 'installed' && action.id === `remove-${itemId}`) {
+    delete item.installed
+    delete item.enabled
   }
 
   recordEvent({
@@ -127,6 +274,11 @@ const handleClose = () => {
   isClosed.value = true
   recordEvent({ type: 'close' })
 }
+
+onBeforeUnmount(() => {
+  installTimeouts.forEach((timeout) => clearTimeout(timeout))
+  installIntervals.forEach((interval) => clearInterval(interval))
+})
 </script>
 
 <template>
@@ -135,22 +287,24 @@ const handleClose = () => {
       <label>
         Active tab
         <select v-model="activeTab" aria-label="Active tab">
-          <option value="workspace">Workspace</option>
-          <option value="catalog">Catalog</option>
+          <option value="mcp">MCP</option>
+          <option value="skills">Skills</option>
           <option value="empty">Empty (no tags)</option>
         </select>
       </label>
-      <button type="button" @click="handleHeaderAction">Header action</button>
-      <span>{{ headerActionCount }} header actions</span>
     </div>
 
-    <p v-if="isClosed" class="storybook-manager-playground__closed">Manager closed. Reopen the story to reset it.</p>
+    <p v-if="isClosed" class="storybook-manager-playground__closed">
+      Manager closed.
+      <span style="text-decoration: underline; cursor: pointer" @click="isClosed = false">Click me</span>
+      to open it.
+    </p>
 
     <ExtensionManager
       v-else
       v-model:active-tab="activeTab"
       :tabs="tabs"
-      title="Extension manager playground"
+      title="服务列表"
       show-close-button
       @tab-change="handleTabChange"
       @section-toggle="handleSectionToggle"
