@@ -131,6 +131,47 @@ test.describe('ExtensionManager section model', () => {
 })
 
 test.describe('ExtensionManager uncontrolled state', () => {
+  test('activates and focuses tabs with Arrow, Home, and End keys', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('uncontrolled-manager')
+    const slashTab = manager.getByRole('tab', { name: /Slash tab/ })
+    const dashTab = manager.getByRole('tab', { name: /Dash tab/ })
+
+    await dashTab.focus()
+    await dashTab.press('ArrowRight')
+    await expect(slashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(slashTab).toHaveAttribute('tabindex', '0')
+    await expect(dashTab).toHaveAttribute('tabindex', '-1')
+    await expect(slashTab).toBeFocused()
+
+    await slashTab.press('ArrowLeft')
+    await expect(dashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(dashTab).toBeFocused()
+
+    await dashTab.press('Home')
+    await expect(slashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(slashTab).toBeFocused()
+
+    await slashTab.press('End')
+    await expect(dashTab).toHaveAttribute('aria-selected', 'true')
+    await expect(dashTab).toBeFocused()
+  })
+
+  test('keeps Enter and Space activation through native tab buttons', async ({ mount }) => {
+    const component = await mount(ExtensionManagerUncontrolledFixture)
+    const manager = component.getByTestId('uncontrolled-manager')
+    const slashTab = manager.getByRole('tab', { name: /Slash tab/ })
+    const dashTab = manager.getByRole('tab', { name: /Dash tab/ })
+
+    await slashTab.focus()
+    await slashTab.press('Enter')
+    await expect(slashTab).toHaveAttribute('aria-selected', 'true')
+
+    await dashTab.focus()
+    await dashTab.press('Space')
+    await expect(dashTab).toHaveAttribute('aria-selected', 'true')
+  })
+
   test('uses internal active and section expansion state without v-model bindings', async ({ mount }) => {
     const component = await mount(ExtensionManagerUncontrolledFixture)
     const manager = component.getByTestId('uncontrolled-manager')

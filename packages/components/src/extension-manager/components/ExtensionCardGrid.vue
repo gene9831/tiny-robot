@@ -11,6 +11,8 @@ import ExtensionCard from './ExtensionCard.vue'
 
 const props = withDefaults(defineProps<ExtensionCardGridProps>(), {
   emptyText: '暂无内容',
+  nameClickable: undefined,
+  overflowMenuShowIcons: undefined,
 })
 
 const slots = useSlots()

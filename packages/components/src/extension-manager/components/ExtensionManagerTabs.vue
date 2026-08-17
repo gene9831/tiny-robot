@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ComponentPublicInstance, VNode } from 'vue'
-import { computed, nextTick } from 'vue'
+import type { VNode } from 'vue'
+import { nextTick } from 'vue'
 import type { ExtensionManagerTab } from '../index.type'
 
 defineOptions({ name: 'ExtensionManagerTabs' })
@@ -25,103 +25,65 @@ const getTabPanelDomId = (tabId: string) => `${props.idPrefix}-tabpanel-${encode
 
 const tabElements = new Map<string, HTMLButtonElement>()
 
-const setTabRef = (tabId: string, target: Element | ComponentPublicInstance | null) => {
-  const element = target instanceof Element ? target : target?.$el
-
-  if (element instanceof HTMLButtonElement) tabElements.set(tabId, element)
+const setTabRef = (tabId: string, element: HTMLButtonElement | null) => {
+  if (element) tabElements.set(tabId, element)
   else tabElements.delete(tabId)
 }
 
-const activeTabId = computed(() =>
-  props.tabs.some((tab) => tab.id === props.activeTabId) ? props.activeTabId : props.tabs[0]?.id,
-)
-
-const selectTab = (tabId: string) => {
-  const tab = props.tabs.find((candidate) => candidate.id === tabId)
-  if (!tab) return
-
-  emit('select', tab.id)
-}
+const selectTab = (tabId: string) => emit('select', tabId)
 
 const focusTab = (tabId: string) => {
   void nextTick(() => tabElements.get(tabId)?.focus())
 }
 
-const getWrappedIndex = (index: number, length: number) => ((index % length) + length) % length
-
-const getAdjacentTabId = (tabId: string, direction: -1 | 1) => {
-  const tabs = props.tabs
-  if (tabs.length === 0) return undefined
-
-  const currentIndex = tabs.findIndex((tab) => tab.id === tabId)
-  const startingIndex = currentIndex >= 0 ? currentIndex : direction === 1 ? -1 : 0
-
-  for (let offset = 1; offset <= tabs.length; offset += 1) {
-    const candidate = tabs[getWrappedIndex(startingIndex + direction * offset, tabs.length)]
-    if (candidate) return candidate.id
-  }
-
-  return undefined
-}
-
-const getBoundaryTabId = (boundary: 'first' | 'last') => {
-  const tabs = props.tabs
-  return boundary === 'first' ? tabs[0]?.id : tabs.at(-1)?.id
-}
-
-const handleKeydown = (tabId: string, event: KeyboardEvent) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    selectTab(tabId)
-    return
-  }
-
-  let nextTabId: string | undefined
+const handleKeydown = (tabIndex: number, event: KeyboardEvent) => {
+  let nextIndex: number
 
   switch (event.key) {
     case 'ArrowLeft':
-      nextTabId = getAdjacentTabId(tabId, -1)
+      nextIndex = (tabIndex - 1 + props.tabs.length) % props.tabs.length
       break
     case 'ArrowRight':
-      nextTabId = getAdjacentTabId(tabId, 1)
+      nextIndex = (tabIndex + 1) % props.tabs.length
       break
     case 'Home':
-      nextTabId = getBoundaryTabId('first')
+      nextIndex = 0
       break
     case 'End':
-      nextTabId = getBoundaryTabId('last')
+      nextIndex = props.tabs.length - 1
       break
     default:
       return
   }
 
-  if (nextTabId === undefined) return
+  const nextTab = props.tabs[nextIndex]
+  if (!nextTab) return
 
   event.preventDefault()
-  selectTab(nextTabId)
-  focusTab(nextTabId)
+  selectTab(nextTab.id)
+  focusTab(nextTab.id)
 }
 </script>
 
 <template>
   <div class="extension-manager-tabs" role="tablist" aria-orientation="horizontal">
     <button
-      v-for="tab in props.tabs"
+      v-for="(tab, index) in props.tabs"
       :key="tab.id"
-      :ref="(element) => setTabRef(tab.id, element as Element | ComponentPublicInstance | null)"
+      :ref="(element) => setTabRef(tab.id, element as HTMLButtonElement | null)"
       class="extension-manager-tabs__tab"
       type="button"
       role="tab"
       :id="getTabDomId(tab.id)"
-      :aria-selected="tab.id === activeTabId"
+      :aria-selected="tab.id === props.activeTabId"
       :aria-controls="getTabPanelDomId(tab.id)"
-      :tabindex="tab.id === activeTabId ? 0 : -1"
+      :tabindex="tab.id === props.activeTabId ? 0 : -1"
       @click="selectTab(tab.id)"
-      @keydown="handleKeydown(tab.id, $event)"
+      @keydown="handleKeydown(index, $event)"
     >
       <template v-if="slots.tab">
         <span class="extension-manager-tabs__slot" @click.stop>
-          <slot name="tab" :tab="tab" :active="tab.id === activeTabId" :select="() => selectTab(tab.id)" />
+          <slot name="tab" :tab="tab" :active="tab.id === props.activeTabId" :select="() => selectTab(tab.id)" />
         </span>
       </template>
       <template v-else>{{ tab.label }}</template>

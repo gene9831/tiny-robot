@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/experimental-ct-vue'
+import vue from '@vitejs/plugin-vue'
+import vuejsx from '@vitejs/plugin-vue-jsx'
 
 process.env.NODE_ENV = 'development'
 
@@ -16,6 +18,7 @@ export default defineConfig({
     ctCacheDir: 'playwright/.cache-development-mode',
     ctViteConfig: {
       mode: 'development',
+      plugins: [vue(), vuejsx()],
     },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
