@@ -18,10 +18,7 @@ const items: ExtensionCardGridItem[] = [
       { id: 'install-alpha', type: 'button', label: 'Install Alpha', icon: editIcon },
       { id: 'inspect-alpha', type: 'custom', label: 'Inspect Alpha', data: { origin: 'storybook' } },
     ],
-    primaryActionsLimit: 3,
     progress: 75,
-    overflowMenuLabel: 'Alpha actions',
-    overflowMenuPlacement: 'top-end',
   },
   {
     id: 'beta',
@@ -33,5 +30,13 @@ const items: ExtensionCardGridItem[] = [
 </script>
 
 <template>
-  <ExtensionManager.CardGrid :items="items" empty-text="暂无内容" />
+  <ExtensionManager.CardGrid
+    :items="items"
+    empty-text="暂无内容"
+    :primary-actions-limit="1"
+    :name-clickable="true"
+    overflow-menu-label="更多操作"
+    overflow-menu-placement="top-end"
+    :overflow-menu-show-icons="false"
+  />
 </template>

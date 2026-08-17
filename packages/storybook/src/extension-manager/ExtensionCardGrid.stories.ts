@@ -33,10 +33,7 @@ const defaultItems: ExtensionCardGridItem[] = [
       { id: 'install-alpha', type: 'button', label: 'Install Alpha', icon: editIcon },
       { id: 'inspect-alpha', type: 'custom', label: 'Inspect Alpha', data: { origin: 'storybook' } },
     ],
-    primaryActionsLimit: 3,
     progress: 75,
-    overflowMenuLabel: 'Alpha actions',
-    overflowMenuPlacement: 'top-end',
   },
   {
     id: 'beta',

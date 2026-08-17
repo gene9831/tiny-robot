@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, markRaw, ref } from 'vue'
 import { IconEditPen } from '@opentiny/tiny-robot-svgs'
 import type {
   ExtensionCardGridActionEvent,
@@ -7,6 +7,8 @@ import type {
   ExtensionCardGridNameClickEvent,
 } from '../../../components/src/extension-manager/index.type'
 import ExtensionCardGrid from '../../../components/src/extension-manager/components/ExtensionCardGrid.vue'
+
+const editIcon = markRaw(IconEditPen)
 
 const items: ExtensionCardGridItem[] = [
   {
@@ -71,7 +73,7 @@ const fallbackItems: ExtensionCardGridItem[] = [
     name: 'Fallback extension',
     actions: [
       { id: 'fallback-primary', type: 'button', label: 'Fallback primary' },
-      { id: 'fallback-overflow', type: 'button', label: 'Fallback overflow' },
+      { id: 'fallback-overflow', type: 'button', label: 'Fallback overflow', icon: editIcon },
     ],
   },
   {
@@ -93,6 +95,22 @@ const fallbackItems: ExtensionCardGridItem[] = [
 const nameClickableItems: ExtensionCardGridItem[] = [
   { id: 'fallback-name', name: 'Fallback name' },
   { id: 'disabled-name', name: 'Disabled name', nameClickable: false },
+]
+const implicitNameClickableItems: ExtensionCardGridItem[] = [{ id: 'implicit-name', name: 'Implicit name' }]
+const menuFallbackItems: ExtensionCardGridItem[] = [
+  {
+    id: 'menu-fallback',
+    name: 'Menu fallback extension',
+    actions: [{ id: 'fallback-menu-action', type: 'button', label: 'Fallback menu action', icon: editIcon }],
+  },
+  {
+    id: 'menu-override',
+    name: 'Menu override extension',
+    overflowMenuLabel: 'Item actions',
+    overflowMenuPlacement: 'bottom-end',
+    overflowMenuShowIcons: false,
+    actions: [{ id: 'override-menu-action', type: 'button', label: 'Override menu action', icon: editIcon }],
+  },
 ]
 const actionEvents = ref<ExtensionCardGridActionEvent[]>([])
 const lastNameClick = ref<ExtensionCardGridNameClickEvent>()
@@ -139,6 +157,9 @@ const changeDuplicateItems = () => {
 </script>
 
 <template>
+  <div style="margin-top: 200px">
+    <ExtensionCardGrid data-testid="fallback-grid" :items="fallbackItems" :primary-actions-limit="1" />
+  </div>
   <ExtensionCardGrid data-testid="default-grid" :items="items" @action="handleAction" @name-click="handleNameClick" />
 
   <ExtensionCardGrid data-testid="slot-grid" :items="items">
@@ -158,8 +179,18 @@ const changeDuplicateItems = () => {
     </template>
   </ExtensionCardGrid>
 
-  <ExtensionCardGrid data-testid="fallback-grid" :items="fallbackItems" :primary-actions-limit="1" />
   <ExtensionCardGrid data-testid="name-clickable-fallback-grid" :items="nameClickableItems" :name-clickable="true" />
+  <ExtensionCardGrid data-testid="implicit-name-clickable-grid" :items="implicitNameClickableItems" />
+  <div style="position: fixed; top: 200px; left: 0; width: 100%">
+    <ExtensionCardGrid
+      data-testid="menu-fallback-grid"
+      :items="menuFallbackItems"
+      :primary-actions-limit="0"
+      overflow-menu-label="Grid actions"
+      overflow-menu-placement="top-end"
+      :overflow-menu-show-icons="true"
+    />
+  </div>
 
   <div data-testid="default-min-width-container" style="width: 820px">
     <ExtensionCardGrid data-testid="default-min-width-grid" :items="columnItems" />

@@ -26,6 +26,9 @@ const getCardProps = (item: ExtensionCardGridItem) => {
     ...cardProps,
     primaryActionsLimit: item.primaryActionsLimit ?? props.primaryActionsLimit,
     nameClickable: item.nameClickable ?? props.nameClickable,
+    overflowMenuLabel: item.overflowMenuLabel ?? props.overflowMenuLabel,
+    overflowMenuPlacement: item.overflowMenuPlacement ?? props.overflowMenuPlacement,
+    overflowMenuShowIcons: item.overflowMenuShowIcons ?? props.overflowMenuShowIcons,
   }
 }
 

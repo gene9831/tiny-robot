@@ -67,11 +67,12 @@ export type ExtensionCardGridItem = ExtensionCardProps & {
   id: string
 }
 
-export interface ExtensionCardGridProps {
+export interface ExtensionCardGridProps extends Pick<
+  ExtensionCardProps,
+  'primaryActionsLimit' | 'nameClickable' | 'overflowMenuLabel' | 'overflowMenuPlacement' | 'overflowMenuShowIcons'
+> {
   items: ExtensionCardGridItem[]
   emptyText?: string
-  primaryActionsLimit?: number
-  nameClickable?: boolean
 }
 
 export interface ExtensionCardGridSlots {

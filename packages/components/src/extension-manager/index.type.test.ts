@@ -73,6 +73,9 @@ const cardGridProps: ExtensionCardGridProps = {
   emptyText: 'No cards',
   primaryActionsLimit: 1,
   nameClickable: true,
+  overflowMenuLabel: 'Grid actions',
+  overflowMenuPlacement: 'top-end',
+  overflowMenuShowIcons: false,
 }
 const cardGridDefaultProps: ExtensionCardGridProps = {
   items: [cardGridItem],

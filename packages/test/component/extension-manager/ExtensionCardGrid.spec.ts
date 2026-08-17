@@ -53,6 +53,22 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(grid.getByRole('button', { name: 'Override primary 2' })).toHaveCount(1)
     await expect(grid.getByRole('button', { name: 'Zero overflow' })).toHaveCount(0)
     await expect(grid.locator('[data-card-id="zero"] [aria-label="更多操作"]')).toHaveCount(1)
+
+    const fallbackCard = grid.locator('[data-card-id="fallback"]')
+    await fallbackCard.getByRole('button', { name: '更多操作' }).click()
+    const fallbackMenu = fallbackCard.locator('.tr-extension-card-popover__content')
+    await expect(fallbackMenu).toBeVisible()
+    await expect(fallbackMenu.locator('.tr-extension-card__more-menu-item-icon-slot')).toHaveCount(1)
+    await expect
+      .poll(async () =>
+        fallbackMenu.evaluate((element) => {
+          const trigger = element.parentElement?.querySelector<HTMLButtonElement>('[popovertarget]')
+          return trigger
+            ? Number.parseFloat(getComputedStyle(element).top) >= trigger.getBoundingClientRect().bottom
+            : false
+        }),
+      )
+      .toBe(true)
   })
 
   test('uses the Grid name-clickable fallback while preserving an explicit false item override', async ({ mount }) => {
@@ -65,6 +81,55 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(
       grid.locator('[data-card-id="disabled-name"]').getByRole('button', { name: 'Disabled name' }),
     ).toHaveCount(0)
+  })
+
+  test('uses the Card name-clickable default when the standalone Grid does not provide a fallback', async ({
+    mount,
+  }) => {
+    const component = await mount(ExtensionCardGridFixture)
+    const grid = component.getByTestId('implicit-name-clickable-grid')
+
+    await expect(grid.getByRole('button', { name: 'Implicit name' })).toHaveCount(1)
+  })
+
+  test('uses Grid overflow fallbacks and preserves item-level label, placement, and false icon override', async ({
+    mount,
+  }) => {
+    const component = await mount(ExtensionCardGridFixture)
+    const grid = component.getByTestId('menu-fallback-grid')
+    const fallbackCard = grid.locator('[data-card-id="menu-fallback"]')
+    const overrideCard = grid.locator('[data-card-id="menu-override"]')
+
+    await fallbackCard.getByRole('button', { name: 'Grid actions' }).click()
+    const fallbackMenu = fallbackCard.locator('.tr-extension-card-popover__content')
+    await expect(fallbackMenu).toBeVisible()
+    await expect(fallbackMenu.getByRole('button', { name: 'Fallback menu action' })).toBeVisible()
+    await expect(fallbackMenu.locator('.tr-extension-card__more-menu-item-icon')).toHaveCount(1)
+    await expect
+      .poll(async () =>
+        fallbackMenu.evaluate((element) => {
+          const trigger = element.parentElement?.querySelector<HTMLButtonElement>('[popovertarget]')
+          return trigger
+            ? Number.parseFloat(getComputedStyle(element).top) < trigger.getBoundingClientRect().top
+            : false
+        }),
+      )
+      .toBe(true)
+
+    await overrideCard.getByRole('button', { name: 'Item actions' }).click()
+    const overrideMenu = overrideCard.locator('.tr-extension-card-popover__content')
+    await expect(overrideMenu).toBeVisible()
+    await expect(overrideMenu.locator('.tr-extension-card__more-menu-item-icon')).toHaveCount(0)
+    await expect
+      .poll(async () =>
+        overrideMenu.evaluate((element) => {
+          const trigger = element.parentElement?.querySelector<HTMLButtonElement>('[popovertarget]')
+          return trigger
+            ? Number.parseFloat(getComputedStyle(element).top) >= trigger.getBoundingClientRect().bottom
+            : false
+        }),
+      )
+      .toBe(true)
   })
 
   test('wraps default Card actions and controlled name clicks with the item id', async ({ mount }) => {
