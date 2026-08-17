@@ -108,9 +108,6 @@ export type ExtensionManagerItem = ExtensionCardGridItem & {
 export interface ExtensionManagerTab {
   id: string
   label: string
-  disabled?: boolean
-  badge?: string | number
-  tags?: ExtensionManagerTagOption[]
   items: ExtensionManagerItem[]
 }
 

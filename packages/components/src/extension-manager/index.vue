@@ -73,7 +73,7 @@ const deriveTags = (items: readonly ExtensionManagerItem[]) => {
 }
 const filter = useFilter<ExtensionManagerItem>({
   items: () => activeTab.value?.items ?? [],
-  tags: () => activeTab.value?.tags ?? deriveTags(activeTab.value?.items ?? []),
+  tags: () => deriveTags(activeTab.value?.items ?? []),
   state: () => getFilterState(activeTabId.value),
 })
 

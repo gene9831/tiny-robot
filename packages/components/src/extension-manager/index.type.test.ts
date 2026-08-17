@@ -17,7 +17,6 @@ import type {
   ExtensionManagerSectionKey,
   ExtensionManagerSectionToggleEvent,
   ExtensionManagerSlots,
-  ExtensionManagerTagOption,
   ExtensionManagerTab,
   ExtensionManagerTabChangeEvent,
 } from './index.type'
@@ -111,31 +110,14 @@ const managerItem: ExtensionManagerItem = {
   installed: true,
 }
 
-const managerTag: ExtensionManagerTagOption = { value: 'recommended', label: '推荐' }
-const taggedManagerItem: ExtensionManagerItem = {
-  id: 'tagged',
-  name: 'Tagged extension',
-  tags: ['recommended'],
-}
-
-const taggedManagerTab: ExtensionManagerTab = {
-  id: 'catalog',
-  label: 'Catalog',
-  tags: [managerTag],
-  items: [taggedManagerItem],
-}
-
 const managerTab: ExtensionManagerTab = {
   id: 'catalog',
   label: 'Catalog',
-  disabled: false,
-  badge: 2,
   items: [managerItem],
 }
 const secondManagerTab: ExtensionManagerTab = {
   id: 'updates',
   label: 'Updates',
-  badge: 'new',
   items: [],
 }
 
@@ -245,6 +227,28 @@ const oldShowHeaderProps: ExtensionManagerProps = {
 // @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
 const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
 
+const oldTabWithTags: ExtensionManagerTab = {
+  id: 'old-fields',
+  label: 'Old fields',
+  items: [],
+  // @ts-expect-error Tab filter options are derived from item tags.
+  tags: [],
+}
+const oldTabWithBadge: ExtensionManagerTab = {
+  id: 'old-badge',
+  label: 'Old badge',
+  items: [],
+  // @ts-expect-error Tab badges are not part of the lean tab model.
+  badge: 'new',
+}
+const oldDisabledTab: ExtensionManagerTab = {
+  id: 'old-disabled',
+  label: 'Old disabled',
+  items: [],
+  // @ts-expect-error Tabs are always selectable in the lean tab model.
+  disabled: true,
+}
+
 // @ts-expect-error Card no longer accepts an Extension item.
 const oldCardProps: ExtensionCardProps = { item: legacyItem }
 // @ts-expect-error Grid identity is not a Card prop.
@@ -269,7 +273,6 @@ void cardGridActionEvent
 void cardGridNameClickEvent
 void managerItem
 void managerTab
-void taggedManagerTab
 void secondManagerTab
 void managerProps
 void managerTabChangeEvent
@@ -278,6 +281,9 @@ void managerActionEvent
 void managerNameClickEvent
 void managerSectionKey
 void oldTreeManagerTab
+void oldTabWithTags
+void oldTabWithBadge
+void oldDisabledTab
 void managerSlots
 void managerItemWithoutId
 void oldManagerFacadeProps

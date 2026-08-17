@@ -28,10 +28,6 @@ const handleSectionToggle = (event: { tabId: string; sectionKey: string; expande
   record('section-toggle:' + event.tabId + '/' + event.sectionKey + '/' + event.expanded)
 }
 
-const disableDefaultTab = () => {
-  tabs.value = tabs.value.map((tab) => (tab.id === 'a-b' ? { ...tab, disabled: true } : tab))
-}
-
 const identityTabs: ExtensionManagerTab[] = [
   {
     id: 'a/b',
@@ -62,8 +58,6 @@ const identityTabs: ExtensionManagerTab[] = [
       </template>
     </ExtensionManager>
   </div>
-
-  <button type="button" data-testid="disable-default-tab" @click="disableDefaultTab">Disable default tab</button>
 
   <output data-testid="uncontrolled-event-log">{{ eventLog.join('|') }}</output>
 

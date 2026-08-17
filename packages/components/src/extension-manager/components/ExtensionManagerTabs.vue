@@ -32,14 +32,13 @@ const setTabRef = (tabId: string, target: Element | ComponentPublicInstance | nu
   else tabElements.delete(tabId)
 }
 
-const enabledTabs = computed(() => props.tabs.filter((tab) => !tab.disabled))
-const activeEnabledTabId = computed(() =>
-  enabledTabs.value.some((tab) => tab.id === props.activeTabId) ? props.activeTabId : enabledTabs.value[0]?.id,
+const activeTabId = computed(() =>
+  props.tabs.some((tab) => tab.id === props.activeTabId) ? props.activeTabId : props.tabs[0]?.id,
 )
 
 const selectTab = (tabId: string) => {
   const tab = props.tabs.find((candidate) => candidate.id === tabId)
-  if (!tab || tab.disabled) return
+  if (!tab) return
 
   emit('select', tab.id)
 }
@@ -50,23 +49,23 @@ const focusTab = (tabId: string) => {
 
 const getWrappedIndex = (index: number, length: number) => ((index % length) + length) % length
 
-const getAdjacentEnabledTabId = (tabId: string, direction: -1 | 1) => {
+const getAdjacentTabId = (tabId: string, direction: -1 | 1) => {
   const tabs = props.tabs
-  if (tabs.length === 0 || enabledTabs.value.length === 0) return undefined
+  if (tabs.length === 0) return undefined
 
   const currentIndex = tabs.findIndex((tab) => tab.id === tabId)
   const startingIndex = currentIndex >= 0 ? currentIndex : direction === 1 ? -1 : 0
 
   for (let offset = 1; offset <= tabs.length; offset += 1) {
     const candidate = tabs[getWrappedIndex(startingIndex + direction * offset, tabs.length)]
-    if (candidate && !candidate.disabled) return candidate.id
+    if (candidate) return candidate.id
   }
 
   return undefined
 }
 
-const getBoundaryEnabledTabId = (boundary: 'first' | 'last') => {
-  const tabs = enabledTabs.value
+const getBoundaryTabId = (boundary: 'first' | 'last') => {
+  const tabs = props.tabs
   return boundary === 'first' ? tabs[0]?.id : tabs.at(-1)?.id
 }
 
@@ -81,16 +80,16 @@ const handleKeydown = (tabId: string, event: KeyboardEvent) => {
 
   switch (event.key) {
     case 'ArrowLeft':
-      nextTabId = getAdjacentEnabledTabId(tabId, -1)
+      nextTabId = getAdjacentTabId(tabId, -1)
       break
     case 'ArrowRight':
-      nextTabId = getAdjacentEnabledTabId(tabId, 1)
+      nextTabId = getAdjacentTabId(tabId, 1)
       break
     case 'Home':
-      nextTabId = getBoundaryEnabledTabId('first')
+      nextTabId = getBoundaryTabId('first')
       break
     case 'End':
-      nextTabId = getBoundaryEnabledTabId('last')
+      nextTabId = getBoundaryTabId('last')
       break
     default:
       return
@@ -114,20 +113,18 @@ const handleKeydown = (tabId: string, event: KeyboardEvent) => {
       type="button"
       role="tab"
       :id="getTabDomId(tab.id)"
-      :aria-selected="tab.id === activeEnabledTabId"
-      :aria-disabled="tab.disabled ? 'true' : undefined"
+      :aria-selected="tab.id === activeTabId"
       :aria-controls="getTabPanelDomId(tab.id)"
-      :tabindex="tab.id === activeEnabledTabId ? 0 : -1"
+      :tabindex="tab.id === activeTabId ? 0 : -1"
       @click="selectTab(tab.id)"
       @keydown="handleKeydown(tab.id, $event)"
     >
       <template v-if="slots.tab">
         <span class="extension-manager-tabs__slot" @click.stop>
-          <slot name="tab" :tab="tab" :active="tab.id === activeEnabledTabId" :select="() => selectTab(tab.id)" />
+          <slot name="tab" :tab="tab" :active="tab.id === activeTabId" :select="() => selectTab(tab.id)" />
         </span>
       </template>
       <template v-else>{{ tab.label }}</template>
-      <span v-if="tab.badge !== undefined" class="extension-manager-tabs__badge">{{ tab.badge }}</span>
     </button>
   </div>
 </template>
@@ -158,19 +155,8 @@ const handleKeydown = (tabId: string, event: KeyboardEvent) => {
   font-weight: 600;
 }
 
-.extension-manager-tabs__tab[aria-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .extension-manager-tabs__tab:focus-visible {
   outline: 2px solid var(--tr-color-primary);
   outline-offset: 2px;
-}
-
-.extension-manager-tabs__badge {
-  color: var(--tr-text-tertiary);
-  font-size: 12px;
-  font-weight: 400;
 }
 </style>

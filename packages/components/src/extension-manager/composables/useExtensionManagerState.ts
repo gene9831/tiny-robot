@@ -81,11 +81,11 @@ export const useExtensionManagerState = (
   const uncontrolledActiveTabId = ref(props.defaultActiveTab)
   const sectionExpansionState = ref<SectionExpansionState>(createSafeRecord())
 
-  const enabledTabs = computed(() => props.tabs.filter((tab) => !tab.disabled))
-  const firstEnabledTabId = computed(() => enabledTabs.value[0]?.id)
+  const tabIds = computed(() => props.tabs.map((tab) => tab.id))
+  const firstTabId = computed(() => tabIds.value[0])
 
   watch(
-    () => props.tabs.map((tab) => tab.id),
+    tabIds,
     (tabIds) => {
       const allowedTabIds = new Set(tabIds)
       const next = createSafeRecord<SectionExpansionState>()
@@ -99,33 +99,31 @@ export const useExtensionManagerState = (
     { immediate: true },
   )
 
-  const normalizedUncontrolledActiveTab = (nextEnabledTabs: ExtensionManagerTab[]) => {
-    if (nextEnabledTabs.some((tab) => tab.id === uncontrolledActiveTabId.value)) return
+  const normalizedUncontrolledActiveTab = (nextTabIds: string[]) => {
+    if (nextTabIds.includes(uncontrolledActiveTabId.value ?? '')) return
 
-    uncontrolledActiveTabId.value = nextEnabledTabs[0]?.id
+    uncontrolledActiveTabId.value = nextTabIds[0]
   }
 
   watch(
-    [enabledTabs, () => props.activeTab],
-    ([nextEnabledTabs, activeTab]) => {
+    [tabIds, () => props.activeTab],
+    ([nextTabIds, activeTab]) => {
       if (activeTab !== undefined) return
 
-      normalizedUncontrolledActiveTab(nextEnabledTabs)
+      normalizedUncontrolledActiveTab(nextTabIds)
     },
     { immediate: true },
   )
 
   const activeTabId = computed<string | undefined>(() => {
     const requestedTabId = props.activeTab ?? uncontrolledActiveTabId.value
-    const requestedTab = enabledTabs.value.find((tab) => tab.id === requestedTabId)
+    const requestedTab = props.tabs.find((tab) => tab.id === requestedTabId)
 
-    return requestedTab?.id ?? firstEnabledTabId.value
+    return requestedTab?.id ?? firstTabId.value
   })
 
   const activeTab = computed<ExtensionManagerTab | undefined>(() =>
-    activeTabId.value === undefined
-      ? undefined
-      : props.tabs.find((tab) => tab.id === activeTabId.value && !tab.disabled),
+    activeTabId.value === undefined ? undefined : props.tabs.find((tab) => tab.id === activeTabId.value),
   )
 
   let lastEmittedActiveTabId = props.activeTab
@@ -150,7 +148,7 @@ export const useExtensionManagerState = (
   }
 
   const selectTab = (tabId: string) => {
-    const tab = enabledTabs.value.find((candidate) => candidate.id === tabId)
+    const tab = props.tabs.find((candidate) => candidate.id === tabId)
     if (!tab || activeTabId.value === tab.id) return
 
     if (props.activeTab === undefined) uncontrolledActiveTabId.value = tab.id

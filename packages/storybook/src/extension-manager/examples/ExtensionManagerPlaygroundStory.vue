@@ -31,11 +31,6 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
   {
     id: 'workspace',
     label: 'Workspace',
-    badge: 2,
-    tags: [
-      { value: 'local', label: 'Local' },
-      { value: 'featured', label: 'Featured' },
-    ],
     items: [
       {
         id: 'alpha',
@@ -58,11 +53,6 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
   {
     id: 'catalog',
     label: 'Catalog',
-    badge: 1,
-    tags: [
-      { value: 'remote', label: 'Remote' },
-      { value: 'recommended', label: 'Recommended' },
-    ],
     items: [
       {
         id: 'beta',

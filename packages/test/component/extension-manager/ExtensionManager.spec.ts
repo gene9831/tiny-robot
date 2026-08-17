@@ -140,11 +140,10 @@ test.describe('ExtensionManager uncontrolled state', () => {
     await expect(dashSection).toHaveAttribute('aria-expanded', 'false')
     await expect(component.getByTestId('uncontrolled-event-log')).toContainText('section-toggle:a-b/installed/false')
 
-    await component.getByTestId('disable-default-tab').click()
+    await slashTab.click()
 
     await expect(slashTab).toHaveAttribute('aria-selected', 'true')
-    await expect(dashTab).toHaveAttribute('aria-disabled', 'true')
-    await expect(component.getByTestId('uncontrolled-event-log')).toContainText('update:active-tab:a/b')
+    await expect(dashTab).toHaveAttribute('aria-selected', 'false')
   })
 
   test('keeps arbitrary tab ids safe in the nested expansion model', async ({ mount }) => {
@@ -206,7 +205,7 @@ test.describe('ExtensionManager Filter acceptance', () => {
     expect(availableIds).toEqual(['beta', 'gamma'])
   })
 
-  test('keeps static tags, disables the selector without tags, and keeps the filter row for empty tabs', async ({
+  test('derives item tags, disables the selector without tags, and keeps the filter row for empty tabs', async ({
     mount,
   }) => {
     const component = await mount(ExtensionManagerFixture)

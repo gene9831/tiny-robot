@@ -18,10 +18,6 @@ const createTabs = (): ExtensionManagerTab[] => [
   {
     id: 'library',
     label: 'Library tab',
-    tags: [
-      { value: 'recommended', label: '推荐' },
-      { value: 'writing', label: '写作' },
-    ],
     items: [
       {
         id: 'alpha',
@@ -51,11 +47,7 @@ const createTabs = (): ExtensionManagerTab[] => [
   {
     id: 'market',
     label: 'Market tab',
-    tags: [
-      { value: 'featured', label: '精选' },
-      { value: 'tools', label: '工具' },
-    ],
-    items: [{ id: 'delta', name: 'Delta extension', installed: true }],
+    items: [{ id: 'delta', name: 'Delta extension', installed: true, tags: ['featured'] }],
   },
 ]
 
@@ -106,7 +98,15 @@ const setExternalActiveTab = (tabId: string) => {
 
 const removeLibraryTag = (tagValue: string) => {
   tabs.value = tabs.value.map((tab) =>
-    tab.id === activeTab.value ? { ...tab, tags: (tab.tags ?? []).filter((tag) => tag.value !== tagValue) } : tab,
+    tab.id === activeTab.value
+      ? {
+          ...tab,
+          items: tab.items.map((item) => ({
+            ...item,
+            tags: (item.tags ?? []).filter((tag) => tag !== tagValue),
+          })),
+        }
+      : tab,
   )
 }
 
