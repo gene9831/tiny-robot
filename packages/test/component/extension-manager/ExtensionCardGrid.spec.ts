@@ -43,6 +43,18 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(betaItem.getByTestId('slot-item-beta-index')).toHaveText('1')
   })
 
+  test('uses the Grid fallback while preserving item overrides including explicit zero', async ({ mount }) => {
+    const component = await mount(ExtensionCardGridFixture)
+    const grid = component.getByTestId('fallback-grid')
+
+    await expect(grid.getByRole('button', { name: 'Fallback primary' })).toHaveCount(1)
+    await expect(grid.locator('[data-card-id="fallback"] [aria-label="更多操作"]')).toHaveCount(1)
+    await expect(grid.getByRole('button', { name: 'Override primary 1' })).toHaveCount(1)
+    await expect(grid.getByRole('button', { name: 'Override primary 2' })).toHaveCount(1)
+    await expect(grid.getByRole('button', { name: 'Zero overflow' })).toHaveCount(0)
+    await expect(grid.locator('[data-card-id="zero"] [aria-label="更多操作"]')).toHaveCount(1)
+  })
+
   test('wraps default Card actions and controlled name clicks with the item id', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
     const card = component.getByTestId('default-grid').locator(':scope > li[data-card-id="alpha"] > *')

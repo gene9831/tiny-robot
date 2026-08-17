@@ -42,6 +42,14 @@ test.describe('ExtensionManager section model', () => {
     await expect(manager.getByTestId('empty-slot-market-available')).toHaveText('Empty available')
   })
 
+  test('defaults derived Cards to one primary action', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await expect(manager.getByRole('button', { name: 'Install Beta' })).toHaveCount(1)
+    await expect(manager.locator('[data-card-id="beta"] [aria-label="更多操作"]')).toHaveCount(1)
+  })
+
   test('moves an item between derived sections when installed changes', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
     const manager = component.getByTestId('manager-host')

@@ -71,6 +71,7 @@ const cardGridItem: ExtensionCardGridItem = {
 const cardGridProps: ExtensionCardGridProps = {
   items: [cardGridItem],
   emptyText: 'No cards',
+  primaryActionsLimit: 1,
 }
 const cardGridDefaultProps: ExtensionCardGridProps = {
   items: [cardGridItem],

@@ -35,12 +35,20 @@ const createTabs = (): ExtensionManagerTab[] => [
         description: 'Beta description',
         tags: ['writing'],
         installed: false,
+        actions: [
+          { id: 'install-beta', type: 'button', label: 'Install Beta' },
+          { id: 'inspect-beta', type: 'button', label: 'Inspect Beta' },
+        ],
       },
       {
         id: 'gamma',
         name: 'Gamma extension',
         description: 'Gamma description',
         tags: ['recommended'],
+        actions: [
+          { id: 'install-gamma', type: 'button', label: 'Install Gamma' },
+          { id: 'inspect-gamma', type: 'button', label: 'Inspect Gamma' },
+        ],
       },
     ],
   },

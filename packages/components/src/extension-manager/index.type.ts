@@ -70,6 +70,7 @@ export type ExtensionCardGridItem = ExtensionCardProps & {
 export interface ExtensionCardGridProps {
   items: ExtensionCardGridItem[]
   emptyText?: string
+  primaryActionsLimit?: number
 }
 
 export interface ExtensionCardGridSlots {

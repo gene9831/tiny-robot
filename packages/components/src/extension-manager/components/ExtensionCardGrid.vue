@@ -22,7 +22,10 @@ const getCardProps = (item: ExtensionCardGridItem) => {
   const { id, ...cardProps } = item
 
   void id
-  return cardProps
+  return {
+    ...cardProps,
+    primaryActionsLimit: item.primaryActionsLimit ?? props.primaryActionsLimit,
+  }
 }
 
 if (import.meta.env.DEV) {

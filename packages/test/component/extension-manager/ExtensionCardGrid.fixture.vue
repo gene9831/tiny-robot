@@ -65,6 +65,31 @@ const columnItems: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index
 }))
 
 const emptyItems: ExtensionCardGridItem[] = []
+const fallbackItems: ExtensionCardGridItem[] = [
+  {
+    id: 'fallback',
+    name: 'Fallback extension',
+    actions: [
+      { id: 'fallback-primary', type: 'button', label: 'Fallback primary' },
+      { id: 'fallback-overflow', type: 'button', label: 'Fallback overflow' },
+    ],
+  },
+  {
+    id: 'override',
+    name: 'Override extension',
+    primaryActionsLimit: 2,
+    actions: [
+      { id: 'override-primary-1', type: 'button', label: 'Override primary 1' },
+      { id: 'override-primary-2', type: 'button', label: 'Override primary 2' },
+    ],
+  },
+  {
+    id: 'zero',
+    name: 'Zero extension',
+    primaryActionsLimit: 0,
+    actions: [{ id: 'zero-overflow', type: 'button', label: 'Zero overflow' }],
+  },
+]
 const actionEvents = ref<ExtensionCardGridActionEvent[]>([])
 const lastNameClick = ref<ExtensionCardGridNameClickEvent>()
 
@@ -128,6 +153,8 @@ const changeDuplicateItems = () => {
       <span data-testid="custom-empty">Custom empty slot</span>
     </template>
   </ExtensionCardGrid>
+
+  <ExtensionCardGrid data-testid="fallback-grid" :items="fallbackItems" :primary-actions-limit="1" />
 
   <div data-testid="default-min-width-container" style="width: 820px">
     <ExtensionCardGrid data-testid="default-min-width-grid" :items="columnItems" />
