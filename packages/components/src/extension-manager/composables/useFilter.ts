@@ -1,4 +1,4 @@
-import { computed, reactive, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { computed, reactive, toValue, watch } from 'vue'
 import type { FilterState, UseFilterOptions, UseFilterResult } from '../filter.type'
 
 const createFilterState = (): FilterState => reactive({ selectedTag: '', searchValue: '' })
@@ -30,9 +30,7 @@ const defaultSearch = <T extends object>(item: T, query: string) => {
 
 export const useFilter = <T extends object>(options: UseFilterOptions<T>): UseFilterResult<T> => {
   const internalState = createFilterState()
-  const currentState = computed(
-    () => toValue(options.state as MaybeRefOrGetter<FilterState> | undefined) ?? internalState,
-  )
+  const currentState = computed(() => toValue(options.state) ?? internalState)
 
   const selectedTag = computed({
     get: () => currentState.value.selectedTag,
@@ -50,9 +48,11 @@ export const useFilter = <T extends object>(options: UseFilterOptions<T>): UseFi
   const normalizedTags = computed(() => normalizeTags(toValue(options.tags)))
 
   watch(
-    () => normalizedTags.value.map((tag) => tag.value),
-    (values) => {
-      if (selectedTag.value && !values.includes(selectedTag.value)) selectedTag.value = ''
+    normalizedTags,
+    (tags) => {
+      if (selectedTag.value && !tags.some((tag) => tag.value === selectedTag.value)) {
+        selectedTag.value = ''
+      }
     },
     { immediate: true },
   )

@@ -38,7 +38,6 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
         description: 'Changing the switch moves this item between the derived sections.',
         installed: alphaInstalled.value,
         actions: alphaActions.value,
-        primaryActionsLimit: 2,
         tags: ['local', 'featured'],
       },
       {

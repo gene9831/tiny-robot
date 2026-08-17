@@ -12,7 +12,7 @@ const items: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index) => (
 <template>
   <div class="storybook-grid-stack">
     <section>
-      <h3>Default minimum width: 400px</h3>
+      <h3>Default minimum width: 320px</h3>
       <ExtensionManager.CardGrid :items="items" />
     </section>
     <section>

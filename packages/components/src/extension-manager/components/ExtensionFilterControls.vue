@@ -3,16 +3,12 @@ import type { ExtensionManagerTagOption } from '../index.type'
 
 defineOptions({ name: 'ExtensionFilterControls' })
 
-defineProps<{
+const props = defineProps<{
   tags: readonly ExtensionManagerTagOption[]
-  selectedTag: string
-  searchValue: string
 }>()
 
-defineEmits<{
-  (event: 'update:selectedTag', value: string): void
-  (event: 'update:searchValue', value: string): void
-}>()
+const selectedTag = defineModel<string>('selectedTag', { default: '' })
+const searchValue = defineModel<string>('searchValue', { default: '' })
 </script>
 
 <template>
@@ -22,12 +18,11 @@ defineEmits<{
         data-testid="filter-tag"
         class="extension-filter-controls__select"
         aria-label="标签"
-        :value="selectedTag"
-        :disabled="tags.length === 0"
-        @change="$emit('update:selectedTag', ($event.target as HTMLSelectElement).value)"
+        :disabled="props.tags.length === 0"
+        v-model="selectedTag"
       >
         <option value="">全部标签</option>
-        <option v-for="tag in tags" :key="tag.value" :value="tag.value">{{ tag.label }}</option>
+        <option v-for="tag in props.tags" :key="tag.value" :value="tag.value">{{ tag.label }}</option>
       </select>
       <input
         data-testid="filter-search"
@@ -35,8 +30,7 @@ defineEmits<{
         type="search"
         aria-label="搜索扩展"
         placeholder="请输入关键字搜索"
-        :value="searchValue"
-        @input="$emit('update:searchValue', ($event.target as HTMLInputElement).value)"
+        v-model="searchValue"
       />
     </div>
   </div>

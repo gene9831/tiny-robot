@@ -92,7 +92,7 @@ const handleCardNameClick = (itemId: string, event: MouseEvent | KeyboardEvent) 
 <style lang="less" scoped>
 .tr-extension-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--tr-extension-card-grid-card-min-width, 400px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--tr-extension-card-grid-card-min-width, 320px), 1fr));
   gap: 12px 16px;
   margin: 0;
   padding: 12px 0 4px;
