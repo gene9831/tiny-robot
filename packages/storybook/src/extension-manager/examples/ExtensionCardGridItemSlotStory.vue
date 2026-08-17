@@ -26,7 +26,7 @@ const serializeItem = (item: ExtensionCardGridItem) =>
 </script>
 
 <template>
-  <ExtensionManager.CardGrid :items="items" :columns="2">
+  <ExtensionManager.CardGrid :items="items">
     <template #item="{ item, index }">
       <article class="storybook-grid-slot-item">
         <strong>{{ item.name }}</strong>

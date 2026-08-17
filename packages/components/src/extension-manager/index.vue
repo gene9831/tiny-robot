@@ -94,7 +94,6 @@ const activeSections = computed<ExtensionManagerSectionState[]>(() => {
   return SECTION_DEFINITIONS.map(({ key, title }) => ({
     key,
     title,
-    columns: props.columns,
     items: items.filter((item) => (item.installed === true ? 'installed' : 'available') === key).map(toCardGridItem),
   }))
 })

@@ -70,7 +70,6 @@ const cardGridItem: ExtensionCardGridItem = {
 
 const cardGridProps: ExtensionCardGridProps = {
   items: [cardGridItem],
-  columns: 3,
   emptyText: 'No cards',
 }
 const cardGridDefaultProps: ExtensionCardGridProps = {
@@ -125,7 +124,6 @@ const managerProps: ExtensionManagerProps = {
   tabs: [managerTab, secondManagerTab],
   activeTab: 'catalog',
   defaultActiveTab: 'updates',
-  columns: 3,
   title: 'Extensions',
   showCloseButton: true,
   emptyText: 'No enabled tabs',
@@ -224,6 +222,18 @@ const oldShowHeaderProps: ExtensionManagerProps = {
   showHeader: false,
 }
 
+const oldCardGridColumnsProps: ExtensionCardGridProps = {
+  items: [cardGridItem],
+  // @ts-expect-error CardGrid columns are derived from the card minimum-width CSS variable.
+  columns: 3,
+}
+
+const oldManagerColumnsProps: ExtensionManagerProps = {
+  tabs: [managerTab],
+  // @ts-expect-error Manager no longer exposes a columns prop.
+  columns: 3,
+}
+
 // @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
 const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
 
@@ -291,6 +301,8 @@ void oldManagerProps
 void oldControlledManagerProps
 void oldDefaultExpandedProps
 void oldShowHeaderProps
+void oldCardGridColumnsProps
+void oldManagerColumnsProps
 void oldCardProps
 void cardPropsWithGridId
 void cardGridItemWithoutId

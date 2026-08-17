@@ -154,7 +154,6 @@ const handleClose = () => {
       v-model:active-tab="activeTab"
       :tabs="tabs"
       title="Extension manager playground"
-      :columns="1"
       show-close-button
       @tab-change="handleTabChange"
       @section-toggle="handleSectionToggle"

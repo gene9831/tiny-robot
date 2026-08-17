@@ -79,15 +79,7 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(slotEmptyGrid.getByText('Fallback empty text', { exact: true })).toHaveCount(0)
   })
 
-  test('renders normalized grid tracks and does not warn for invalid values', async ({ mount, page }) => {
-    const warnings: string[] = []
-    page.on('console', (message) => {
-      if (message.type() === 'warning' && message.text().includes('[ExtensionManager.CardGrid]')) {
-        warnings.push(message.text())
-      }
-    })
-
-    await page.setViewportSize({ width: 1200, height: 800 })
+  test('uses the container width and card minimum-width variable to derive tracks', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
     const readRenderedTrackCount = (testId: string) =>
       component.getByTestId(testId).evaluate((element) => {
@@ -98,34 +90,9 @@ test.describe('standalone ExtensionCardGrid', () => {
         return new Set(leftPositions).size
       })
 
-    await expect.poll(() => readRenderedTrackCount('columns-one')).toBe(1)
-    await expect.poll(() => readRenderedTrackCount('columns-sub-unit')).toBe(2)
-    await expect.poll(() => readRenderedTrackCount('columns-fraction')).toBe(2)
-    await expect.poll(() => readRenderedTrackCount('columns-integer')).toBe(7)
-    await expect.poll(() => readRenderedTrackCount('columns-zero')).toBe(2)
-    await expect.poll(() => readRenderedTrackCount('columns-negative')).toBe(2)
-    await expect.poll(() => readRenderedTrackCount('columns-nan')).toBe(2)
-    await expect.poll(() => readRenderedTrackCount('columns-infinity')).toBe(2)
-    await expect.poll(() => warnings).toHaveLength(0)
-  })
-
-  test('collapses the configured columns to one track on narrow viewports', async ({ mount, page }) => {
-    await page.setViewportSize({ width: 1200, height: 800 })
-    const component = await mount(ExtensionCardGridFixture)
-    const grid = component.getByTestId('responsive-grid')
-    const readRenderedTrackCount = () =>
-      grid.evaluate((element) => {
-        const style = getComputedStyle(element)
-        if (style.display !== 'grid' || style.gridTemplateColumns === 'none') return 0
-
-        const leftPositions = Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().left))
-        return new Set(leftPositions).size
-      })
-
-    await expect.poll(readRenderedTrackCount).toBe(3)
-
-    await page.setViewportSize({ width: 768, height: 800 })
-    await expect.poll(readRenderedTrackCount).toBe(1)
+    await expect.poll(() => readRenderedTrackCount('default-min-width-grid')).toBe(2)
+    await expect.poll(() => readRenderedTrackCount('narrow-min-width-grid')).toBe(1)
+    await expect.poll(() => readRenderedTrackCount('custom-min-width-grid')).toBe(3)
   })
 
   test('warns once for each changed duplicate-id set', async ({ mount, page }) => {

@@ -44,7 +44,6 @@ const handleNameClick = (event: ExtensionCardGridNameClickEvent) => emit('name-c
       <ExtensionCardGrid
         v-if="props.section.items.length > 0"
         :items="props.section.items"
-        :columns="props.section.columns"
         @action="handleAction"
         @name-click="handleNameClick"
       >

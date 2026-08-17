@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useSlots, watch } from 'vue'
+import { useSlots, watch } from 'vue'
 import type {
   ExtensionCardActionEvent,
   ExtensionCardGridEmits,
@@ -10,7 +10,6 @@ import type {
 import ExtensionCard from './ExtensionCard.vue'
 
 const props = withDefaults(defineProps<ExtensionCardGridProps>(), {
-  columns: 2,
   emptyText: '暂无内容',
 })
 
@@ -18,16 +17,6 @@ const slots = useSlots()
 defineSlots<ExtensionCardGridSlots>()
 
 const emit = defineEmits<ExtensionCardGridEmits>()
-
-const normalizedColumns = computed(() => {
-  const columns = props.columns
-
-  if (!Number.isFinite(columns) || columns <= 0) return 2
-
-  const normalizedColumns = Math.floor(columns)
-
-  return normalizedColumns > 0 ? normalizedColumns : 2
-})
 
 const getCardProps = (item: ExtensionCardGridItem) => {
   const { id, ...cardProps } = item
@@ -77,7 +66,7 @@ const handleCardNameClick = (itemId: string, event: MouseEvent | KeyboardEvent) 
 </script>
 
 <template>
-  <ul class="tr-extension-card-grid" :style="{ '--tr-extension-card-grid-columns': normalizedColumns }">
+  <ul class="tr-extension-card-grid">
     <li v-if="items.length === 0" class="tr-extension-card-grid__empty">
       <slot name="empty">{{ emptyText }}</slot>
     </li>
@@ -99,7 +88,7 @@ const handleCardNameClick = (itemId: string, event: MouseEvent | KeyboardEvent) 
 <style lang="less" scoped>
 .tr-extension-card-grid {
   display: grid;
-  grid-template-columns: repeat(var(--tr-extension-card-grid-columns), minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--tr-extension-card-grid-card-min-width, 400px), 1fr));
   gap: 12px 16px;
   margin: 0;
   padding: 12px 0 4px;
@@ -116,11 +105,5 @@ const handleCardNameClick = (itemId: string, event: MouseEvent | KeyboardEvent) 
   color: var(--tr-text-secondary);
   font-size: 13px;
   text-align: center;
-}
-
-@media (max-width: 768px) {
-  .tr-extension-card-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

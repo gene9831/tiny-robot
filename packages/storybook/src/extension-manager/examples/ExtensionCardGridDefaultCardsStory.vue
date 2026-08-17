@@ -33,5 +33,5 @@ const items: ExtensionCardGridItem[] = [
 </script>
 
 <template>
-  <ExtensionManager.CardGrid :items="items" :columns="2" empty-text="暂无内容" />
+  <ExtensionManager.CardGrid :items="items" empty-text="暂无内容" />
 </template>

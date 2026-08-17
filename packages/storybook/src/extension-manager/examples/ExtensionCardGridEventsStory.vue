@@ -40,7 +40,7 @@ const handleNameClick = (event: ExtensionCardGridNameClickEvent) => {
 
 <template>
   <div class="storybook-grid-events">
-    <ExtensionManager.CardGrid :items="items" :columns="2" @action="handleAction" @name-click="handleNameClick" />
+    <ExtensionManager.CardGrid :items="items" @action="handleAction" @name-click="handleNameClick" />
     <pre>{{ eventSummary }}</pre>
   </div>
 </template>

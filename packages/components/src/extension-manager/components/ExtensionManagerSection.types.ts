@@ -5,5 +5,4 @@ export interface ExtensionManagerSectionState {
   key: ExtensionManagerSectionKey
   title: string
   items: ExtensionCardGridItem[]
-  columns?: number
 }

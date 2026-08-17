@@ -69,7 +69,6 @@ export type ExtensionCardGridItem = ExtensionCardProps & {
 
 export interface ExtensionCardGridProps {
   items: ExtensionCardGridItem[]
-  columns?: number
   emptyText?: string
 }
 
@@ -115,7 +114,6 @@ export interface ExtensionManagerProps {
   tabs: ExtensionManagerTab[]
   activeTab?: string
   defaultActiveTab?: string
-  columns?: number
   title?: string
   showCloseButton?: boolean
   emptyText?: string

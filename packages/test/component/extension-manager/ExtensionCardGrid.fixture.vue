@@ -65,17 +65,6 @@ const columnItems: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index
 }))
 
 const emptyItems: ExtensionCardGridItem[] = []
-const columnCases = [
-  { testId: 'columns-one', columns: 1 },
-  { testId: 'columns-sub-unit', columns: 0.5 },
-  { testId: 'columns-fraction', columns: 2.75 },
-  { testId: 'columns-integer', columns: 7 },
-  { testId: 'columns-zero', columns: 0 },
-  { testId: 'columns-negative', columns: -2 },
-  { testId: 'columns-nan', columns: Number.NaN },
-  { testId: 'columns-infinity', columns: Number.POSITIVE_INFINITY },
-]
-
 const actionEvents = ref<ExtensionCardGridActionEvent[]>([])
 const lastNameClick = ref<ExtensionCardGridNameClickEvent>()
 
@@ -140,15 +129,21 @@ const changeDuplicateItems = () => {
     </template>
   </ExtensionCardGrid>
 
-  <ExtensionCardGrid
-    v-for="columnCase in columnCases"
-    :key="columnCase.testId"
-    :data-testid="columnCase.testId"
-    :items="columnItems"
-    :columns="columnCase.columns"
-  />
+  <div data-testid="default-min-width-container" style="width: 820px">
+    <ExtensionCardGrid data-testid="default-min-width-grid" :items="columnItems" />
+  </div>
 
-  <ExtensionCardGrid data-testid="responsive-grid" :items="columnItems" :columns="3" />
+  <div data-testid="narrow-min-width-container" style="width: 640px">
+    <ExtensionCardGrid data-testid="narrow-min-width-grid" :items="columnItems" />
+  </div>
+
+  <div data-testid="custom-min-width-container" style="width: 820px">
+    <ExtensionCardGrid
+      data-testid="custom-min-width-grid"
+      :items="columnItems"
+      style="--tr-extension-card-grid-card-min-width: 260px"
+    />
+  </div>
 
   <button data-testid="show-duplicate-grid" type="button" @click="showDuplicateGrid">Show duplicates</button>
   <button data-testid="replace-duplicate-items" type="button" @click="replaceDuplicateItems">

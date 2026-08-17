@@ -3,8 +3,8 @@ import type { ExtensionCardGridItem } from '@opentiny/tiny-robot'
 import { ExtensionManager } from '@opentiny/tiny-robot'
 import { IconEditPen, IconSparkles } from '@opentiny/tiny-robot-svgs'
 import { markRaw } from 'vue'
-import ExtensionCardGridColumnLayoutStory from './examples/ExtensionCardGridColumnLayoutStory.vue'
-import columnLayoutSource from './examples/ExtensionCardGridColumnLayoutStory.vue?raw'
+import ExtensionCardGridMinWidthStory from './examples/ExtensionCardGridMinWidthStory.vue'
+import minWidthSource from './examples/ExtensionCardGridMinWidthStory.vue?raw'
 import ExtensionCardGridDefaultCardsStory from './examples/ExtensionCardGridDefaultCardsStory.vue'
 import defaultCardsSource from './examples/ExtensionCardGridDefaultCardsStory.vue?raw'
 import ExtensionCardGridDuplicateIdsStory from './examples/ExtensionCardGridDuplicateIdsStory.vue'
@@ -61,12 +61,10 @@ const meta = {
   },
   argTypes: {
     items: { control: false },
-    columns: { control: { type: 'number', min: 0, step: 0.25 } },
     emptyText: { control: 'text' },
   },
   args: {
     items: defaultItems,
-    columns: 2,
     emptyText: '暂无内容',
   },
 } satisfies Meta<typeof CardGrid>
@@ -95,20 +93,20 @@ export const DefaultCards: Story = {
   }),
 }
 
-export const ColumnLayout: Story = {
+export const MinCardWidth: Story = {
   parameters: {
     controls: { disable: true },
     docs: {
       source: {
-        code: columnLayoutSource,
+        code: minWidthSource,
         language: 'html',
         type: 'code',
       },
     },
   },
   render: () => ({
-    components: { ExtensionCardGridColumnLayoutStory },
-    template: '<ExtensionCardGridColumnLayoutStory />',
+    components: { ExtensionCardGridMinWidthStory },
+    template: '<ExtensionCardGridMinWidthStory />',
   }),
 }
 

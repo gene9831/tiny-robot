@@ -11,7 +11,7 @@ const items: ExtensionCardGridItem[] = Array.from({ length: 8 }, (_, index) => (
 
 <template>
   <div class="storybook-grid-responsive">
-    <p>Resize the Storybook canvas below 768px to see the configured tracks collapse to one column.</p>
-    <ExtensionManager.CardGrid :items="items" :columns="3" />
+    <p>Resize the Storybook canvas to see cards keep a 400px minimum width and fit automatically.</p>
+    <ExtensionManager.CardGrid :items="items" />
   </div>
 </template>
