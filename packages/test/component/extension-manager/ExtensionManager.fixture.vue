@@ -27,7 +27,6 @@ const createTabs = (): ExtensionManagerTab[] => [
         installed: true,
         actions: alphaActions,
         primaryActionsLimit: 2,
-        nameClickable: true,
       },
       {
         id: 'beta',

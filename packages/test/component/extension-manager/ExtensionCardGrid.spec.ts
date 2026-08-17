@@ -55,6 +55,18 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(grid.locator('[data-card-id="zero"] [aria-label="更多操作"]')).toHaveCount(1)
   })
 
+  test('uses the Grid name-clickable fallback while preserving an explicit false item override', async ({ mount }) => {
+    const component = await mount(ExtensionCardGridFixture)
+    const grid = component.getByTestId('name-clickable-fallback-grid')
+
+    await expect(
+      grid.locator('[data-card-id="fallback-name"]').getByRole('button', { name: 'Fallback name' }),
+    ).toHaveCount(1)
+    await expect(
+      grid.locator('[data-card-id="disabled-name"]').getByRole('button', { name: 'Disabled name' }),
+    ).toHaveCount(0)
+  })
+
   test('wraps default Card actions and controlled name clicks with the item id', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
     const card = component.getByTestId('default-grid').locator(':scope > li[data-card-id="alpha"] > *')

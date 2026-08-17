@@ -25,6 +25,7 @@ const getCardProps = (item: ExtensionCardGridItem) => {
   return {
     ...cardProps,
     primaryActionsLimit: item.primaryActionsLimit ?? props.primaryActionsLimit,
+    nameClickable: item.nameClickable ?? props.nameClickable,
   }
 }
 

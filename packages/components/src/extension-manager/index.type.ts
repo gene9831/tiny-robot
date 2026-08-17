@@ -71,6 +71,7 @@ export interface ExtensionCardGridProps {
   items: ExtensionCardGridItem[]
   emptyText?: string
   primaryActionsLimit?: number
+  nameClickable?: boolean
 }
 
 export interface ExtensionCardGridSlots {

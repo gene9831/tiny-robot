@@ -39,7 +39,6 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
         installed: alphaInstalled.value,
         actions: alphaActions.value,
         primaryActionsLimit: 2,
-        nameClickable: true,
         tags: ['local', 'featured'],
       },
       {
@@ -59,7 +58,6 @@ const tabs = computed<ExtensionManagerTab[]>(() => [
         name: 'Beta extension',
         description: 'The second tab has its own installed and available sections.',
         installed: false,
-        nameClickable: true,
         tags: ['remote', 'recommended'],
       },
     ],

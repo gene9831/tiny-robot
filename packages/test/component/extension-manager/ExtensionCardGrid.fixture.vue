@@ -90,6 +90,10 @@ const fallbackItems: ExtensionCardGridItem[] = [
     actions: [{ id: 'zero-overflow', type: 'button', label: 'Zero overflow' }],
   },
 ]
+const nameClickableItems: ExtensionCardGridItem[] = [
+  { id: 'fallback-name', name: 'Fallback name' },
+  { id: 'disabled-name', name: 'Disabled name', nameClickable: false },
+]
 const actionEvents = ref<ExtensionCardGridActionEvent[]>([])
 const lastNameClick = ref<ExtensionCardGridNameClickEvent>()
 
@@ -155,6 +159,7 @@ const changeDuplicateItems = () => {
   </ExtensionCardGrid>
 
   <ExtensionCardGrid data-testid="fallback-grid" :items="fallbackItems" :primary-actions-limit="1" />
+  <ExtensionCardGrid data-testid="name-clickable-fallback-grid" :items="nameClickableItems" :name-clickable="true" />
 
   <div data-testid="default-min-width-container" style="width: 820px">
     <ExtensionCardGrid data-testid="default-min-width-grid" :items="columnItems" />
