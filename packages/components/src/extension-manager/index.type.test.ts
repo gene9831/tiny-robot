@@ -130,7 +130,6 @@ const managerProps: ExtensionManagerProps = {
   activeTab: 'catalog',
   defaultActiveTab: 'updates',
   title: 'Extensions',
-  showCloseButton: true,
   emptyText: 'No enabled tabs',
 }
 
@@ -196,9 +195,6 @@ managerEmit('tab-change', managerTabChangeEvent)
 managerEmit('section-toggle', managerSectionToggleEvent)
 managerEmit('action', managerActionEvent)
 managerEmit('name-click', managerNameClickEvent)
-managerEmit('close')
-// @ts-expect-error Close does not accept a payload.
-managerEmit('close', managerTab.id)
 
 // @ts-expect-error Manager items retain Grid-owned identity.
 const managerItemWithoutId: ExtensionManagerItem = { name: 'Missing Manager identity' }

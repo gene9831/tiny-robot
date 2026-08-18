@@ -2,6 +2,17 @@ import { expect, test } from '@playwright/experimental-ct-vue'
 import ExtensionManagerFixture from './ExtensionManager.fixture.vue'
 import ExtensionManagerUncontrolledFixture from './ExtensionManagerUncontrolled.fixture.vue'
 
+test('leaves surface styling to the host', async ({ mount }) => {
+  const component = await mount(ExtensionManagerFixture)
+  const manager = component.getByTestId('manager-host').locator(':scope > .extension-manager')
+
+  await expect(manager).toHaveCSS('max-width', 'none')
+  await expect(manager).toHaveCSS('padding-top', '0px')
+  await expect(manager).toHaveCSS('border-top-width', '0px')
+  await expect(manager).toHaveCSS('border-top-left-radius', '0px')
+  await expect(manager).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+})
+
 test.describe('ExtensionManager section model', () => {
   test('derives stable installed and available sections from the active tab items', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
@@ -249,6 +260,24 @@ test.describe('ExtensionManager uncontrolled state', () => {
 })
 
 test.describe('ExtensionManager Filter acceptance', () => {
+  test('responds to the manager container width instead of the viewport width', async ({ mount, page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 })
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+
+    await manager.evaluate((element) => {
+      element.style.width = '440px'
+    })
+
+    const tagBox = await manager.getByTestId('filter-tag').boundingBox()
+    const searchBox = await manager.getByTestId('filter-search').boundingBox()
+
+    expect(tagBox).not.toBeNull()
+    expect(searchBox).not.toBeNull()
+    expect(searchBox!.y).toBeGreaterThan(tagBox!.y)
+    expect(searchBox!.x).toBe(tagBox!.x)
+  })
+
   test('filters by trimmed case-insensitive name and description search', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
     const manager = component.getByTestId('manager-host')
@@ -259,6 +288,21 @@ test.describe('ExtensionManager Filter acceptance', () => {
     await expect(manager.locator('li[data-card-id="beta"]')).toHaveCount(0)
     await search.fill('DESCRIPTION')
     await expect(manager.locator('li[data-card-id]')).toHaveCount(3)
+  })
+
+  test('shows a themed search clear button only when needed and clears the query', async ({ mount }) => {
+    const component = await mount(ExtensionManagerFixture)
+    const manager = component.getByTestId('manager-host')
+    const search = manager.getByTestId('filter-search')
+    const clear = manager.getByTestId('filter-search-clear')
+
+    await expect(clear).toHaveCount(0)
+    await expect(search).toHaveCSS('appearance', 'none')
+    await search.fill('alpha')
+    await expect(clear).toBeVisible()
+    await clear.click()
+    await expect(search).toHaveValue('')
+    await expect(clear).toHaveCount(0)
   })
 
   test('combines selected tag and search with AND semantics', async ({ mount }) => {

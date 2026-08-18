@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { IconClose } from '@opentiny/tiny-robot-svgs'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import type {
   ExtensionCardAction,
@@ -300,26 +301,28 @@ onBeforeUnmount(() => {
       to open it.
     </p>
 
-    <ExtensionManager
-      v-else
-      v-model:active-tab="activeTab"
-      :tabs="tabs"
-      title="服务列表"
-      show-close-button
-      @tab-change="handleTabChange"
-      @section-toggle="handleSectionToggle"
-      @action="handleAction"
-      @name-click="handleNameClick"
-      @close="handleClose"
-    >
-      <template #header-actions>
-        <button type="button" @click="handleHeaderAction">Header action</button>
-      </template>
+    <div v-else class="storybook-manager-playground__surface">
+      <ExtensionManager
+        v-model:active-tab="activeTab"
+        :tabs="tabs"
+        title="服务列表"
+        @tab-change="handleTabChange"
+        @section-toggle="handleSectionToggle"
+        @action="handleAction"
+        @name-click="handleNameClick"
+      >
+        <template #header-actions>
+          <button type="button" @click="handleHeaderAction">Header action</button>
+          <button class="storybook-manager-playground__close" type="button" aria-label="Close" @click="handleClose">
+            <IconClose />
+          </button>
+        </template>
 
-      <template #empty="{ title }">
-        <span>{{ title }} is empty.</span>
-      </template>
-    </ExtensionManager>
+        <template #empty="{ title }">
+          <span>{{ title }} is empty.</span>
+        </template>
+      </ExtensionManager>
+    </div>
 
     <aside class="storybook-manager-playground__events">
       <strong>Last event</strong>
@@ -361,6 +364,32 @@ onBeforeUnmount(() => {
 .storybook-manager-playground__closed {
   margin: 0;
   color: var(--tr-text-secondary);
+}
+
+.storybook-manager-playground__surface {
+  max-width: 820px;
+  padding: 24px;
+  background: var(--tr-container-bg-default);
+  border: 1px solid var(--tr-mcp-server-picker-border-color-default);
+  border-radius: 12px;
+}
+
+.storybook-manager-playground__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.storybook-manager-playground__close:hover {
+  background: var(--tr-mcp-server-picker-bg-hover);
 }
 
 .storybook-manager-playground__events {

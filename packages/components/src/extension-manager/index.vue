@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { IconClose } from '@opentiny/tiny-robot-svgs'
 import { computed, useId } from 'vue'
 import { useExtensionManagerState } from './composables/useExtensionManagerState'
 import { useExtensionManagerFilterState } from './composables/useExtensionManagerFilterState'
@@ -22,7 +21,6 @@ import type { ExtensionManagerSectionState } from './components/ExtensionManager
 defineOptions({ name: 'ExtensionManager' })
 
 const props = withDefaults(defineProps<ExtensionManagerProps>(), {
-  showCloseButton: false,
   emptyText: '暂无内容',
 })
 
@@ -78,7 +76,7 @@ const filter = useFilter<ExtensionManagerItem>({
 })
 
 const hasActiveTab = computed(() => activeTab.value !== undefined)
-const hasHeader = computed(() => Boolean(props.title || slots['header-actions'] || props.showCloseButton))
+const hasHeader = computed(() => Boolean(props.title || slots['header-actions']))
 
 const toCardGridItem = (item: ExtensionManagerItem): ExtensionCardGridItem => {
   const { installed, tags, ...cardItem } = item
@@ -100,8 +98,6 @@ const activeSections = computed<ExtensionManagerSectionState[]>(() => {
 
 const getSectionExpanded = (tabId: string, sectionKey: ExtensionManagerSectionKey) =>
   isSectionExpanded(tabId, sectionKey)
-
-const handleClose = () => emit('close')
 
 const handleSectionToggle = (tabId: string, sectionKey: ExtensionManagerSectionKey) => {
   if (activeTab.value?.id !== tabId) return
@@ -136,17 +132,8 @@ const handleNameClick = (
   <div class="extension-manager">
     <div v-if="hasHeader" class="extension-manager__header">
       <div v-if="props.title" class="extension-manager__title">{{ props.title }}</div>
-      <div v-if="slots['header-actions'] || props.showCloseButton" class="extension-manager__header-actions">
-        <slot v-if="slots['header-actions']" name="header-actions" />
-        <button
-          v-if="props.showCloseButton"
-          class="extension-manager__close"
-          type="button"
-          aria-label="Close"
-          @click="handleClose"
-        >
-          <IconClose />
-        </button>
+      <div v-if="slots['header-actions']" class="extension-manager__header-actions">
+        <slot name="header-actions" />
       </div>
     </div>
 
@@ -196,13 +183,7 @@ const handleNameClick = (
 
 <style lang="less" scoped>
 .extension-manager {
-  box-sizing: border-box;
   width: 100%;
-  max-width: 820px;
-  padding: 24px;
-  background: var(--tr-container-bg-default);
-  border: 1px solid var(--tr-mcp-server-picker-border-color-default);
-  border-radius: 12px;
   color: var(--tr-text-primary);
 }
 
@@ -211,7 +192,7 @@ const handleNameClick = (
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .extension-manager__title {
@@ -225,30 +206,10 @@ const handleNameClick = (
   gap: 12px;
 }
 
-.extension-manager__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 28px;
-  height: 28px;
-  padding: 5px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.extension-manager__close:hover {
-  background: var(--tr-mcp-server-picker-bg-hover);
-}
-
 .extension-manager__sections {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  margin-top: 18px;
+  gap: 16px;
 }
 
 .extension-manager__empty {
@@ -256,20 +217,5 @@ const handleNameClick = (
   color: var(--tr-text-secondary);
   font-size: 13px;
   text-align: center;
-}
-
-@media (max-width: 640px) {
-  .extension-manager {
-    padding: 18px;
-  }
-
-  .extension-manager__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .extension-manager__header-actions {
-    justify-content: space-between;
-  }
 }
 </style>

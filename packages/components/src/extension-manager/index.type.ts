@@ -118,7 +118,6 @@ export interface ExtensionManagerProps {
   activeTab?: string
   defaultActiveTab?: string
   title?: string
-  showCloseButton?: boolean
   emptyText?: string
 }
 
@@ -164,5 +163,4 @@ export interface ExtensionManagerEmits {
   (e: 'section-toggle', event: ExtensionManagerSectionToggleEvent): void
   (e: 'action', event: ExtensionManagerActionEvent): void
   (e: 'name-click', event: ExtensionManagerNameClickEvent): void
-  (e: 'close'): void
 }

@@ -130,7 +130,7 @@ const handleNameClick = () => {
 
 .storybook-card-playground__controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
   padding: 14px;
   border: 1px solid #d9e7fb;
@@ -161,7 +161,7 @@ const handleNameClick = () => {
 .storybook-card-playground__checkbox {
   display: flex !important;
   align-items: center;
-  grid-column: span 3;
+  grid-column: 1 / -1;
   gap: 6px !important;
 }
 
@@ -180,15 +180,5 @@ const handleNameClick = () => {
     Consolas,
     monospace;
   overflow-wrap: anywhere;
-}
-
-@media (max-width: 720px) {
-  .storybook-card-playground__controls {
-    grid-template-columns: 1fr;
-  }
-
-  .storybook-card-playground__checkbox {
-    grid-column: auto;
-  }
 }
 </style>
