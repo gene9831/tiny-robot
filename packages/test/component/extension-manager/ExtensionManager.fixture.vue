@@ -169,7 +169,6 @@ const removeMarketTab = () => {
   <div v-if="showItemSlotManager" data-testid="item-slot-manager">
     <ExtensionManager :tabs="tabs">
       <template #item="{ item }">
-        <span data-testid="item-slot-context">{{ 'installed' in item }}</span>
         <span data-testid="item-slot-keys">{{ JSON.stringify(Object.keys(item)) }}</span>
       </template>
     </ExtensionManager>

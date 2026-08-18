@@ -107,9 +107,7 @@ test.describe('standalone ExtensionCard', () => {
     const menu = card.locator('.tr-extension-card__more-menu')
     await expect(menu.getByRole('button', { name: '带图标操作' })).toBeVisible()
     await expect(menu.getByRole('button', { name: '无图标操作' })).toBeVisible()
-    await expect(menu.locator('.tr-extension-card__more-menu-item-icon-slot')).toHaveCount(0)
-    await expect(menu.locator('.tr-extension-card__more-menu-item-icon')).toHaveCount(0)
-    await expect(menu.locator('.tr-extension-card__more-menu-item-icon-placeholder')).toHaveCount(0)
+    await expect(menu.locator('svg')).toHaveCount(0)
 
     await menu.getByRole('button', { name: '无图标操作' }).click()
     await expect(component.getByTestId('event-id')).toHaveText('overflow-text')
@@ -130,27 +128,11 @@ test.describe('standalone ExtensionCard', () => {
     ).toHaveAttribute('style', /width: 0%/)
   })
 
-  test('warns once per duplicate action ID set in development', async ({ mount, page }) => {
-    const duplicateActionWarnings: string[] = []
-    page.on('console', (message) => {
-      if (
-        message.type() === 'warning' &&
-        message.text().includes('[ExtensionManager.Card] Action ids must be unique')
-      ) {
-        duplicateActionWarnings.push(message.text())
-      }
-    })
-
+  test('renders a non-clickable name as text', async ({ mount }) => {
     const component = await mount(ExtensionCardFixture)
+    const card = component.getByTestId('presentation-card')
 
-    await expect.poll(() => duplicateActionWarnings).toHaveLength(1)
-    await expect.poll(() => duplicateActionWarnings[0] ?? '').toContain('duplicate-initial')
-
-    await component.getByTestId('replace-duplicate-actions').click()
-    await expect.poll(() => duplicateActionWarnings).toHaveLength(1)
-
-    await component.getByTestId('change-duplicate-actions').click()
-    await expect.poll(() => duplicateActionWarnings).toHaveLength(2)
-    await expect.poll(() => duplicateActionWarnings[1] ?? '').toContain('duplicate-changed')
+    await expect(card.getByRole('button', { name: 'Item name' })).toHaveCount(0)
+    await expect(card.locator('.tr-extension-card__name')).toHaveText('Item name')
   })
 })

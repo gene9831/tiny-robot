@@ -15,21 +15,6 @@ const actions: ExtensionCardAction[] = [
   { id: 'inspect', type: 'custom', label: '检查', data: { origin: 'fixture' } },
 ]
 
-const createDuplicateActions = (id: string): ExtensionCardAction[] => [
-  { id, type: 'button', label: `${id} first` },
-  { id, type: 'button', label: `${id} second` },
-]
-
-const duplicateActions = ref(createDuplicateActions('duplicate-initial'))
-
-const replaceDuplicateActions = () => {
-  duplicateActions.value = createDuplicateActions('duplicate-initial')
-}
-
-const changeDuplicateActions = () => {
-  duplicateActions.value = createDuplicateActions('duplicate-changed')
-}
-
 const getOverflowSwitchLabel = (checked: boolean) => (checked ? '停止跟踪更新' : '跟踪更新')
 
 const overflowActions = ref<ExtensionCardAction[]>([
@@ -70,6 +55,7 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       name="Item name"
       description="Item description"
       icon="https://example.com/item-icon.png"
+      :name-clickable="false"
     />
 
     <ExtensionCard data-testid="component-icon-card" name="Component icon" :icon="IconEditPen" />
@@ -82,14 +68,6 @@ const handleAction = (event: ExtensionCardActionEvent) => {
       overflow-menu-label="扩展操作"
       @action="handleAction"
     />
-
-    <button data-testid="replace-duplicate-actions" type="button" @click="replaceDuplicateActions">
-      Replace duplicate actions
-    </button>
-    <button data-testid="change-duplicate-actions" type="button" @click="changeDuplicateActions">
-      Change duplicate action IDs
-    </button>
-    <ExtensionCard data-testid="duplicate-actions-card" name="Duplicate actions" :actions="duplicateActions" />
 
     <ExtensionCard
       data-testid="custom-fallback-card"

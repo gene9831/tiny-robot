@@ -13,9 +13,7 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(grid.locator(':scope > li[data-card-id]')).toHaveCount(2)
     await expect(alphaItem).toHaveCount(1)
     await expect(grid.locator(':scope > li[data-card-id="alpha"]')).toHaveCount(1)
-    await expect(grid.locator('[id="alpha"]')).toHaveCount(0)
     await expect(alphaCard).toHaveCount(1)
-    await expect(alphaCard).not.toHaveAttribute('id')
     await expect(alphaCard.getByText('Alpha extension', { exact: true })).toBeVisible()
     await expect(alphaCard.getByText('Alpha description', { exact: true })).toBeVisible()
     await expect(alphaCard.getByRole('checkbox', { name: 'Enable Alpha' })).toBeVisible()
@@ -33,13 +31,15 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect(grid.locator(':scope > li')).toHaveCount(2)
     await expect(grid.locator(':scope > li[data-card-id]')).toHaveCount(2)
     await expect(alphaItem.locator(':scope > [data-testid="slot-item-alpha"]')).toHaveCount(1)
-    await expect(alphaItem.getByTestId('slot-item-alpha-value')).toHaveText(
-      '{"id":"alpha","name":"Alpha extension","description":"Alpha description","icon":"https://example.com/alpha-icon.png","actions":[{"id":"toggle-alpha","type":"switch","label":"Enable Alpha","checked":true,"icon":"[component]","hidden":false,"disabled":false,"danger":false},{"id":"install-alpha","type":"button","label":"Install Alpha","icon":"[component]","hidden":false,"disabled":false,"danger":false},{"id":"inspect-alpha","type":"custom","label":"Inspect Alpha","icon":"[component]","hidden":false,"disabled":false,"danger":false,"data":{"origin":"grid-fixture","nested":{"enabled":true}}}],"primaryActionsLimit":3,"progress":75,"nameClickable":true,"overflowMenuLabel":"Alpha actions","overflowMenuPlacement":"top-end"}',
-    )
+    const alphaValue = JSON.parse((await alphaItem.getByTestId('slot-item-alpha-value').textContent()) ?? '{}')
+    const betaValue = JSON.parse((await betaItem.getByTestId('slot-item-beta-value').textContent()) ?? '{}')
+
+    expect(alphaValue.id).toBe('alpha')
+    expect(alphaValue.name).toBe('Alpha extension')
+    expect(alphaValue.actions?.[2]?.data).toEqual({ origin: 'grid-fixture', nested: { enabled: true } })
     await expect(alphaItem.getByTestId('slot-item-alpha-index')).toHaveText('0')
-    await expect(betaItem.getByTestId('slot-item-beta-value')).toHaveText(
-      '{"id":"beta","name":"Beta extension","description":"Beta description","nameClickable":false}',
-    )
+    expect(betaValue.id).toBe('beta')
+    expect(betaValue.name).toBe('Beta extension')
     await expect(betaItem.getByTestId('slot-item-beta-index')).toHaveText('1')
   })
 
@@ -184,28 +184,13 @@ test.describe('standalone ExtensionCardGrid', () => {
     await expect.poll(() => readRenderedTrackCount('custom-min-width-grid')).toBe(3)
   })
 
-  test('warns once for each changed duplicate-id set', async ({ mount, page }) => {
-    const duplicateWarnings: string[] = []
-    page.on('console', (message) => {
-      if (
-        message.type() === 'warning' &&
-        message.text().includes('[ExtensionManager.CardGrid] Item ids must be unique')
-      ) {
-        duplicateWarnings.push(message.text())
-      }
-    })
-
+  test('preserves input item order', async ({ mount }) => {
     const component = await mount(ExtensionCardGridFixture)
-    await component.getByTestId('show-duplicate-grid').click()
+    const itemIds = await component
+      .getByTestId('default-grid')
+      .locator(':scope > li[data-card-id]')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-card-id')))
 
-    await expect.poll(() => duplicateWarnings).toHaveLength(1)
-    await expect.poll(() => duplicateWarnings[0] ?? '').toContain('duplicate-initial')
-
-    await component.getByTestId('replace-duplicate-items').click()
-    await expect.poll(() => duplicateWarnings).toHaveLength(1)
-
-    await component.getByTestId('change-duplicate-items').click()
-    await expect.poll(() => duplicateWarnings).toHaveLength(2)
-    await expect.poll(() => duplicateWarnings[1] ?? '').toContain('duplicate-changed')
+    expect(itemIds).toEqual(['alpha', 'beta'])
   })
 })

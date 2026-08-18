@@ -134,26 +134,6 @@ const handleAction = (event: ExtensionCardGridActionEvent) => {
 const handleNameClick = (event: ExtensionCardGridNameClickEvent) => {
   lastNameClick.value = event
 }
-
-const createDuplicateItems = (id: string): ExtensionCardGridItem[] => [
-  { id, name: `${id} first` },
-  { id, name: `${id} second` },
-]
-
-const duplicateItems = ref(createDuplicateItems('duplicate-initial'))
-const duplicateGridVisible = ref(false)
-
-const showDuplicateGrid = () => {
-  duplicateGridVisible.value = true
-}
-
-const replaceDuplicateItems = () => {
-  duplicateItems.value = createDuplicateItems('duplicate-initial')
-}
-
-const changeDuplicateItems = () => {
-  duplicateItems.value = createDuplicateItems('duplicate-changed')
-}
 </script>
 
 <template>
@@ -207,15 +187,6 @@ const changeDuplicateItems = () => {
       style="--tr-extension-card-grid-card-min-width: 260px"
     />
   </div>
-
-  <button data-testid="show-duplicate-grid" type="button" @click="showDuplicateGrid">Show duplicates</button>
-  <button data-testid="replace-duplicate-items" type="button" @click="replaceDuplicateItems">
-    Replace duplicate items
-  </button>
-  <button data-testid="change-duplicate-items" type="button" @click="changeDuplicateItems">
-    Change duplicate item ids
-  </button>
-  <ExtensionCardGrid v-if="duplicateGridVisible" data-testid="duplicate-grid" :items="duplicateItems" />
 
   <output data-testid="action-events">{{ actionSummary }}</output>
   <output data-testid="name-click-item-id">{{ lastNameClick?.itemId }}</output>

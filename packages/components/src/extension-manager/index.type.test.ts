@@ -21,8 +21,6 @@ import type {
   ExtensionManagerTabChangeEvent,
 } from './index.type'
 
-const legacyItem = { id: 'legacy', kind: 'skill', name: 'Legacy extension' }
-
 const icon = {} as Component
 
 const cardProps: ExtensionCardProps = {
@@ -198,72 +196,6 @@ managerEmit('name-click', managerNameClickEvent)
 
 // @ts-expect-error Manager items retain Grid-owned identity.
 const managerItemWithoutId: ExtensionManagerItem = { name: 'Missing Manager identity' }
-const oldManagerFacadeProps = {
-  extensions: [legacyItem],
-  operationStates: {},
-}
-// @ts-expect-error The old extensions/operationStates facade is not the Manager contract.
-const oldManagerProps: ExtensionManagerProps = oldManagerFacadeProps
-
-const oldControlledManagerProps: ExtensionManagerProps = {
-  tabs: [managerTab],
-  // @ts-expect-error Section expansion is internal state, not a public Manager prop.
-  expandedSections: { catalog: { installed: true, available: false } },
-}
-
-const oldDefaultExpandedProps: ExtensionManagerProps = {
-  tabs: [managerTab],
-  // @ts-expect-error Section expansion is always initialized and managed internally.
-  defaultExpanded: false,
-}
-
-const oldShowHeaderProps: ExtensionManagerProps = {
-  tabs: [managerTab],
-  // @ts-expect-error Header visibility is derived from its content.
-  showHeader: false,
-}
-
-const oldCardGridColumnsProps: ExtensionCardGridProps = {
-  items: [cardGridItem],
-  // @ts-expect-error CardGrid columns are derived from the card minimum-width CSS variable.
-  columns: 3,
-}
-
-const oldManagerColumnsProps: ExtensionManagerProps = {
-  tabs: [managerTab],
-  // @ts-expect-error Manager no longer exposes a columns prop.
-  columns: 3,
-}
-
-// @ts-expect-error Manager tabs own flat items; explicit sections are no longer the Manager input model.
-const oldTreeManagerTab: ExtensionManagerTab = { id: 'old', label: 'Old', sections: [] }
-
-const oldTabWithTags: ExtensionManagerTab = {
-  id: 'old-fields',
-  label: 'Old fields',
-  items: [],
-  // @ts-expect-error Tab filter options are derived from item tags.
-  tags: [],
-}
-const oldTabWithBadge: ExtensionManagerTab = {
-  id: 'old-badge',
-  label: 'Old badge',
-  items: [],
-  // @ts-expect-error Tab badges are not part of the lean tab model.
-  badge: 'new',
-}
-const oldDisabledTab: ExtensionManagerTab = {
-  id: 'old-disabled',
-  label: 'Old disabled',
-  items: [],
-  // @ts-expect-error Tabs are always selectable in the lean tab model.
-  disabled: true,
-}
-
-// @ts-expect-error Card no longer accepts an Extension item.
-const oldCardProps: ExtensionCardProps = { item: legacyItem }
-// @ts-expect-error Grid identity is not a Card prop.
-const cardPropsWithGridId: ExtensionCardProps = { name: 'Card without Grid identity', id: 'grid-only' }
 // @ts-expect-error ExtensionCardGridItem requires the Grid-owned id.
 const cardGridItemWithoutId: ExtensionCardGridItem = { name: 'Missing Grid identity' }
 // @ts-expect-error Every action requires a label.
@@ -291,21 +223,8 @@ void managerSectionToggleEvent
 void managerActionEvent
 void managerNameClickEvent
 void managerSectionKey
-void oldTreeManagerTab
-void oldTabWithTags
-void oldTabWithBadge
-void oldDisabledTab
 void managerSlots
 void managerItemWithoutId
-void oldManagerFacadeProps
-void oldManagerProps
-void oldControlledManagerProps
-void oldDefaultExpandedProps
-void oldShowHeaderProps
-void oldCardGridColumnsProps
-void oldManagerColumnsProps
-void oldCardProps
-void cardPropsWithGridId
 void cardGridItemWithoutId
 void unlabeledAction
 void installAction

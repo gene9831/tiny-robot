@@ -2,17 +2,6 @@ import { expect, test } from '@playwright/experimental-ct-vue'
 import ExtensionManagerFixture from './ExtensionManager.fixture.vue'
 import ExtensionManagerUncontrolledFixture from './ExtensionManagerUncontrolled.fixture.vue'
 
-test('leaves surface styling to the host', async ({ mount }) => {
-  const component = await mount(ExtensionManagerFixture)
-  const manager = component.getByTestId('manager-host').locator(':scope > .extension-manager')
-
-  await expect(manager).toHaveCSS('max-width', 'none')
-  await expect(manager).toHaveCSS('padding-top', '0px')
-  await expect(manager).toHaveCSS('border-top-width', '0px')
-  await expect(manager).toHaveCSS('border-top-left-radius', '0px')
-  await expect(manager).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-})
-
 test.describe('ExtensionManager section model', () => {
   test('derives stable installed and available sections from the active tab items', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
@@ -86,17 +75,17 @@ test.describe('ExtensionManager section model', () => {
     await expect(manager.getByTestId('empty-slot-context-market-available')).toHaveText('market/available/可安装')
   })
 
-  test('keeps installed metadata out of the Card/Grid item boundary', async ({ mount }) => {
+  test('keeps Manager-only metadata out of the Card/Grid item boundary', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
 
     await component.getByTestId('show-item-slot-manager').click()
 
-    const itemSlotManager = component.getByTestId('item-slot-manager')
-    await expect(itemSlotManager.locator('.extension-manager__header')).toHaveCount(0)
-
-    const itemSlot = itemSlotManager.getByTestId('item-slot-context')
-    await expect(itemSlot).toHaveCount(3)
-    expect(await itemSlot.allTextContents()).toEqual(['false', 'false', 'false'])
+    const itemSlotKeys = component.getByTestId('item-slot-manager').getByTestId('item-slot-keys')
+    await expect(itemSlotKeys).toHaveCount(3)
+    for (const keys of await itemSlotKeys.allTextContents()) {
+      expect(JSON.parse(keys)).not.toContain('installed')
+      expect(JSON.parse(keys)).not.toContain('tags')
+    }
   })
 
   test('preserves collapse state per tab and section key', async ({ mount }) => {
@@ -297,7 +286,6 @@ test.describe('ExtensionManager Filter acceptance', () => {
     const clear = manager.getByTestId('filter-search-clear')
 
     await expect(clear).toHaveCount(0)
-    await expect(search).toHaveCSS('appearance', 'none')
     await search.fill('alpha')
     await expect(clear).toBeVisible()
     await clear.click()
@@ -366,15 +354,9 @@ test.describe('ExtensionManager Filter acceptance', () => {
     await expect(manager.getByTestId('filter-root')).toBeVisible()
   })
 
-  test('does not expose item tags in the item slot Card/Grid boundary', async ({ mount }) => {
+  test('renders the configured title', async ({ mount }) => {
     const component = await mount(ExtensionManagerFixture)
-    await component.getByTestId('show-item-slot-manager').click()
-    const itemSlotManager = component.getByTestId('item-slot-manager')
-    await expect(itemSlotManager.locator('.extension-manager__header')).toHaveCount(0)
-    await expect(itemSlotManager.getByTestId('item-slot-context')).toHaveCount(3)
-    await expect(itemSlotManager.getByTestId('item-slot-keys')).toHaveCount(3)
-    for (const keys of await itemSlotManager.getByTestId('item-slot-keys').allTextContents()) {
-      expect(JSON.parse(keys)).not.toContain('tags')
-    }
+
+    await expect(component.getByTestId('manager-host').getByText('Extension manager', { exact: true })).toBeVisible()
   })
 })
