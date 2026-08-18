@@ -17,3 +17,11 @@ import { ExtensionManager } from '@opentiny/tiny-robot'
     <ExtensionManager.Card name="No progress" description="Omitting progress hides the progress bar." />
   </div>
 </template>
+
+<style>
+.storybook-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+</style>

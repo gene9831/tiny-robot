@@ -147,6 +147,8 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   --tr-extension-card-bg-color-hover: rgba(0, 0, 0, 0.04);
   --tr-extension-card-focus-color: #191919;
   --tr-extension-card-icon-color: #808080;
+  --tr-extension-card-switch-bg-color: var(--tr-text-disabled);
+  --tr-extension-card-switch-bg-color-checked: var(--tr-color-primary);
 }
 </style>
 
@@ -156,8 +158,6 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   --tr-extension-card-menu-icon-slot-size: var(--tr-extension-card-action-icon-size);
   --tr-extension-card-progress-bg-color: var(--tr-extension-card-bg-color-hover);
   --tr-extension-card-progress-bar-color: var(--tr-success-color, #52c41a);
-  --tr-extension-card-switch-bg-color: var(--tr-extension-card-bg-color-hover);
-  --tr-extension-card-switch-bg-color-checked: var(--tr-extension-card-focus-color);
 
   box-sizing: border-box;
   position: relative;
@@ -202,6 +202,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   flex: 1;
   flex-direction: column;
   justify-content: center;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -212,7 +213,7 @@ const handleNameKeydown = (event: KeyboardEvent) => {
   color: var(--tr-text-primary);
   font-size: 14px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 24px;
   outline: none;
   text-overflow: ellipsis;
   white-space: nowrap;

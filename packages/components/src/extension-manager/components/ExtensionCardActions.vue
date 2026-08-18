@@ -140,14 +140,14 @@ const handleCustom = (action: Extract<ExtensionCardRenderableAction, { type: 'cu
 }
 
 .tr-extension-card-primary-actions__switch input:checked + .tr-extension-card-primary-actions__switch-track::after {
-  transform: translateX(18px);
+  transform: translateX(16px);
 }
 
 .tr-extension-card-primary-actions__switch-track {
   position: relative;
   display: block;
-  width: 40px;
-  height: 22px;
+  width: 36px;
+  height: 20px;
   border-radius: 999px;
   background: var(--tr-extension-card-switch-bg-color);
   transition: background 0.2s ease;
@@ -157,8 +157,8 @@ const handleCustom = (action: Extract<ExtensionCardRenderableAction, { type: 'cu
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
@@ -172,14 +172,14 @@ const handleCustom = (action: Extract<ExtensionCardRenderableAction, { type: 'cu
   justify-content: center;
   gap: 6px;
   min-width: 64px;
-  height: 30px;
-  padding: 0 12px;
+  padding: 4px 8px;
   border: 0;
   border-radius: 999px;
   background: var(--tr-extension-card-bg-color-hover);
   color: var(--tr-text-primary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 16px;
   transition: background-color 0.2s ease;
 }
 

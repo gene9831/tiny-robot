@@ -21,3 +21,11 @@ const sparklesIcon = markRaw(IconSparkles)
     <ExtensionManager.Card name="Placeholder icon" description="Omitting icon keeps the first-character placeholder." />
   </div>
 </template>
+
+<style>
+.storybook-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+</style>
