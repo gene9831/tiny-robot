@@ -15,7 +15,7 @@ outline: [1, 3]
 1. 先只读检查 Step 1 证据：当前应用 package + lockfile 的 TinyRobot 解析、TrThemeProvider/TrChat 有效导入、真实入口唯一挂载、TinyRobot 样式；证据不足时按 TINYROBOT_SOURCE_MISSING 停止。
 2. 预检并报告现有 dirty 文件、TinyRobot/GenUI 版本、sender-footer、message plugin、content renderer 和 responseProvider 的实际 API，然后暂停等我确认。
 3. 优先复用 Skill 的 assets/genui-v1.3.0；已存在或 dirty 的目标文件只能合并，不能覆盖。不要参考 robot-client，不要创建第二个聊天框或 mock schema 卡片。
-4. GenUI 是 Sender footer 中的功能开关，不是模型。默认关闭；开关前后必须保留当前 selected model。它必须与深度思考、联网搜索和模型选择器共存。
+4. GenUI 是 Sender footer 中的功能开关，不是模型。默认关闭；没有明确 mode allowlist 时开关前后必须保留当前 selected model，有明确宿主策略时模型选项、selected ID 和真实请求必须一致执行。它必须与深度思考、联网搜索和模型选择器共存。
 5. 使用 PatternExtractor 跨 chunk 保留 Markdown/schema-card 顺序；只把有效 schema-card 交给异步 GenuiRenderer。
 6. 只在 .env.example 增加 VITE_GENUI_URL、VITE_GENUI_PROMPT_ID、VITE_GENUI_API_KEY 空占位。不得读取、删除、覆盖或输出 .env。
 7. 缺 URL 或 Prompt ID 时开关禁用并提示缺失变量；VITE_GENUI_API_KEY 不是启用开关的必需条件。GenUI 请求不得转发模型供应商 key。
