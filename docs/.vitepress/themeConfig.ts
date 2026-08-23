@@ -8,6 +8,7 @@ const sharedSidebarItems = [
       { text: '主题配置', link: 'theme-config' },
       { text: '更新日志', link: 'update-log' },
       { text: 'CLI 接入', link: 'cli-integration' },
+      { text: 'AI 应用集成', link: 'ai-app-integration/' },
     ],
   },
   {
