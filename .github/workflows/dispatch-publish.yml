@@ -49,7 +49,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 22 # 使用Node.js 22版本
+          node-version: 24 # 使用Node.js 24版本
           package-manager-cache: false
           registry-url: 'https://registry.npmjs.org' # 设置npm registry地址
 
@@ -81,7 +81,6 @@ jobs:
       - name: Build VitePress
         run: pnpm build:docs --nocomponents
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
           VITEPRESS_BASE: /tiny-robot/${{ inputs.tag }}/
           PLAYGROUND_BASE: /tiny-robot/${{ inputs.tag }}/playground
 
