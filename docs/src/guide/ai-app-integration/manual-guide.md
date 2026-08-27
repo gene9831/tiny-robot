@@ -6,18 +6,16 @@ outline: [1, 3]
 
 本页不依赖 Agent 或 Skill，开发者可以在现有 Vue 3 + Vite 应用中手动完成四步集成。Step 1/2 基于 TinyRobot `0.5.2-alpha.10`、GenUI `1.3.0`，并在 `opentiny.design.home@8064255` 的临时 worktree 中从头重放；Step 3/4 基于该业务项目的真实工作树、Next SDK `0.4.2` 和 `http://localhost:5174/` 浏览器闭环恢复。业务项目的 Step 3/4 尚未形成提交，不能把基线提交 `8064255` 误写成实现提交。
 
+本页的浏览器闭环章节是**开发者人工运行时验收**，不是 Agent 完成代码接入时的默认动作。Agent 默认执行依赖/源码核对、契约测试、类型检查和生产构建；只有提示词明确要求验证对应功能时，才代为执行运行时闭环。
+
 ## 环境要求
 
 - macOS；本次验证为 macOS `26.6.2`、Apple Silicon。Linux 只可参考等价 shell 命令，未实际重放；Windows 未验证。
 - Node.js `>=20.13.0`。Step 1/2 重放使用 `v22.23.1`；Step 3/4 文档整理时的只读复核环境为 `v26.7.0`，原浏览器验证时没有单独保存 Node 版本输出。
 - pnpm 和 Git。本次应用 lockfile 是 `lockfileVersion: '9.0'`，实际重放工具为 pnpm `11.21.0`。不要把 lockfile 格式误认为本机 pnpm 版本。
 - 一个已经能构建的 Vue 3 + Vite 业务应用，拥有独立 `package.json` 和 lockfile。Step 3/4 还要求已有唯一 TinyRobot `TrChat` 和可观察、可测试的真实页面状态。
-- 本地 TinyRobot 源码仓库，其中 CLI package 声明 `@opentiny/tiny-robot-cli@0.5.2-alpha.11`。
-- 能使用当前模型服务完成自然语言工具调用。endpoint、认证和密钥由开发者在私有环境中配置；本手册不读取、复制或展示配置值。
-
-::: danger RELEASE-BLOCKER: LOCAL_CLI
-当前 CLI 是本地修改、未发布版本。下面的本地路径命令是开发预览流程，不是正式发布命令。CLI 发布后必须替换为精确锁定版本的 `pnpm dlx`/`npx` 命令，并从干净应用重新验证。
-:::
+- 已发布的 `@opentiny/tiny-robot-cli@0.5.2-alpha.12`；建议使用完整版本号，避免 `latest` 标签解析到其他版本。
+- 人工运行时验收时需要能使用当前模型服务完成自然语言工具调用。代码接入阶段不要求 endpoint、认证或密钥；这些值由开发者在私有环境中配置，本手册不读取、复制或展示。
 
 ## Step 0：记录基线和边界
 
@@ -49,20 +47,20 @@ node -e "const p=require('./package.json'); console.log(JSON.stringify({name:p.n
 
 不要打开、打印或删除 `.env`。即使 `git status` 显示 `.env`，也只记录文件名。
 
-## Step 1：使用本地 CLI 引入 TinyRobot
+## Step 1：使用 TinyRobot CLI 引入 TinyRobot
 
 ### 1.1 执行 CLI
 
-通用命令：
+pnpm 项目运行：
 
 ```bash
-node <TINY_ROBOT_REPO>/packages/cli/bin/cli.js add chat
+pnpm dlx @opentiny/tiny-robot-cli@0.5.2-alpha.12 add chat
 ```
 
-本次验证命令：
+npm 项目运行：
 
 ```bash
-node /Users/gene/Projects/tiny-robot/packages/cli/bin/cli.js add chat
+npx @opentiny/tiny-robot-cli@0.5.2-alpha.12 add chat
 ```
 
 CLI 会询问：
@@ -83,7 +81,7 @@ find src/tiny-robot-chat -type f | sort
 node -e "const p=require('./package.json'); console.log(JSON.stringify(p.dependencies,null,2))"
 ```
 
-本地 CLI 应创建：
+CLI 应创建：
 
 ```text
 .env.example
@@ -1042,7 +1040,6 @@ git commit -m "feat: add restricted PageTool automation"
 
 ## 发布前清单
 
-- [ ] `RELEASE-BLOCKER: LOCAL_CLI` 已由精确发布版本替代。
 - [ ] 已从干净 Vue 3 + Vite 项目重新执行发布 CLI。
 - [ ] CLI package 版本、生成 runtime 版本和文档版本表一致且不混淆。
 - [ ] Step 1 与 Step 2 的测试、构建、UI 证据已更新。
