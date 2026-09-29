@@ -1,53 +1,114 @@
 # 组件文档规范未解决事项
 
-本文只记录 Bubble 与 Sender 文档审计中无法通过修改文档规范直接解决的问题。已经确认并写入 `docs/component-documentation-standard.md` 的规则不在此重复。
+本文记录组件文档整理过程中发现、但暂时无法仅通过文档修改解决的事项。
 
-这些事项需要维护者做公共契约决定、调整组件实现，或建立机器可读的事实源。在决议完成前，正式文档应继续按可验证的当前行为编写，并显式标记类型与运行时差异。
+本文件不记录临时工作笔记，也不重复已经可以写入 `docs/component-documentation-standard.md` 的规则。未解决事项需要维护者做公共契约决定、调整组件实现，或建立机器可读的事实源。在决议完成前，正式文档应继续按可验证的当前行为编写，并显式标记类型与运行时差异。
 
-## 规范基础设施
+## 优先级定义
 
-### U1. 公共 CSS Variables 缺少机器可读事实源
+- **P0 — 阻断**：可能导致严重错误使用、数据风险，或必须在当前发布前解决。
+- **P1 — 高**：公开 API、类型定义和运行时行为存在明显冲突，可能直接误导用户。
+- **P2 — 中**：影响文档完整性、API 可发现性或长期维护，但不妨碍主要功能使用。
+- **P3 — 低**：体验优化、内部一致性或需要进一步评估的改进建议。
 
-- **现状**：Bubble 和 Sender 的变量分散在公共主题文件、全局 `variables.css` 和组件局部 fallback 中。源码出现 `var(--*)` 只能证明实现使用，不能证明兼容性承诺。
-- **影响**：文档作者无法稳定判断哪些变量应进入公开 API，也无法自动校验变量名、作用域、默认值和主题覆盖。
-- **建议决议**：建立可生成文档的公共 token 注册表，至少包含变量名、作用域、默认值、主题覆盖和稳定级别；评审工具应能检查文档与注册表的差异。
+同一优先级内按照用户影响范围排序；影响相同时，优先排列其他事项依赖的问题。每项使用稳定的 `GAP-NNN` 编号，并记录范围、现状、证据、影响、待决定、建议行动和完成条件。
 
-## 公开 API 与运行时契约
+## P0 — 阻断
 
-### A1. Sender 插槽作用域类型与顶层转发不一致
+当前无。
 
-- `SenderSlots` 声明 `actions-inline`、`footer` 和 `footer-right` 接收 `SenderSlotScope`。
-- `TrSender` 的顶层插槽转发没有传递这些参数；当前只有 `content` 插槽能收到 `editor`。
-- 需要决定修复顶层转发，还是收窄公开类型。
+## P1 — 高
 
-### A2. BubbleList 自定义分组函数没有公开类型名
+### GAP-001：Sender 插槽作用域类型与顶层转发不一致
 
-- `BubbleListProps.groupStrategy` 使用内部 `BubbleGroupFunction`，但该类型没有从包根导出。
-- 需要决定公开 `BubbleGroupFunction`，或在公开类型中直接内联签名并移除内部命名。
+- **范围**：`SenderSlots`、`TrSender` 的 `actions-inline`、`footer`、`footer-right` 和 `content` 插槽。
+- **现状**：`SenderSlots` 声明 `actions-inline`、`footer` 和 `footer-right` 接收 `SenderSlotScope`；`TrSender` 的顶层插槽转发没有传递这些参数，当前只有 `content` 插槽能收到 `editor`。
+- **证据**：公开插槽类型与 `TrSender` 顶层插槽转发实现不一致。
+- **影响**：TypeScript 用户会认为这些插槽能够访问作用域参数，但运行时得到的值与类型承诺不符。
+- **待决定**：修复顶层插槽转发，还是收窄公开插槽类型。
+- **建议行动**：优先确认各插槽是否设计为共享 `SenderSlotScope`，再同步实现、类型和文档。
+- **完成条件**：插槽类型、运行时转发和组件文档对作用域参数的描述一致。
 
-### A3. `SenderSuggestionItem.label` 的类型说明与运行时不一致
+### GAP-002：`SenderSuggestionItem.label` 的类型说明与运行时不一致
 
-- 公开类型称 `label` 是显示标签，未提供时使用 `content`。
-- 当前 Suggestion 列表的展示、高亮和默认回填都只读取 `content`。
-- 需要决定实现类型承诺，还是收窄 `label` 的公开说明或移除该字段。
+- **范围**：`SenderSuggestionItem`、Suggestion 列表展示、高亮和默认回填逻辑。
+- **现状**：公开类型称 `label` 是显示标签，未提供时使用 `content`；当前实现的展示、高亮和默认回填都只读取 `content`。
+- **证据**：Suggestion 相关运行时代码没有读取 `label`。
+- **影响**：用户设置 `label` 后无法得到类型说明承诺的显示效果。
+- **待决定**：实现 `label` 的类型承诺，还是收窄说明或移除该字段。
+- **建议行动**：先确认 `label` 与 `content` 是否需要承担不同语义，再决定补齐实现或调整公共类型。
+- **完成条件**：类型、列表展示、回填行为和文档对 `label` 的说明一致。
 
-### A4. `SpeechConfig` 包含当前未生效的字段
+### GAP-003：`SpeechConfig` 包含当前未生效的字段
 
-- `autoReplace` 和 `onVoiceButtonClick` 位于公开 `SpeechConfig`，但 `VoiceButton`、`useSpeechHandler` 和 `WebSpeechHandler` 均未读取它们。
-- 需要决定实现这两个配置，或从公开类型移除并提供迁移说明。
+- **范围**：`SpeechConfig.autoReplace`、`SpeechConfig.onVoiceButtonClick`、`VoiceButton`、`useSpeechHandler` 和 `WebSpeechHandler`。
+- **现状**：`autoReplace` 和 `onVoiceButtonClick` 位于公开 `SpeechConfig`，但相关运行时实现均未读取它们。
+- **证据**：语音按钮和语音处理链路中不存在这两个字段的消费逻辑。
+- **影响**：用户配置字段后不会产生预期行为，且没有明确的迁移或弃用信号。
+- **待决定**：实现这两个配置，还是从公开类型移除。
+- **建议行动**：结合语音交互设计确认字段是否仍属于支持范围；若移除，应提供迁移说明。
+- **完成条件**：公开类型中的字段均有可验证的运行时行为，或已按兼容策略移除。
 
-### A5. Sender 的公开注释与运行时默认行为存在偏差
+### GAP-004：Sender 的公开注释与运行时默认行为存在偏差
 
-- `SenderProps.stopText` 的注释写默认值为“停止响应”，但组件没有设置该默认值；省略时实际只显示停止图标。
-- `SenderContext.getContent` 的注释写返回 HTML，实际实现调用 `editor.getText()` 返回纯文本。
-- 需要同步修正公开类型注释，并由维护者确认 `stopText` 是否应有实际默认值。
+- **范围**：`SenderProps.stopText` 和 `SenderContext.getContent`。
+- **现状**：`stopText` 的注释写默认值为“停止响应”，但组件没有设置该默认值，省略时实际只显示停止图标；`getContent` 的注释写返回 HTML，实际调用 `editor.getText()` 返回纯文本。
+- **证据**：Sender 默认值声明和 `getContent` 实现与公开注释不一致。
+- **影响**：用户可能依赖不存在的默认文案，或把纯文本结果按 HTML 处理。
+- **待决定**：`stopText` 是否应补充实际默认值，以及 `getContent` 应返回 HTML 还是维持纯文本。
+- **建议行动**：先确认预期公共契约，再同步类型注释、实现和文档。
+- **完成条件**：默认值、返回值、公开注释和组件文档一致，并有相应验证。
 
-### A6. `WordCounterProps` 已导出但组件不接收
+### GAP-005：`WordCounterProps` 已导出但组件不接收
 
-- 包根导出了必填的 `WordCounterProps.current`、`max` 和 `isOverLimit`，但 `TrWordCounter` 当前没有声明 Props，而是从 Sender Context 读取字数、上限与超限状态。
-- 需要决定删除未使用的导出类型，或让组件实际接收并定义它与 Sender Context 的优先级。
+- **范围**：包根导出的 `WordCounterProps` 和 `TrWordCounter`。
+- **现状**：`WordCounterProps` 声明必填的 `current`、`max` 和 `isOverLimit`，但 `TrWordCounter` 没有声明 Props，而是从 Sender Context 读取字数、上限与超限状态。
+- **证据**：公开导出类型与组件实际输入接口不一致。
+- **影响**：用户可能按公开类型向组件传参，但组件不会按该契约消费这些值。
+- **待决定**：删除未使用的导出类型，还是让组件实际接收这些 Props，并定义它们与 Sender Context 的优先级。
+- **建议行动**：先确定 `TrWordCounter` 是内部上下文组件还是可独立使用的公共组件，再调整导出和实现。
+- **完成条件**：组件定位明确，公开类型、实际 Props、上下文优先级和文档一致。
 
-### A7. Sender 包根导出包含未分类的内部实现类型
+## P2 — 中
 
-- `KeyboardHandlers`、`UseEditorReturn`、`SuggestionListProps` 等类型可从包根导入，但它们更像内部组合函数和内部列表的实现契约。
-- 正式规范已要求区分 `stable`、`advanced`、`internal-exported` 和 `deprecated`；这些 Sender 类型仍需要维护者逐项确认支持级别，并决定是否继续从包根导出。
+### GAP-006：公共 CSS Variables 缺少机器可读事实源
+
+- **范围**：Bubble、Sender、公共主题文件、全局 `variables.css` 和组件局部 fallback。
+- **现状**：变量分散在多个实现位置；源码出现 `var(--*)` 只能证明实现使用，不能证明兼容性承诺。
+- **证据**：当前没有统一注册表记录变量名、作用域、默认值、主题覆盖和稳定级别。
+- **影响**：文档作者无法稳定判断哪些变量应进入公开 API，也无法自动检查文档是否遗漏或记录了内部变量。
+- **待决定**：是否建立可生成文档的公共 token 注册表，以及哪些字段构成稳定承诺。
+- **建议行动**：设计最小机器可读注册表，并让文档生成或评审工具检查文档与注册表的差异。
+- **完成条件**：公共 CSS Variables 具有唯一、机器可读且可校验的事实源。
+
+### GAP-007：BubbleList 自定义分组函数没有公开类型名
+
+- **范围**：`BubbleListProps.groupStrategy` 和内部 `BubbleGroupFunction`。
+- **现状**：`groupStrategy` 使用内部命名类型 `BubbleGroupFunction`，但该类型没有从包根导出。
+- **证据**：组件 Props 引用了该命名类型，而包根公共导出中没有对应类型名。
+- **影响**：用户能够传入函数，却无法稳定导入相应类型用于复用或显式标注。
+- **待决定**：公开 `BubbleGroupFunction`，还是在公开 Props 类型中直接内联签名并移除内部命名。
+- **建议行动**：根据该签名是否需要被用户复用来选择命名导出或内联。
+- **完成条件**：用户可以仅依赖公开入口完整表达 `groupStrategy` 的函数类型。
+
+### GAP-008：Sender 包根导出包含未分类的内部实现类型
+
+- **范围**：`KeyboardHandlers`、`UseEditorReturn`、`SuggestionListProps` 等 Sender 包根导出类型。
+- **现状**：这些类型可从包根导入，但更像内部组合函数和内部列表的实现契约，尚未逐项确认支持级别。
+- **证据**：正式规范要求区分 `stable`、`advanced`、`internal-exported` 和 `deprecated`，但这些类型尚未完成分类。
+- **影响**：用户可能把实现细节当作稳定公共契约，维护者也无法判断变更时所需的兼容策略。
+- **待决定**：逐项确认支持级别，并决定是否继续从包根导出。
+- **建议行动**：审计实际外部使用场景，为每个类型指定支持级别后再调整导出或文档。
+- **完成条件**：相关类型均有明确支持级别，包根导出和文档索引与该分类一致。
+
+## P3 — 低
+
+当前无。
+
+## 事项关闭规则
+
+本文件不长期保留已解决事项。事项解决后应：
+
+1. 将形成的通用规则写入 `docs/component-documentation-standard.md`，或完成相应的实现及文档修正；
+2. 在相关 PR、Issue 或提交中保留处理记录；
+3. 从本文件删除对应事项。
