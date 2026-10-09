@@ -1,0 +1,35 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "tsconfig": "tsconfig.json",
+  "out": "../../docs/api/runtime",
+  "emit": "none",
+  "readme": "none",
+  "excludeExternals": true,
+  "disableSources": true,
+  "treatWarningsAsErrors": true,
+  "validation": {
+    "invalidLink": true,
+    "invalidPath": true,
+    "notDocumented": true,
+    "notExported": true,
+    "rewrittenLink": true,
+    "unusedMergeModuleWith": true
+  },
+  "requiredToBeDocumented": [
+    "Class",
+    "Interface",
+    "Function",
+    "Enum",
+    "EnumMember",
+    "TypeAlias",
+    "Variable",
+    "Property",
+    "Method",
+    "Accessor",
+    "Constructor",
+    "CallSignature",
+    "IndexSignature",
+    "Parameter"
+  ]
+}

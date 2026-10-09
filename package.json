@@ -16,6 +16,7 @@
     "build:components": "pnpm -r --filter @opentiny/tiny-robot-chat... build",
     "dev:kit": "pnpm -F @opentiny/tiny-robot-kit dev",
     "build:kit": "pnpm -F @opentiny/tiny-robot-kit build",
+    "build:runtime": "pnpm -F @opentiny/tiny-robot-runtime build",
     "build:svgs": "pnpm -F @opentiny/tiny-robot-svgs build",
     "test": "pnpm -F tiny-robot-test test",
     "test:ui": "pnpm -F tiny-robot-test test:ui",

@@ -1,0 +1,41 @@
+{
+  "name": "@opentiny/tiny-robot-runtime",
+  "version": "0.5.1",
+  "description": "Framework-independent Tiny Robot conversation runtime",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "docs:build": "typedoc --options typedoc.json --emit docs",
+    "docs:check": "typedoc --options typedoc.json",
+    "test": "vitest run",
+    "type-check": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@ai-sdk/provider": "4.0.25"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "4.0.25",
+    "tsup": "8.5.1",
+    "typedoc": "0.28.20",
+    "typescript": "5.8.2",
+    "vitest": "4.1.11"
+  }
+}

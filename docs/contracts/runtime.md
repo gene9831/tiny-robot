@@ -5,9 +5,9 @@
 ## 边界
 
 - Runtime **MUST NOT** 依赖 Vue、Angular、DOM 或组件 View Model。
-- Provider 集成 **MUST** 遵守仓库固定版本的 [LanguageModelV4 Runtime Boundary Contract v1](language-model-v4-runtime-boundary-v1.md)。Runtime 只可通过 Ingress Guard 消费允许的 `LanguageModelV4` 子集。
+- Provider 集成 **MUST** 遵守仓库固定版本的 [LanguageModelV4 Runtime Boundary Contract v1](language-model-v4-runtime-boundary-v1.md)。Runtime 出站只可通过 capability preflight 和 allowlist projection 构造允许的 `LanguageModelV4CallOptions` 子集；入站只可通过 Ingress Guard 消费 `LanguageModelV4StreamResult.stream` 中允许的 `LanguageModelV4StreamPart` 子集。
 - `LanguageModelV4` **MUST NOT** 被视为 Runtime Domain Model。Provider 原始 payload、SDK 私有类型、raw chunks、headers、未经清洗的 error/warning/metadata **MUST NOT** 进入 Domain Event、Snapshot 或组件公共 API。
-- Provider boundary **MUST** 明确上游版本、允许的 stream parts、合法顺序、终止语义、能力声明、有损映射和 conformance fixtures；升级必须经过人工评审。
+- Provider boundary **MUST** 明确上游版本、允许的 call options 与 prompt parts、允许的 stream parts、合法顺序、终止语义、能力声明、有损映射和双向 conformance fixtures；升级必须经过人工评审。
 
 ## 公共模型
 

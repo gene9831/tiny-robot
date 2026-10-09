@@ -1,0 +1,23 @@
+{
+  "name": "@opentiny/tiny-robot-provider-openai",
+  "version": "0.5.1",
+  "description": "OpenAI model registrations for Tiny Robot Runtime",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.89",
+    "@ai-sdk/openai-compatible": "3.0.66",
+    "@opentiny/tiny-robot-runtime": "workspace:^"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "4.0.25",
+    "typescript": "5.8.2"
+  }
+}

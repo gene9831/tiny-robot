@@ -7,14 +7,16 @@
 ## 1. 决策与分层
 
 ```text
-Provider API
-  ↓
-AI SDK Provider / custom LanguageModelV4 Provider
-  ↓ LanguageModelV4CallOptions / LanguageModelV4StreamPart
-Tiny Robot Ingress Guard
-  ↓ Domain Events
-Runtime reducer
-  ↓
+Snapshot / frozen Run config
+  ↓ capability preflight + allowlist projection
+LanguageModelV4CallOptions
+  ↓ LanguageModelV4.doStream()
+AI SDK Provider / custom LanguageModelV4 Provider ↔ Provider wire protocol
+  ↓ LanguageModelV4StreamResult.stream
+ReadableStream<LanguageModelV4StreamPart>
+  ↓ Tiny Robot Ingress Guard
+Domain Events
+  ↓ Runtime reducer
 Snapshot
 ```
 
@@ -26,6 +28,8 @@ Snapshot
 4. UI contract：由 Selector/Presenter 从 Snapshot 投影的 View Model；不属于本文。
 
 Open Responses 只作为 OpenAI Responses mapping 和 conformance 的参考，不是 Tiny Robot 公共协议。
+
+一次 Model Step 的 Provider ABI 同时包含出站请求和入站响应：Runtime 构造允许的 `LanguageModelV4CallOptions`，调用 `LanguageModelV4.doStream()`，然后只把 `LanguageModelV4StreamResult.stream` 交给 Ingress Guard。`LanguageModelV4StreamResult.request` 与 `.response` 是 Provider 调试数据，不属于 Runtime 入站协议。
 
 ## 2. 上游基线与升级
 
@@ -113,6 +117,8 @@ interface RuntimeMappingLossV1 {
 
 ## 5. 允许的 call options
 
+Runtime **MUST** 从冻结的 Run 配置、Snapshot 历史、已注册工具和当前 `AbortSignal` 构造完整的 `LanguageModelV4CallOptions`。调用对象必须通过固定版本 `@ai-sdk/provider` 的类型检查；禁止字段必须保持不可由 Command、UI 或任意 consumer 输入表达，而不是先接受再清洗。
+
 Runtime v1 可构造：
 
 - `prompt`；
@@ -133,6 +139,8 @@ Runtime v1 不公开以下跨 Provider 配置：
 - `includeRawChunks: true`。
 
 Provider factory 可以在 Runtime 之外封装 Provider 特有默认值，但这些值不构成 Runtime 公共协议。
+
+Provider conformance **MUST** 同时验证允许的 `LanguageModelV4CallOptions` 被映射为预期的脱敏 wire request，且禁止字段不会由 Runtime 注入。验证过程中截获的原始 request、credential 和 authorization material 只能存在于测试进程内存，不得写入 fixture、日志或快照。
 
 ## 6. 允许的 prompt
 
@@ -159,6 +167,8 @@ v1 暂缓：
 ## 7. 允许的 stream parts
 
 Runtime v1 **MUST** 通过 `doStream()` 消费模型调用；非流式 Provider 行为由 Provider 实现规范化为同一 stream-part 生命周期。Runtime 不维护第二套 `doGenerate()` Domain mapping。
+
+Coordinator **MAY** 接收完整 `LanguageModelV4StreamResult`，但 **MUST** 仅把 `result.stream` 传给 Ingress Guard。`result.request`、`result.response` 及其 body/headers **MUST** 在该边界丢弃，不得传给 Domain Event、reducer、Snapshot、持久化、日志、fixture、诊断或 UI API。
 
 Ingress Guard v1 接受：
 
@@ -222,14 +232,14 @@ tool-input-start(id, toolName)
 
 `finishReason.unified` 映射：
 
-| V4 reason | Model Step | Run |
-| --- | --- | --- |
-| `stop` | completed | completed |
-| `tool-calls` | completed | 保持 active，进入工具审批/执行 |
-| `length` | completed | completed，termination=`max_output_tokens` |
-| `content-filter` | completed | completed，termination=`content_filter` |
-| `error` | failed | failed |
-| `other` | interrupted | interrupted，除非 registration 有已评审 allowlist |
+| V4 reason        | Model Step  | Run                                               |
+| ---------------- | ----------- | ------------------------------------------------- |
+| `stop`           | completed   | completed                                         |
+| `tool-calls`     | completed   | 保持 active，进入工具审批/执行                    |
+| `length`         | completed   | completed，termination=`max_output_tokens`        |
+| `content-filter` | completed   | completed，termination=`content_filter`           |
+| `error`          | failed      | failed                                            |
+| `other`          | interrupted | interrupted，除非 registration 有已评审 allowlist |
 
 终止优先级：
 
@@ -358,15 +368,20 @@ Model Step emits client tool-call
 13. capability reject 与 declared loss；
 14. credential canary。
 
-测试必须分两层：
+测试必须覆盖三个方向，并保持 fixture/断言边界独立：
 
-1. sanitized Provider HTTP/SSE fixture → exact `LanguageModelV4` parts；
-2. constructed `LanguageModelV4` parts → exact Domain Events、Run terminal state 与 Snapshot。
+1. Snapshot/冻结 Run 配置 → exact allowed `LanguageModelV4CallOptions`；
+2. constructed `LanguageModelV4CallOptions` → sanitized Provider wire request，且 sanitized Provider HTTP/SSE fixture → exact `LanguageModelV4StreamPart`；
+3. constructed `LanguageModelV4StreamPart` → exact Domain Events、Run terminal state 与 Snapshot。
+
+第 2 层可在测试进程内通过受控 transport/fetch 截获请求，但 checked-in fixture 只能保存经过 allowlist 生成的请求语义和 redaction manifest，不能保存 credential、Authorization、cookie、带 query 的 endpoint URL 或原始 headers/body。
 
 每项 fixture 记录 Provider/API 格式、AI SDK package/version、constructed 或 sanitized recording、redaction manifest 和 expected observable result。
 
 Compliance tests 至少断言：
 
+- exact allowed call options 及禁止字段不可表达；
+- prompt、tool declaration、tool choice、reasoning、output limit 与 abort 的 wire request 映射；
 - exact accepted part order；
 - per-ID state transition；
 - text/tool delta assembly；
@@ -382,7 +397,7 @@ Compliance tests 至少断言：
 
 ### OpenAI Responses
 
-使用 `@ai-sdk/openai` 的 Responses model。Tiny Robot 验证其 text、reasoning summary、function tool call、usage、finish 和 abort 的 V4 输出，不重复实现 OpenAI semantic event parser。
+使用 `@ai-sdk/openai` 的 Responses model。Tiny Robot 验证允许的 V4 prompt、output limit、reasoning、function tools、tool choice 与 tool result 被映射为预期的脱敏 Responses request 语义，同时验证 text、reasoning summary、function tool call、usage、finish 和 abort 的 V4 输出；不重复实现 OpenAI semantic event parser。
 
 OpenAI Responses 新增 hosted tool、compaction、background 或其他 custom content 时，除非本契约升级，否则必须 capability reject 或由 Ingress Guard 拒绝，不能自动进入 Domain。
 
@@ -391,6 +406,7 @@ OpenAI Responses 新增 hosted tool、compaction、background 或其他 custom c
 使用 `@ai-sdk/openai-compatible`。每个具体 endpoint 仍需登记：
 
 - base URL 与 browser/CORS 支持；
+- 允许的 V4 call options 如何映射为该 endpoint 的脱敏 request 语义；
 - tool call ID 与 indexed delta 行为；
 - usage 是否存在；
 - finish reason 集合；

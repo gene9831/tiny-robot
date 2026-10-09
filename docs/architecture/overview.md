@@ -5,19 +5,21 @@
 Tiny Robot 的下一代架构以 AI 应用常用组件和浏览器 Runtime 为中心，首期同时支持 Vue 3.4+ 与 Angular 20+。它共享状态、规则和异步流程，同时保留两个框架原生的渲染、生命周期和组合能力。
 
 ```text
-Provider API
-    ↓
-AI SDK Provider / Provider Adapter
-    ↓  LanguageModelV4 stream parts
+Runtime Command / normalized Snapshot
+    ↓  capability preflight + allowlist projection
+LanguageModelV4CallOptions
+    ↓  LanguageModelV4.doStream()
+AI SDK Provider / Provider Adapter ↔ Provider API
+    ↓  LanguageModelV4StreamResult.stream
 Runtime Ingress Guard
     ↓  Domain Events
-Runtime commands → domain events → reducer → normalized Snapshot
-                                         ↓
-                                 Selector / Presenter
-                                         ↓
-                              component View Models
-                                ↙                 ↘
-                         Vue renderer       Angular renderer
+Reducer → normalized Snapshot
+                    ↓
+            Selector / Presenter
+                    ↓
+         component View Models
+           ↙                 ↘
+    Vue renderer       Angular renderer
 ```
 
 ## 分层职责
@@ -25,7 +27,8 @@ Runtime commands → domain events → reducer → normalized Snapshot
 ### Provider Model Boundary
 
 - 使用 `LanguageModelV4` 作为 Provider 实现与 Runtime 之间的统一模型调用规范；OpenAI Responses、Chat Completions compatible、Anthropic、Gemini 或私有接口由对应 AI SDK Provider 或自定义 Provider 实现该规范。
-- Runtime Ingress Guard 只接受契约允许的 V4 子集，校验事件顺序和终止条件，清洗 error、warning、metadata，并转换为 Domain Event。
+- 出站侧由 capability preflight 和 allowlist projection 将冻结的 Run 配置、历史和工具投影为允许的 `LanguageModelV4CallOptions` 子集；任意 headers、caller-supplied provider options 和暂缓能力不能穿过该边界。
+- 入站侧只把 `LanguageModelV4StreamResult.stream` 交给 Runtime Ingress Guard；Guard 校验允许的 `LanguageModelV4StreamPart`、事件顺序和终止条件，清洗 error、warning、metadata，并转换为 Domain Event。result 上的 request/response 调试数据必须在 coordinator 边界丢弃。
 - `LanguageModelV4` 是 Provider ABI，不是 Runtime Domain Model；Provider 原始 payload、headers、raw chunks、SDK 对象和未清洗 metadata 不得进入 Snapshot 或组件公共 API。
 - 一次 `LanguageModelV4` 调用对应一个 Model Step。包含工具执行的 Run 可以有多个 Model Step。
 
