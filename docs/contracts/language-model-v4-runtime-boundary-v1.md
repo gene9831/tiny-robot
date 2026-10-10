@@ -84,14 +84,15 @@ interface RuntimeModelContextV1 {
 - Runtime **MUST NOT** 读取、复制、记录或持久化 credential。
 - API key、Authorization、cookie、raw headers 和带 query 的 endpoint URL **MUST NOT** 出现在 Domain Event、Snapshot、日志、fixture、错误或诊断中。
 - `model.provider` 和 `model.modelId` 可作为非敏感标识进入冻结 Run 配置；用户自定义值在日志前仍需长度和字符限制。
+- registration 是能够接收 Run-local credential 并选择目标 endpoint 的 Provider 扩展，也是应用与 Provider 之间的信任边界；应用 **MUST** 只注册其信任的实现。
+- Provider registration 维护者负责确认具体 mapping 与 endpoint 可从受支持浏览器直连。公开或启用该 registration 前 **MUST** 完成真实浏览器验证，并把 CORS、认证 header 和流式响应结果记录在 Provider conformance/live verification 资料中。
 
 ## 4. Capability descriptor
 
-`LanguageModelV4` 不提供足够的能力发现。每个 registration **MUST** 声明：
+`LanguageModelV4` 不提供足够的能力发现。每个 registration **MUST** 声明 Runtime 构造模型调用时需要依赖的模型语义能力：
 
 ```ts
 interface RuntimeModelCapabilitiesV1 {
-  browserDirect: 'verified' | 'unsupported' | 'unknown'
   streaming: 'native' | 'emulated' | 'unsupported'
   functionTools: 'native' | 'emulated' | 'unsupported'
   parallelToolCalls: 'supported' | 'unsupported' | 'unknown'
@@ -112,8 +113,8 @@ interface RuntimeMappingLossV1 {
 
 - required capability 为 `unsupported` 或 `unknown` 时 **MUST** 在调用前 reject。
 - `emulated` 和每项 loss **MUST** 可由稳定 code 诊断，不能只有自由文本。
-- Chat Completions compatible endpoint **MUST** 逐服务声明能力；格式兼容不能推导 reasoning、usage、tool 或 CORS 能力。
-- `browserDirect: verified` **MUST** 来自真实浏览器验证，不得只依据文档或 Node 测试。
+- Chat Completions compatible endpoint **MUST** 逐服务声明模型语义能力；格式兼容不能推导 reasoning、usage 或 tool 能力。
+- Provider registration 维护者 **MUST** 在准入阶段验证浏览器直连，并以 conformance 测试、live verification 清单和支持文档记录证据。`RuntimeModelCapabilitiesV1` 只描述构造和解释模型调用所需的语义能力。
 
 ## 5. 允许的 call options
 
@@ -403,9 +404,9 @@ OpenAI Responses 新增 hosted tool、compaction、background 或其他 custom c
 
 ### OpenAI Chat Completions compatible
 
-使用 `@ai-sdk/openai-compatible`。每个具体 endpoint 仍需登记：
+使用 `@ai-sdk/openai-compatible`。每个具体 endpoint 仍需由 Provider 维护者登记并验证：
 
-- base URL 与 browser/CORS 支持；
+- 安全 base URL 标识，以及真实浏览器中的 CORS、认证 header 和流式响应结果；
 - 允许的 V4 call options 如何映射为该 endpoint 的脱敏 request 语义；
 - tool call ID 与 indexed delta 行为；
 - usage 是否存在；

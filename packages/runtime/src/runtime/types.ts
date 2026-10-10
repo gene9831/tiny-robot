@@ -25,7 +25,7 @@ export interface TinyRobotRuntime {
   subscribe(listener: (snapshot: RuntimeSnapshot) => void): () => void
 
   /**
-   * Validates and applies a serializable Runtime command.
+   * Validates and routes a Runtime command to its requested behavior.
    *
    * @param command - Command to execute against this Runtime instance.
    * @returns A promise that settles after the command is accepted or rejected.
@@ -34,7 +34,7 @@ export interface TinyRobotRuntime {
   dispatch(command: RuntimeCommand): Promise<void>
 
   /**
-   * Starts a turn using convenience input that may carry a run-local credential.
+   * Requests a new user turn and response run through convenience input.
    *
    * @param input - Conversation, registration, content, and optional transient credential.
    * @returns A promise that settles after the send request is accepted or rejected.

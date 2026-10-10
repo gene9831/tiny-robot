@@ -24,16 +24,16 @@ export interface RuntimeMappingLossV1 {
 }
 
 /**
- * Declares the provider behavior that the Runtime may rely on before a run.
+ * Declares the model behavior that the Runtime may rely on before a run.
  *
  * @remarks
- * Capabilities describe the reviewed Runtime subset, not every feature offered
- * by the upstream provider. Unsupported or unknown required capabilities must
- * be rejected before model creation.
+ * Capabilities describe the reviewed model-semantic subset, not every feature
+ * offered by the upstream provider. Unsupported or unknown required
+ * capabilities must be rejected before model creation. Provider registration
+ * maintainers own the evidence that each concrete mapping and endpoint works
+ * from the supported browser environment.
  */
 export interface RuntimeModelCapabilitiesV1 {
-  /** Whether direct credentialed requests from a supported browser are verified. */
-  readonly browserDirect: 'verified' | 'unsupported' | 'unknown'
   /** Whether streaming is native, emulated, or unavailable for this mapping. */
   readonly streaming: 'native' | 'emulated' | 'unsupported'
   /** Whether client-executed function tools are native, emulated, or unavailable. */
@@ -54,7 +54,7 @@ export interface RuntimeModelCapabilitiesV1 {
   readonly knownLosses: ReadonlyArray<RuntimeMappingLossV1>
 }
 
-/** Registers one provider/model mapping with the Runtime. */
+/** Defines how the browser Runtime creates a run-local model for one provider/model mapping. */
 export interface RuntimeModelRegistrationV1 {
   /** Stable, non-sensitive identifier selected by {@link SendInput.registrationId}. */
   readonly id: string
@@ -62,6 +62,11 @@ export interface RuntimeModelRegistrationV1 {
    * Creates the model instance owned by the current run.
    *
    * @remarks
+   * The registration implementer owns the target endpoint and must verify that
+   * the mapping works from supported browsers before making the registration
+   * available. Applications must register only trusted implementations because
+   * this factory receives the run-local credential.
+   *
    * The Runtime calls `doStream()` with an allowlisted
    * `LanguageModelV4CallOptions` request. Only
    * `LanguageModelV4StreamResult.stream` may cross into the Ingress Guard;
@@ -72,7 +77,7 @@ export interface RuntimeModelRegistrationV1 {
    * @returns A LanguageModelV4 instance that must not be retained after its run ends.
    */
   readonly createModel: (context: RuntimeModelContextV1) => LanguageModelV4
-  /** Reviewed capabilities frozen into each run created from this registration. */
+  /** Reviewed model-semantic capabilities frozen into each run. */
   readonly capabilities: RuntimeModelCapabilitiesV1
 }
 

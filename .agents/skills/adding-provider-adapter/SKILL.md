@@ -21,13 +21,13 @@ Creating a package, adding a production dependency, changing public exports, cha
 
 ## Workflow
 
-1. **Freeze scope.** Record Provider API/version, AI SDK package/version, browser-direct support, authentication mechanism, supported capabilities, explicit exclusions and every known loss.
+1. **Freeze scope.** Record Provider API/version, AI SDK package/version, direct browser access support, authentication mechanism, supported capabilities, explicit exclusions and every known loss.
 2. **Build a mapping matrix.** For every supported request field and V4 stream part, name the Provider representation, ordering rule, ID rule, terminal condition, cancellation behavior and loss policy. Include unknown, malformed, truncated and non-2xx input.
 3. **Define the security boundary.** Credentials are per-request transient inputs. Use a Run-local model factory. Never place secrets or raw headers in Run config, Snapshot, persistence, URLs, event payloads, adapter instances that outlive the Run, fixtures or errors.
 4. **Create sanitized conformance fixtures first.** Test raw Provider fixture to V4 output separately from V4 fixture to Domain output. Cover exact stream order, text/tool assembly, termination, errors, cancellation, unknown events and secret isolation.
 5. **Implement or configure the Provider.** Prefer the maintained Provider package. If custom conversion is required, keep parsing and mapping deterministic before connecting I/O and `AbortSignal`.
 6. **Run integration checks.** Verify capability negotiation, Ingress Guard invariants, Snapshot results, terminal Run state, tool lifecycle, retry/error behavior, and abort before and during streaming.
-7. **Document truthfully.** Publish the tested package/API versions, browser/CORS limitations, losses, errors, cancellation, BYOK risk and proxy alternative. Do not claim browser-direct support without a real-browser check.
+7. **Document truthfully.** Publish the tested package/API versions, browser/CORS limitations, losses, errors, cancellation, BYOK risk and proxy alternative. Do not claim direct browser access support without a real-browser check.
 
 ## Required handoff
 

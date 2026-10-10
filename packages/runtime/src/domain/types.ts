@@ -74,6 +74,19 @@ export interface RuntimeRun {
   readonly termination?: 'stop' | 'max_output_tokens' | 'content_filter' | 'tool_calls'
   /** Normalized safe error, present only when the run exposes a provider failure. */
   readonly error?: RuntimeProviderErrorV1
+  /** Available normalized token counts; omitted values remain unavailable rather than zero. */
+  readonly usage?: Readonly<{
+    /** Input tokens reported by the reviewed provider mapping. */
+    inputTokens?: number
+    /** Output tokens reported by the reviewed provider mapping. */
+    outputTokens?: number
+    /** Reasoning tokens reported separately from other output tokens. */
+    reasoningTokens?: number
+    /** Tokens read from a provider cache. */
+    cacheReadTokens?: number
+    /** Tokens written to a provider cache. */
+    cacheWriteTokens?: number
+  }>
 }
 
 /** One model invocation or one Runtime-managed tool execution within a run. */
@@ -112,6 +125,10 @@ export interface RuntimePart {
   readonly messageId: string
   /** Safe domain representation of the part's content category. */
   readonly kind: 'text' | 'reasoning' | 'tool-call' | 'error'
+  /** Exact accumulated text for text or visible reasoning parts. */
+  readonly content?: string
+  /** Streaming lifecycle for incrementally assembled text-like parts. */
+  readonly status?: 'streaming' | 'completed'
 }
 
 /** Runtime-owned record of a client-executed function tool request. */
@@ -136,6 +153,97 @@ export interface RuntimeToolCall {
  * credentials, authorization material, provider headers, raw payloads, raw
  * stream chunks, SDK objects, unsanitized errors, arbitrary provider metadata,
  * or opaque continuation data.
+ *
+ * IDs connect the normalized records without nesting mutable entity copies:
+ * `Conversation.turnIds` points to Turns, `Turn.runIds` points to Runs, and a
+ * Run points to its ordered Steps and Messages. Messages then point to their
+ * ordered Parts.
+ *
+ * @example A completed single-step text response
+ * ```ts
+ * const snapshot: RuntimeSnapshot = {
+ *   schemaVersion: 1,
+ *   conversationsById: {
+ *     'conversation-1': {
+ *       id: 'conversation-1',
+ *       turnIds: ['turn-1'],
+ *     },
+ *   },
+ *   turnsById: {
+ *     'turn-1': {
+ *       id: 'turn-1',
+ *       conversationId: 'conversation-1',
+ *       runIds: ['run-1'],
+ *       selectedRunId: 'run-1',
+ *     },
+ *   },
+ *   runsById: {
+ *     'run-1': {
+ *       id: 'run-1',
+ *       turnId: 'turn-1',
+ *       status: 'completed',
+ *       stepIds: ['step-1'],
+ *       messageIds: ['message-user', 'message-assistant'],
+ *       provider: 'example-provider',
+ *       modelId: 'example-model',
+ *       capabilities: {
+ *         streaming: 'native',
+ *         functionTools: 'unsupported',
+ *         parallelToolCalls: 'unsupported',
+ *         toolChoice: ['none'],
+ *         reasoningRequest: 'unsupported',
+ *         visibleReasoning: 'none',
+ *         opaqueContinuation: 'none',
+ *         usage: 'partial',
+ *         knownLosses: [],
+ *       },
+ *       termination: 'stop',
+ *       usage: { inputTokens: 12, outputTokens: 8 },
+ *     },
+ *   },
+ *   stepsById: {
+ *     'step-1': {
+ *       id: 'step-1',
+ *       runId: 'run-1',
+ *       index: 0,
+ *       kind: 'model',
+ *       status: 'completed',
+ *     },
+ *   },
+ *   messagesById: {
+ *     'message-user': {
+ *       id: 'message-user',
+ *       turnId: 'turn-1',
+ *       role: 'user',
+ *       partIds: ['part-user-text'],
+ *     },
+ *     'message-assistant': {
+ *       id: 'message-assistant',
+ *       turnId: 'turn-1',
+ *       runId: 'run-1',
+ *       role: 'assistant',
+ *       partIds: ['part-assistant-text'],
+ *     },
+ *   },
+ *   partsById: {
+ *     'part-user-text': {
+ *       id: 'part-user-text',
+ *       messageId: 'message-user',
+ *       kind: 'text',
+ *       content: 'Hello',
+ *       status: 'completed',
+ *     },
+ *     'part-assistant-text': {
+ *       id: 'part-assistant-text',
+ *       messageId: 'message-assistant',
+ *       kind: 'text',
+ *       content: 'Hi!',
+ *       status: 'completed',
+ *     },
+ *   },
+ *   toolCallsById: {},
+ * }
+ * ```
  */
 export interface RuntimeSnapshot {
   /** Persisted schema version used to validate and migrate stored snapshots. */

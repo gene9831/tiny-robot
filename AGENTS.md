@@ -56,6 +56,7 @@ pnpm build:components
 ## 文档与命名
 
 - 说明文档以中文为主；标识符、规范关键字和协议原名保留英文。
+- Task 完成前必须按 [下一代文档完整性规范](docs-next/src/contributing/documentation-standard.md) 检查概念说明、图例、场景、公共 TSDoc 与可验证示例；不适用项必须说明原因。
 - 行业术语使用 `Conversation`、`Turn`、`Run`、`Step`、`Message`、`Part`、`ToolCall`，含义以 `CONTEXT.md` 为准。
 - 架构决策仅在具备真实备选方案、长期影响和明确理由时写 ADR；不要把普通实现细节写成 ADR。
 - 可重复工作流放在 `.agents/skills/`，稳定约束放在本文件或 `docs/contracts/`，不要复制成多套规则。

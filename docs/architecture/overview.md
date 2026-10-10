@@ -64,9 +64,11 @@ Runtime Snapshot 是当前结果的唯一事实来源。流式增量先由 Ingre
 
 ## 浏览器优先与安全
 
-首期 Runtime 全部在浏览器运行，使用 Provider 与用户提供的 API key 直接访问模型服务。Runtime 接收瞬时凭据但不拥有或持久化凭据；用户输入的 BYOK 默认只驻留内存。带凭据的 model 必须按 Run 创建和释放，不能作为 Runtime 长期状态。Provider 必须声明 `browserDirect`、streaming、tools、reasoning、attachments 等能力。
+首期 Runtime 全部在浏览器运行，使用 Provider 与用户提供的 API key 直接访问模型服务。Runtime 接收瞬时凭据但不拥有或持久化凭据；用户输入的 BYOK 默认只驻留内存。带凭据的 model 必须按 Run 创建和释放，不能作为 Runtime 长期状态。
 
-传输边界必须可替换：首期实现 `BrowserDirectTransport`，未来可增加 `ProxyTransport`，而不改变 Runtime 领域协议。工具写操作或破坏性操作在浏览器侧执行前必须经过明确审批。
+Provider registration 是应用必须信任的扩展边界：维护者负责验证具体 endpoint 的浏览器直连、CORS、认证 header 和流式响应，并只向 Runtime 提供满足首期运行环境的 registration。Run 只冻结 streaming、tools、reasoning、usage 等会改变模型调用或结果解释的语义能力。
+
+传输边界必须可替换：首期使用浏览器直连，未来可增加代理传输，而不改变 Runtime 领域协议。工具写操作或破坏性操作在浏览器侧执行前必须经过明确审批。
 
 ## 首期垂直切片
 

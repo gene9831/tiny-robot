@@ -34,6 +34,10 @@ Message 中可独立投影和渲染的内容单元，例如 TextPart、Reasoning
 
 Runtime 在某个时刻的不可变、规范化领域状态。它是业务与 UI 查询当前结果的唯一事实来源。
 
+## Command
+
+调用方向 Runtime 提交的语义请求，包含识别目标动作及执行该动作所需的领域输入。
+
 ## Domain Event
 
 表示 Runtime 中已发生事实的内部事件。Reducer 使用它演进 Snapshot；它与 Provider stream part、对外生命周期事件相互独立。

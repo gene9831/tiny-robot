@@ -1,4 +1,4 @@
-/** Serializable command that starts a new turn and run. */
+/** Requests a new user turn and response run in a conversation. */
 export interface SendCommand {
   /** Discriminator for a send command. */
   readonly type: 'send'
@@ -10,7 +10,7 @@ export interface SendCommand {
   readonly content: string
 }
 
-/** Serializable command that requests cancellation of a conversation's active run. */
+/** Requests cancellation of a conversation's active run. */
 export interface AbortCommand {
   /** Discriminator for an abort command. */
   readonly type: 'abort'
@@ -18,7 +18,7 @@ export interface AbortCommand {
   readonly conversationId: string
 }
 
-/** Serializable command that retries the latest eligible unsuccessful run. */
+/** Requests another attempt for the latest eligible unsuccessful run. */
 export interface RetryLastRunCommand {
   /** Discriminator for a retry command. */
   readonly type: 'retry-last-run'
@@ -26,7 +26,7 @@ export interface RetryLastRunCommand {
   readonly conversationId: string
 }
 
-/** Serializable command that creates another response from the same prior context. */
+/** Requests another response from the same prior conversation context. */
 export interface RegenerateLastResponseCommand {
   /** Discriminator for a regenerate command. */
   readonly type: 'regenerate-last-response'
@@ -34,7 +34,7 @@ export interface RegenerateLastResponseCommand {
   readonly conversationId: string
 }
 
-/** Serializable command that grants a pending Runtime tool approval. */
+/** Grants approval for a pending Runtime tool call. */
 export interface ApproveToolCallCommand {
   /** Discriminator for a tool-approval command. */
   readonly type: 'approve-tool-call'
@@ -42,7 +42,7 @@ export interface ApproveToolCallCommand {
   readonly toolCallId: string
 }
 
-/** Serializable command that rejects a pending Runtime tool approval. */
+/** Denies approval for a pending Runtime tool call. */
 export interface DenyToolCallCommand {
   /** Discriminator for a tool-denial command. */
   readonly type: 'deny-tool-call'
@@ -59,7 +59,7 @@ export type RuntimeCommand =
   | ApproveToolCallCommand
   | DenyToolCallCommand
 
-/** Convenience input for {@link TinyRobotRuntime.send}. */
+/** Inputs for starting a user turn through {@link TinyRobotRuntime.send}. */
 export interface SendInput {
   /** Conversation that receives the new turn. */
   readonly conversationId: string
@@ -71,9 +71,10 @@ export interface SendInput {
    * Provider credential supplied only for the new run.
    *
    * @remarks
-   * Unlike {@link SendCommand}, this convenience input is not serializable. The
-   * Runtime must remove this value before command dispatch and must not copy,
-   * inspect, log, persist, serialize, or expose it through Runtime state.
+   * The Runtime passes this value only to the model registration that creates
+   * the provider model for the new run. It separates the credential from the
+   * domain command before dispatch and must not copy, inspect, log, persist,
+   * serialize, or expose it through Runtime state.
    */
   readonly credential?: unknown
 }

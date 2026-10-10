@@ -24,6 +24,17 @@ type ForbiddenBoundaryKey =
 
 type PreviousDepth = [never, 0, 1, 2, 3, 4, 5, 6]
 
+type ExpectedRuntimeModelCapabilityKey =
+  | 'streaming'
+  | 'functionTools'
+  | 'parallelToolCalls'
+  | 'toolChoice'
+  | 'reasoningRequest'
+  | 'visibleReasoning'
+  | 'opaqueContinuation'
+  | 'usage'
+  | 'knownLosses'
+
 type ContainsForbiddenBoundaryKey<T, Depth extends number = 6> = Depth extends 0
   ? false
   : T extends (...args: never[]) => unknown
@@ -57,5 +68,9 @@ describe('public Runtime boundary', () => {
   it('keeps credentials and provider transport data out of serializable state and commands', () => {
     expectTypeOf<ContainsForbiddenBoundaryKey<RuntimeSnapshot>>().toEqualTypeOf<false>()
     expectTypeOf<ContainsForbiddenBoundaryKey<RuntimeCommand>>().toEqualTypeOf<false>()
+  })
+
+  it('exports the complete model-semantic capability surface', () => {
+    expectTypeOf<keyof RuntimeModelCapabilitiesV1>().toEqualTypeOf<ExpectedRuntimeModelCapabilityKey>()
   })
 })
