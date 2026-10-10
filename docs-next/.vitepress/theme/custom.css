@@ -1,0 +1,4 @@
+/* Keep VitePress prose styles from changing Mermaid's measured label height. */
+.vp-doc .mermaid foreignObject p {
+  line-height: inherit;
+}

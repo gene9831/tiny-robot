@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts"],
   "tsconfig": "tsconfig.json",
-  "out": "../../docs/api/runtime",
+  "out": "../../docs-next/src/public/api/runtime",
   "emit": "none",
   "readme": "none",
   "excludeExternals": true,

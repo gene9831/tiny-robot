@@ -1,0 +1,3 @@
+/.vitepress/cache/
+/.vitepress/dist/
+/src/public/api/runtime/

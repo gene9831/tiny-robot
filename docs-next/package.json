@@ -1,0 +1,21 @@
+{
+  "name": "@opentiny/tiny-robot-next-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "api:build": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs",
+    "dev": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs && vitepress dev",
+    "build": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs && vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "@braintree/sanitize-url": "7.1.2",
+    "cytoscape": "3.34.3",
+    "cytoscape-cose-bilkent": "4.1.0",
+    "dayjs": "1.11.23",
+    "debug": "4.4.3",
+    "mermaid": "11.2.1",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-mermaid": "2.0.17"
+  }
+}
