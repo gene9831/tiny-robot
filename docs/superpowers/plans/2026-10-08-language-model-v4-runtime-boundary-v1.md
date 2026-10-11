@@ -4,7 +4,7 @@
 
 **Goal:** 在浏览器优先、BYOK 的 Tiny Robot Runtime 中实现已批准的 LanguageModelV4 Boundary v1，使 OpenAI Responses 与 OpenAI Chat Completions compatible 通过统一 `doStream()` 生命周期产生受校验、可归约、可恢复且不会泄漏凭据的多 Step Run，并用 DeepSeek 的 Chat Completions、Responses、Anthropic-compatible 三种 API 格式验证 Provider ABI 抽象。
 
-**Architecture:** 新建独立的 Runtime package 承载公共 Domain/Command/Snapshot API、出站 CallOptions allowlist projection、Ingress Guard、reducer 与 Run coordinator；新建独立的 OpenAI Provider package，只负责创建符合固定 V4 ABI 的 Run-local model registration。Domain/Run→V4 CallOptions、V4 CallOptions→wire request、wire response→V4 StreamPart、V4 StreamPart→Domain Event、Domain Event→Snapshot 分层测试；DeepSeek 三种 wire formats 使用各自 AI SDK Provider 做 test-only conformance，不新增首期 Anthropic 公共 Provider export，Runtime 不复用现有 OpenAI-shaped `packages/kit/src/message` 状态模型。
+**Architecture:** 新建独立的 Runtime package 承载公共 Domain/Command/Snapshot API、出站 CallOptions allowlist projection、Ingress Guard、reducer 与 Run coordinator；新建独立的 OpenAI Provider package，复用 AI SDK creator 将应用拥有的 Provider Connection Configuration 与 credential 转换为可声明多个真实模型的 Provider Registration。Runtime 不接收 credential，只在新 Run 开始时通过同步 resolver 解析一次 registration，并调用其无参 Provider 工厂。Domain/Run→V4 CallOptions、V4 CallOptions→wire request、wire response→V4 StreamPart、V4 StreamPart→Domain Event、Domain Event→Snapshot 分层测试；DeepSeek 三种 wire formats 使用各自 AI SDK Provider 做 test-only conformance，不新增首期 Anthropic 公共 Provider export，Runtime 不复用现有 OpenAI-shaped `packages/kit/src/message` 状态模型。
 
 **Tech Stack:** Node.js 22+、TypeScript 5.8、pnpm 10、Vitest、tsup、TypeDoc 0.28.20、`@ai-sdk/provider@4.0.25`、`@ai-sdk/openai@4.0.89`、`@ai-sdk/openai-compatible@3.0.66`、validation-only `@ai-sdk/anthropic@4.0.76`、Vite browser build、Vue 3.4+ consumer、Angular 20+ consumer。
 
@@ -18,7 +18,9 @@
 - 首期 Provider 仍只实现 OpenAI Responses 与 OpenAI Chat Completions compatible；`@ai-sdk/anthropic@4.0.76` 仅用于 DeepSeek Anthropic-compatible wire→V4 和抽象验证，不形成公开 Anthropic registration、生产依赖或首期支持承诺；Gemini 仍只用于抽象审查。
 - DeepSeek 必须分别验证 Chat Completions、Responses、Anthropic-compatible 三种 API 格式；三者只比较 v1 共同子集，格式特有或被服务端忽略的字段必须记录 declared loss 或 reject，不能据此扩大 Runtime allowlist。
 - Runtime 不依赖 Vue、Angular、DOM、UIMessage 或 Provider wire object；Vue 3.4+、Angular 20+ 仅参与 consumer 类型与构建门禁。
-- Runtime 运行在浏览器，BYOK credential、model 与 opaque continuation 都是 Run-local；Run 结束、失败、中止或恢复时必须释放。
+- Runtime 运行在浏览器；应用拥有 BYOK credential，Provider 集成层与 AI SDK Provider 负责认证。Runtime 的 Provider/model 与 opaque continuation 引用是 Run-local；Run 结束、失败、中止或恢复时必须释放。
+- `providerId` 是应用定义的接入实例标识；Provider 配置与动态增删属于应用层。Runtime 在每个新 Run 创建时同步解析一次 registration，不拥有可变 Provider registry。
+- Send、Retry、Regenerate、Command、resolver 与 Provider factory 都不接收 credential；应用通过替换 registration 或 Provider 集成层自己的 credential resolver 更新认证。
 - credential、headers、raw request/response、raw chunks、SDK object、未清洗 error/warning/metadata 不得进入 Domain Event、Snapshot、持久化、日志、fixture、诊断或 UI API。
 - 同一 Conversation 最多一个 active Run；不同 Conversation 可以并行。
 - hosted/provider-executed/dynamic tools、MCP、多模态、structured output、citations、AG-UI 与 Provider approval flow 必须 reject，不能静默降级。
@@ -33,7 +35,7 @@
 - 当前 `next` 只有 `components`、`chat`、`kit`、`svgs` 等既有 package，没有下一代 Runtime/Provider package。
 - `packages/kit/src/message/core/engine.ts`、`packages/kit/src/message/types.ts` 与 `packages/chat/src/runtime/` 直接使用 OpenAI Chat Completion shape、Vue refs、mutable message state、headers/apiKey 配置；它们只能作为迁移行为参考，不能被新 Runtime 的 Domain 类型或 Provider 边界导入。
 - 可复用模式：`packages/kit` 的 `tsup + Vitest` package 构建方式、`AsyncIterable`/`AbortSignal` 辅助函数思路、`packages/test` 的 Chromium 基础设施、现有 Node 22 CI。
-- 不直接复用：`packages/kit/src/providers/openai.ts` 与 `packages/chat/src/runtime/provider/responseProvider.ts`。二者会保存 credential/header、拼装 wire request、传播 response text/error message，违反 v1 安全边界。
+- 不直接复用：`packages/kit/src/providers/openai.ts` 与 `packages/chat/src/runtime/provider/responseProvider.ts`。二者自行拼装 wire request 并传播 response text/error message，没有形成所需的 V4 Provider/Ingress 边界；credential/header 只能作为 Provider 集成配置参考，不能进入 Runtime API。
 - 根目录没有受版本控制的 lockfile；依赖门禁必须记录安装产生的实际仓库策略，不能假设可提交 `pnpm-lock.yaml`。
 - 现有 root/components/chat TypeScript 多为 5.2 且 `skipLibCheck: true`；新 package 与 consumer gate 必须独立固定 TypeScript 5.8 且关闭 `skipLibCheck`，不能以现状替代。
 - Node 22 已用于 PR CI；自动发布使用 Node 24。新 package 加入构建/发布矩阵仍是独立人工审批事项。
@@ -69,7 +71,6 @@ packages/runtime/
   src/tools/execution.ts
   src/persistence/serialize.ts
   test/public-exports.test.ts
-  test/capability-preflight.test.ts
   test/prompt-projection.test.ts
   test/ingress-guard/*.test.ts
   test/reducer/*.test.ts
@@ -113,14 +114,20 @@ docs/contributing/
 在 Task 1 写实现前，维护者必须批准下面的公共 surface；名称调整必须在此门禁完成，不能在后续任务中随意漂移。
 
 ```ts
-export interface RuntimeModelContextV1 {
-  readonly credential?: unknown
+export type RuntimeLanguageProviderV4 = Pick<ProviderV4, 'specificationVersion' | 'languageModel'>
+
+export interface RuntimeModelDescriptorV1 {
+  readonly capabilities: RuntimeModelCapabilitiesV1
 }
 
-export interface RuntimeModelRegistrationV1 {
-  readonly id: string
-  readonly createModel: (context: RuntimeModelContextV1) => LanguageModelV4
-  readonly capabilities: RuntimeModelCapabilitiesV1
+export interface RuntimeProviderRegistrationV1 {
+  readonly providerId: string
+  readonly models: Readonly<Record<string, RuntimeModelDescriptorV1>>
+  readonly createProvider: () => RuntimeLanguageProviderV4
+}
+
+export interface CreateRuntimeOptions {
+  readonly resolveProvider: (providerId: string) => RuntimeProviderRegistrationV1 | undefined
 }
 
 export interface TinyRobotRuntime {
@@ -129,21 +136,23 @@ export interface TinyRobotRuntime {
   dispatch(command: RuntimeCommand): Promise<void>
   send(input: SendInput): Promise<void>
   abort(conversationId: string): Promise<void>
-  retryLastRun(conversationId: string): Promise<void>
-  regenerateLastResponse(conversationId: string): Promise<void>
+  retryLastRun(input: RetryLastRunInput): Promise<void>
+  regenerateLastResponse(input: RegenerateLastResponseInput): Promise<void>
   approveToolCall(toolCallId: string): Promise<void>
   denyToolCall(toolCallId: string): Promise<void>
 }
 ```
 
-在 Runtime 发布声明中，AI SDK 类型只允许通过 registration factory 暴露 `LanguageModelV4`；Runtime 内部 boundary 模块可以使用 `LanguageModelV4CallOptions`、`LanguageModelV4StreamResult` 与 `LanguageModelV4StreamPart`。Snapshot、Command（序列化形态）、Domain Event 与组件 API 不得引用任何 AI SDK 类型。
+`SendCommand` 与 `SendInput` 使用 `providerId + modelId` 表达选择；`RetryLastRunInput` 和 `RegenerateLastResponseInput` 只携带 `conversationId`。所有 Runtime 输入都不包含 credential、endpoint、headers 或 AI SDK Provider 配置。
+
+在 Runtime 发布声明中，AI SDK Provider 只通过 `Pick<ProviderV4, 'specificationVersion' | 'languageModel'>` 暴露，模型只通过 `LanguageModelV4` 暴露；Runtime 内部 boundary 模块可以使用 `LanguageModelV4CallOptions`、`LanguageModelV4StreamResult` 与 `LanguageModelV4StreamPart`。Snapshot、Command（序列化形态）、Domain Event 与组件 API 不得引用任何 AI SDK 类型。
 
 ## Human Approval Gates
 
 - **Gate A — package topology:** 批准新增 `@opentiny/tiny-robot-runtime`、`@opentiny/tiny-robot-provider-openai` 与 private consumer fixtures；同时批准构建、版本、发布脚本如何识别它们。
 - **Gate B — dependencies/toolchain:** 批准固定 `@ai-sdk/provider@4.0.25`（Runtime peer + dev）、`@ai-sdk/openai@4.0.89` 与 `@ai-sdk/openai-compatible@3.0.66`（Provider production）、`@ai-sdk/anthropic@4.0.76`（validation-only dev dependency）、`typedoc@0.28.20`（Runtime dev-only documentation gate）、TypeScript 5.8 和 Node 22+ 门禁；确认无 lockfile 仓库策略。
-- **Gate C — public API/export:** 批准上述 registration、capability、Snapshot、Command 与 `TinyRobotRuntime` 导出位置；这是 `docs/contracts/runtime.md` 所要求的单独公共契约评审。
-- **Gate D — security/tool approval:** 批准 credential 输入责任、错误 code allowlist、tool risk/approval policy、diagnostic allowlist、compatible endpoint URL/query 处理。
+- **Gate C — public API/export:** 批准上述 Provider Registration、model descriptor、resolver、capability、Snapshot、Command 与 `TinyRobotRuntime` 导出位置；这是 `docs/contracts/runtime.md` 所要求的单独公共契约评审。
+- **Gate D — security/tool approval:** 批准应用与 Provider 集成层的 credential 责任、错误 code allowlist、tool risk/approval policy、diagnostic allowlist、compatible endpoint URL/query 处理。
 - **Gate E — Provider truth claims:** OpenAI 与 DeepSeek 每个格式/endpoint 的浏览器直连、CORS、reasoning、usage、tools、model mapping 与 known losses 必须逐服务人工确认；DeepSeek Anthropic-compatible 自动 model mapping、ignored fields 与格式差异必须在 manifest 中显式记录。Provider 维护者只可在真实浏览器验证成功后把对应 registration 加入支持范围。
 - **Gate F — release integration:** 批准新 package 加入 `.github/workflows/*`、`scripts/publish-version-utils.js`、发布 artifacts 与版本同步；实现验证可以先完成，发布接线不可越过门禁。
 
@@ -154,23 +163,25 @@ Gate A/B/C/D
   └─ Task 1 public boundary + package gates
       └─ Task 1.1 public TSDoc + generated API gate
           ├─ Task 2 domain reducer foundation
-          ├─ Task 3 capability + prompt projection
+          │    └─ Task 3 capability + text/reasoning projection
           └─ Task 4 ingress guard minimal text
-               └─ Task 5 first vertical text Run
-                    ├─ Task 6 terminal/error/abort hardening
-                    ├─ Task 7 reasoning/tool assembly
-                    │    └─ Task 8 tool approval + multi-Step Run
-                    │         └─ Task 9 continuation capsule
-                    └─ Task 10 retry/regenerate/concurrency/recovery
-                         ├─ Task 11 OpenAI Responses conformance
-                         └─ Task 12 compatible conformance
-                              └─ Task 13 DeepSeek three-format validation
-                                   └─ Task 14 cross-layer fixtures + credential canary
-                                        └─ Task 15 consumer/browser/CI gates
-                                             └─ Task 16 docs + manual live verification
+
+Task 3 + Task 4
+  └─ Task 5 first vertical text Run
+      ├─ Task 6 terminal/error/abort hardening
+      ├─ Task 7 reasoning/tool assembly
+      │    └─ Task 8 tool approval + multi-Step Run
+      │         └─ Task 9 continuation capsule
+      └─ Task 10 retry/regenerate/concurrency/recovery
+          ├─ Task 11 OpenAI Responses conformance
+          └─ Task 12 compatible conformance
+               └─ Task 13 DeepSeek three-format validation
+                    └─ Task 14 cross-layer fixtures + credential canary
+                         └─ Task 15 consumer/browser/CI gates
+                              └─ Task 16 docs + manual live verification
 ```
 
-Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 在 Runtime vertical slice 稳定后可并行，二者完成后由 Task 13 统一验证 DeepSeek 三种格式。其余按箭头串行。并行执行只在用户明确授权 subagent 后进行；共享 `package.json`、workspace 与 CI 文件由单一 controller 持有。
+Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime vertical slice 稳定后可并行，二者完成后由 Task 13 统一验证 DeepSeek 三种格式。其余按箭头串行。并行执行只在用户明确授权 subagent 后进行；共享 `package.json`、workspace 与 CI 文件由单一 controller 持有。
 
 ## Review Focus
 
@@ -198,7 +209,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Interfaces:**
 
-- Produces: `RuntimeModelRegistrationV1`, `RuntimeModelContextV1`, `RuntimeModelCapabilitiesV1`, `RuntimeMappingLossV1`, `RuntimeProviderErrorV1`, `RuntimeSnapshot`, `RuntimeCommand`, `TinyRobotRuntime`.
+- Produces: `RuntimeLanguageProviderV4`, `RuntimeProviderRegistrationV1`, `RuntimeModelDescriptorV1`, `CreateRuntimeOptions`, `RuntimeModelCapabilitiesV1`, `RuntimeProviderErrorV1`, `RuntimeSnapshot`, `RuntimeCommand`, `TinyRobotRuntime`.
 - Runtime uses exact `@ai-sdk/provider@4.0.25` as dev and peer dependency; Provider uses exact OpenAI packages as production dependencies.
 
 **TDD order:**
@@ -207,9 +218,9 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 - [ ] Run `pnpm -F @opentiny/tiny-robot-runtime test -- public-exports.test.ts`; expect failure because the package/exports do not exist.
 - [ ] Add minimal package/build configuration and type declarations; do not implement Runtime behavior.
 - [ ] Run Runtime test/build; expect pass and generated `dist/index.d.ts`.
-- [ ] Inspect declarations with `rg "json-schema|node:|NodeJS|Buffer|raw|headers|credential" packages/runtime/dist`; only approved `credential?: unknown` input may match.
+- [ ] Inspect declarations with `rg "json-schema|node:|NodeJS|Buffer|raw|headers|credential" packages/runtime/dist`; no Runtime input or registration member may expose credential or Provider transport configuration.
 
-**Acceptance criteria:** Node 22/TS 5.8 build passes; public declarations match Gate C; no existing `kit`/`chat` export changes; credential-bearing data is not serializable.
+**Acceptance criteria:** Node 22/TS 5.8 build passes; public declarations match Gate C; no existing `kit`/`chat` export changes; Runtime public declarations do not accept credential-bearing data.
 
 **Permanent regression:** public export/type-leak contract.
 
@@ -237,9 +248,9 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 - [ ] 添加 TypeDoc dev dependency、`typedoc.json` 和 `docs:check`/`docs:build` scripts；配置 `entryPoints: ["src/index.ts"]`、`emit: "none"`、缺失文档与无效链接验证、warnings-as-errors，并将接口、类型别名、属性、方法和调用签名列入 `requiredToBeDocumented`。
 - [ ] 在补注释前运行 `pnpm -F @opentiny/tiny-robot-runtime docs:check`；预期因公共声明缺少 TSDoc 而失败，且没有生成 HTML。
-- [ ] 按 `docs/contributing/public-api-documentation.md` 规范补齐当前公共声明：summary 必填；可选值说明缺失语义；方法说明参数、返回/Promise rejection 与并发语义；credential/安全边界使用明确的 `must not`；避免复述类型语法。
+- [ ] 按 `docs/contributing/public-api-documentation.md` 规范补齐当前公共声明：summary 必填；可选值说明缺失语义；方法说明参数、返回/Promise rejection 与并发语义；Provider 配置与安全边界使用明确的 `must not`；避免复述类型语法。
 - [ ] 重跑 `docs:check`；预期零 warning 通过。使用临时输出目录运行一次 `typedoc --emit docs`，证明 HTML 可生成且不污染仓库。
-- [ ] 重跑 Runtime test/type-check/build，并检查 `dist/*.d.ts` 保留文档注释且敏感字段扫描仍只允许两个瞬时 credential 输入位置。
+- [ ] 重跑 Runtime test/type-check/build，并检查 `dist/*.d.ts` 保留文档注释且敏感字段扫描不存在 Runtime credential 输入位置。
 
 **Acceptance criteria:** 当前所有公共类型、属性、方法和调用签名都具有非重复、可执行的 TSDoc；TypeDoc 严格验证和临时 HTML 生成成功；公共名称、签名与 Task 1 相同；未提交生成 HTML；没有引入 API Extractor 或新的生产依赖。
 
@@ -259,6 +270,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 - Produces internal `RuntimeDomainEvent` and `reduceRuntimeEvent(snapshot, event): RuntimeSnapshot`.
 - Snapshot has normalized Conversation/Turn/Run/Step/Message/Part/ToolCall maps, ordered IDs and `schemaVersion`.
+- Run freezes the application-defined `providerId`, real `modelId` and a copy of the reviewed model capabilities; Provider registrations and SDK objects never enter Domain state.
 - Run status is `pending | active | completed | failed | aborted | interrupted | superseded`; Step kind is `model | tool`.
 
 **TDD order:**
@@ -273,32 +285,35 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Permanent regressions:** lifecycle table, append fidelity, terminal immutability, structural sharing, serialization.
 
-### Task 3: Implement capability preflight and call-options projection
+### Task 3: Implement capability preflight and text/reasoning call-options projection
 
-**Goal:** 调用前拒绝 unsupported/unknown/undeclared-loss 请求，并把冻结 Run 配置、允许历史、工具与 AbortSignal 投影为完整的 v1 `LanguageModelV4CallOptions` allowlist。
+**Goal:** 为文本生成建立调用前边界：根据 frozen Run 的 boolean capability 拒绝不可用的 streaming 或 reasoning 请求，并把冻结 Run 配置、允许的 text/reasoning 历史与 `AbortSignal` 投影为完整的 v1 `LanguageModelV4CallOptions` allowlist。Task 8 扩展同一边界以支持完整工具领域关系；Task 9 增加 opaque continuation。
 
-**Dependencies:** Task 1.1; independent of Tasks 2/4.
+**Dependencies:** Task 2; independent of Task 4.
 
-**Files:** Create `src/execution/capabilityPreflight.ts`, `promptProjection.ts`, `modelCallProjection.ts` and `test/{capability-preflight,prompt-projection,model-call-projection}.test.ts`.
+**Files:** Create `src/execution/capabilityPreflight.ts`, `promptProjection.ts`, `modelCallProjection.ts` and `test/{prompt-projection,model-call-projection}.test.ts`.
 
 **Interfaces:**
 
-- `assertModelCapabilities(request, capabilities): void`.
-- `projectPrompt(snapshot, runId, continuation): LanguageModelV4CallOptions['prompt']`.
-- `buildModelCallOptions(input: ModelCallProjectionInput): LanguageModelV4CallOptions`; implementation uses `satisfies LanguageModelV4CallOptions` so the pinned ABI checks the complete request object.
-- Input is Snapshot/frozen Run config, registered function tools, `AbortSignal` plus opaque continuation handle; arbitrary headers/providerOptions、raw chunks、structured output 和 deferred prompt parts 在类型/API 层不可表达。
+- `ModelCapabilityRequirements` derives the `reasoning` field from the pinned call-options type；streaming is intrinsic to this `doStream()` path.
+- `assertModelCapabilities(requirements, capabilities): void`.
+- `projectPrompt(snapshot, runId): LanguageModelV4Prompt`；每条内部投影结果直接使用 `LanguageModelV4Message`，并投影 system/user/assistant text 与 assistant reasoning。具体 Provider prompt 转换不属于 Runtime capability。
+- `RuntimeModelCallOptions` uses `Pick`/`Required` to derive the approved key set from the pinned `LanguageModelV4CallOptions`; `buildModelCallOptions(input)` returns this narrow type, and the constructed object uses `satisfies RuntimeModelCallOptions`.
+- `ModelCallProjectionInput` 的完整 key 集合是 Snapshot、Run ID、`maxOutputTokens`、`reasoning` 和 `AbortSignal`；constructed options 的 key 集合是 prompt、`maxOutputTokens`、`reasoning` 和 `abortSignal`。
+- 无法完整投影的 history Part 使用稳定 code reject，不能静默删除。
+- Task 3 只消费 Run 已冻结的 capabilities，不解析 Provider Registration、不调用 resolver，也不创建 Provider 或 model；这些职责属于 Task 5 coordinator。
 
 **TDD order:**
 
-- [ ] Test exact projection for system/user/assistant text, allowed reasoning summary, function call and all allowed tool-result variants.
-- [ ] Test exact complete options for prompt/maxOutputTokens/function tools/toolChoice/reasoning/abortSignal; assert `headers`、caller `providerOptions`、`includeRawChunks`、structured `responseFormat` and deferred prompt parts cannot be projected.
-- [ ] Test rejection of deferred content and missing safe continuation with stable code.
-- [ ] Test toolChoice/reasoning/functionTools/loss preflight; required `unsupported`/`unknown` rejects before `createModel`.
-- [ ] Confirm RED, implement allowlist projection/preflight, then rerun.
+- [x] Test exact projection for system/user/assistant text and assistant reasoning；用 RuntimeSnapshot 的字面 fixture 独立给出期望 V4 prompt。
+- [x] Test exact input and narrow return key sets: prompt、`maxOutputTokens`、`reasoning` and `abortSignal` derive from the pinned V4 type.
+- [x] Test rejection of unknown、deferred and unsupported history with stable code；不得静默删除 Snapshot part。
+- [x] Through `buildModelCallOptions`, test streaming/reasoning preflight；对应 boolean 为 `false` 时在 Task 5 的 `createProvider` 前拒绝，不能静默删除已请求的 reasoning 参数。
+- [x] Confirm RED, implement allowlist projection/preflight, then rerun.
 
-**Acceptance criteria:** no UIMessage; unknown Snapshot part rejects rather than disappearing; every `doStream()` request is a pinned, allowlisted `LanguageModelV4CallOptions`; no mutation.
+**Acceptance criteria:** no UIMessage；unknown、deferred 和 unsupported Snapshot part rejects rather than disappearing；Task 5 的文本 `doStream()` request 是 pinned、allowlisted `LanguageModelV4CallOptions`；no mutation。
 
-**Permanent regressions:** allowed prompt matrix and capability/deferred-part rejection.
+**Permanent regressions:** allowed text/reasoning prompt matrix、streaming/reasoning boolean capability rejection、exact call-option key set and deferred/unknown/unsupported-part rejection。Declared-loss completeness belongs to Provider conformance in Tasks 11–14.
 
 ### Task 4: Build the minimal text Ingress Guard
 
@@ -336,16 +351,18 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Interfaces:**
 
-- `createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime`.
-- Coordinator calls `createModel({ credential })` once per Run and `doStream` once per Model Step; drops credential/model references in `finally`.
+- `createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime`；`resolveProvider(providerId)` 由应用拥有，可在 Runtime 创建后返回新增的自定义 Provider Registration。
+- Coordinator resolves one registration per new Run, validates the real `modelId` and frozen descriptor, calls `createProvider()` once, then calls `provider.languageModel(modelId)` once. It rejects a model ID mismatch and calls `doStream` once per Model Step.
+- Coordinator drops Provider/model references in `finally`；Provider 配置在 resolver 返回后的变化不影响当前 Run。
 - Coordinator receives `LanguageModelV4StreamResult`, passes only `result.stream` to the Guard, and immediately discards `result.request`/`result.response` debugging data.
-- `send()` wraps typed `dispatch`.
+- `dispatch(command)` receives only Runtime intent；`send()` wraps the same path。Credential and Provider connection configuration remain outside Runtime.
 
 **TDD order:**
 
 - [ ] Fake V4 model emits Task 4 fixture; assert subscriber sees one completed Run/Model Step/message/text part.
+- [ ] Add a Provider Registration to the application-owned resolver after Runtime creation; assert the next Send can select it without rebuilding Runtime. Removing it affects only later Run creation.
 - [ ] Fake result seeds canaries into `request.body` and `response.headers`; assert only `stream` crosses the coordinator boundary and no canary reaches events, Snapshot, diagnostics or errors.
-- [ ] Factory lifetime test uses a credential canary; factory receives it, Snapshot never does, references are released.
+- [ ] Provider/model lifetime test proves `createProvider()` is called without Runtime auth input, Snapshot never receives Provider objects, and Provider/model references are released.
 - [ ] Confirm RED, implement command routing, Runtime IDs, subscription/coordinator/reducer wiring.
 - [ ] Rerun integration plus Tasks 1–4.
 
@@ -387,7 +404,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **TDD order:**
 
-- [ ] Test reasoning only for `visibleReasoning: 'summary'`.
+- [ ] Test reviewed V4 reasoning parts without inferring support from Provider-private fields.
 - [ ] Test single/multiple/empty deltas with no trim/re-tokenization.
 - [ ] Test interleaved parallel calls, split args, empty object, malformed/non-object JSON, name/ID/final mismatch.
 - [ ] Test rejection of provider-executed/dynamic/provider tools and approval requests.
@@ -395,7 +412,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Acceptance criteria:** incomplete/malformed call never reaches approval; opaque/private reasoning never becomes Part.
 
-**Permanent regressions:** reasoning capability, parallel assembly, malformed/mismatch/deferred rejection.
+**Permanent regressions:** reviewed reasoning mapping, parallel assembly, malformed/mismatch/deferred rejection.
 
 ### Task 8: Implement tool registration, approval, execution, result replay, and multi-Step Runs
 
@@ -403,17 +420,21 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Dependencies:** Tasks 3、5、7; Gate D final approval.
 
-**Files:** Create `src/tools/{registry,execution}.ts` and tool integration tests; modify coordinator, prompt projection, events and reducer.
+**Files:** Create `src/tools/{registry,execution}.ts` and tool integration tests; modify coordinator, capability preflight, prompt/model-call projection, Domain types/events and reducer.
 
 **Interfaces:**
 
 - Tool declaration has stable name, input schema, risk, approval and async handler; handler/credential never enter Snapshot.
 - Run freezes root-registered ∩ Conversation-allowed tools.
 - `approveToolCall`/`denyToolCall` are commands; result variants are text/JSON/error text/error JSON/denied.
+- Task 8 defines the complete Domain relationship from assistant tool-call Part to `RuntimeToolCall`, Tool Step and tool-result Message/Part before enabling replay；normalized Snapshot 是 replay 的唯一领域来源。
+- `assertModelCapabilities` expands only with the boolean tool capabilities required by the approved tool behavior；`projectPrompt` expands to assistant function tool call and all five allowed tool-result variants；`buildModelCallOptions` expands to function tools and toolChoice while retaining the Task 3 exact-key allowlist。Provider 原生或兼容实现方式不进入 Runtime capability。
 
 **TDD order:**
 
 - [ ] Test Model Step 1 → two parallel ToolCalls → Tool Steps → Model Step 2 → completed answer.
+- [ ] Test exact assistant function-call replay and text/JSON/error-text/error-JSON/execution-denied tool-result replay from the normalized Snapshot；expand the positive projection matrix.
+- [ ] Test exact function tool declarations、toolChoice and complete `LanguageModelV4CallOptions`；所需 boolean tool capability 为 `false` 或请求的 toolChoice 不可用时，在创建模型前拒绝。
 - [ ] Test read auto-execution, write/destructive approval, approve/deny, handler failure and abort while waiting/running.
 - [ ] Test disabled/unregistered/schema-invalid tools reject before handler.
 - [ ] Confirm RED, implement registry freeze, approval machine, handler isolation, events and replay.
@@ -421,7 +442,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Acceptance criteria:** Provider request never implies approval; write/destructive handler never runs without approval; implementation/credential never persist.
 
-**Permanent regressions:** multi-Step loop, approval, denied/error replay, abort.
+**Permanent regressions:** normalized tool relationships、tool capability preflight、tool declaration/toolChoice projection、all allowed replay variants、multi-Step loop、approval、denied/error replay and abort.
 
 ### Task 9: Add the opaque continuation capsule
 
@@ -429,13 +450,13 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Dependencies:** Task 8.
 
-**Files:** Create `src/boundary/continuationCapsule.ts` and continuation integration test; modify Guard/projection/coordinator.
+**Files:** Create `src/boundary/continuationCapsule.ts` and continuation integration test; modify Guard/prompt and model-call projection/coordinator.
 
 **Interfaces:** private `ContinuationCapsuleStore` keyed by provider/model/run/part, exposing only `capture`, `readForNextStep`, `dropRun`.
 
 **TDD order:**
 
-- [ ] Test verbatim capture in Step 1 and matching replay in Step 2.
+- [ ] Test verbatim capture in Step 1 and matching replay in Step 2；Task 9 才为 `projectPrompt`/`buildModelCallOptions` 增加 opaque continuation handle。
 - [ ] Test provider/model/run/part mismatch, required capsule missing and cleanup on all terminals/recovery.
 - [ ] Assert Snapshot/persistence/diagnostics/events contain no capsule canary.
 - [ ] Confirm RED, implement private store and coordinator `finally` cleanup, rerun.
@@ -456,8 +477,9 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **TDD order:**
 
-- [ ] Test retry accepts only latest failed/aborted/interrupted Run and creates a new frozen Run.
-- [ ] Test regenerate uses same preceding context, creates same-Turn Run, marks old result superseded and excludes it from prompt.
+- [ ] Test retry accepts only latest failed/aborted/interrupted Run, resolves the currently available registration and creates a new frozen Run without Runtime auth input.
+- [ ] Test regenerate uses the same preceding context and currently resolved registration, creates same-Turn Run, marks old result superseded and excludes it from prompt.
+- [ ] Test missing/removed Provider or model rejects Retry/Regenerate before Provider creation.
 - [ ] Test same-Conversation conflict and two-Conversation parallel isolation.
 - [ ] Test persistence allowlist/recovery with canaries in all forbidden fields.
 - [ ] Confirm RED, implement commands/maps/serializer, rerun integration/reducer/security tests.
@@ -474,7 +496,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Files:** Create `packages/provider-openai/src/{responses,capabilities}.ts`, update `src/index.ts`, add `test/responses-conformance.test.ts` and `test/fixtures/responses/manifest.json` plus sanitized fixtures during implementation.
 
-**Interfaces:** `createOpenAIResponsesRegistration(options): RuntimeModelRegistrationV1`. Credential only enters via Run context. Provider 维护者对已发布 registration 的浏览器直连负责；descriptor 显式声明 tools/reasoning/continuation/usage/losses 等模型语义能力。
+**Interfaces:** `createOpenAIResponsesRegistration(options): RuntimeProviderRegistrationV1`. Options contain application-owned connection/auth settings and reviewed model descriptors; the creator binds them through `createOpenAI()` and returns a registration with an argument-free Provider factory. Provider 维护者对已发布 registration 的浏览器直连负责；每个 model descriptor 显式声明 tools/reasoning/continuation/usage/losses 等模型语义能力。
 
 **TDD order:**
 
@@ -497,7 +519,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 **Files:** Create `src/compatible.ts`, update capabilities/index, add compatible conformance test/manifest/fixtures.
 
-**Interfaces:** `createOpenAICompatibleRegistration(options): RuntimeModelRegistrationV1` requires base URL, model ID and full descriptor. Snapshot/diagnostic stores safe endpoint ID, never query URL.
+**Interfaces:** `createOpenAICompatibleRegistration(options): RuntimeProviderRegistrationV1` requires base URL、Provider name、auth settings and a reviewed descriptor for every exposed real model ID, then reuses `createOpenAICompatible()`. Snapshot/diagnostic stores the application-defined safe `providerId`, never the endpoint or query URL.
 
 **TDD order:**
 
@@ -567,7 +589,7 @@ Tasks 2、3、4 在 Task 1.1 完成后可独立实施和评审；Tasks 11、12 �
 
 - [ ] Coverage table maps contract section 15 items 1–14 to Provider and/or constructed V4 fixture; missing expected/redaction metadata fails.
 - [ ] Coverage table separately accounts for exact allowed CallOptions projection, sanitized outbound wire semantics, inbound wire→V4 parts and V4 parts→Domain/Snapshot.
-- [ ] Seed unique canary into credential, auth/cookie/header, query URL, bodies, raw chunk, thrown values, warning, metadata, capsule and tool data.
+- [ ] Seed unique canary through Provider creator settings into credential, auth/cookie/header, query URL, bodies, raw chunk, thrown values, warning, metadata, capsule and tool data; no Runtime API receives the credential directly.
 - [ ] Assert absence from serialized events/Snapshot/persistence/diagnostics/errors/checked-in fixtures.
 - [ ] Assert order, per-ID transitions, assembly, one terminal, terminal silence, Step/Run mapping and provider equivalence.
 - [ ] Run full Runtime and Provider suites.
@@ -657,6 +679,7 @@ rg -n "Authorization|cookie|raw(?:Chunk|Request|Response)|providerMetadata|crede
 - **Spec coverage:** Contract v1 sections 1–18 map to Tasks 1–16; Provider conformance, Guard, reducer and integration suites are separate. DeepSeek three-format validation is additional abstraction evidence and does not expand the approved first-phase implementation scope.
 - **Step scan:** each task has checkable RED/implementation/GREEN actions; no unnamed “handle edge cases”.
 - **Type consistency:** public names originate in Task 1; Domain Events stay internal; Snapshot/Command never import V4.
+- **Task boundary consistency:** Task 3 projects text/reasoning calls；Task 8 adds complete tool Domain relationships、capability/options projection and replay；Task 9 alone adds opaque continuation.
 - **Review Focus:** all five high-risk cases have owner tests in Tasks 6、7、13、14.
 - **Proportion:** bodies are omitted; only signatures, ownership, assertions and fixed mappings remain.
 - **Repository safety:** this plan adds only this temporary Markdown file. It does not alter staged design docs, package metadata, lockfiles, dependencies, Git index or branch.

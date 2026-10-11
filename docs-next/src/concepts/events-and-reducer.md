@@ -4,11 +4,13 @@ Domain Event（下文简称 Event）表示 Runtime 内部已经确认发生的�
 
 文档把这个计算过程称为“归约”。它只是更新状态，不表示压缩或删除数据。基础概念可先查看 [快速开始](../guide/quick-start.md)。
 
+本页解决的问题是：Runtime 怎样把“已经发生的事实”稳定地变成下一份 Snapshot。读完后，你应该能区分请求与事实，并判断哪些输入会被幂等忽略、哪些会暴露领域不变量错误。
+
 ```ts
 reduceRuntimeEvent(snapshot, event): RuntimeSnapshot
 ```
 
-reducer 必须是纯函数：不调用 Provider、不启动异步任务、不读取 credential、不修改旧 Snapshot，也不通知 UI。
+reducer 必须是纯函数：不调用 Provider、不启动异步任务、不读取连接或认证配置、不修改旧 Snapshot，也不通知 UI。
 
 Domain Event 借鉴领域驱动设计中“已经发生的领域事实”，reducer 借鉴单向状态管理中的纯状态计算。参见 [Microsoft Domain events](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)、[Redux reducer 基础](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers) 和[命名来源与项目定义](../reference/terminology-sources.md)。
 
@@ -22,11 +24,11 @@ flowchart LR
   Reducer --> Snapshot["新 Snapshot"]
 ```
 
-例如 `abort` Command 只是“希望停止”的请求；只有后续执行流程确认回答确实停止后，内部终止 Event 才能把 Run 状态更新为 `aborted`（已中止）。负责串起这段流程的组件在后续任务中称为 coordinator（执行协调器）。
+例如 `abort` Command 只是“希望停止”的请求；只有执行层确认回答确实停止后，内部终止 Event 才能把 Run 状态更新为 `aborted`（已中止）。
 
-## Task 2 当前处理的事实
+## 当前 reducer 处理的事实
 
-当前工作树的 reducer 覆盖最小文本生命周期：
+reducer 当前覆盖单 Step 文本生命周期：
 
 | Event                  | 对 Snapshot 的影响                     |
 | ---------------------- | -------------------------------------- |
@@ -72,7 +74,7 @@ reducer 接收的是内部 Domain Event，因此所有权错误代表程序或�
 
 Step 终止表示“一次模型调用或工具执行已经结束”；Run 终止表示“针对这个 Turn 的整次回答尝试已经结束”。这是两个不同层级的事实。
 
-当前 Task 2 的 `run-terminated` 同时接收 `stepId`、`stepStatus` 和 `runStatus`，并在一次归约中终止 Step 与 Run。它能表达单 Step 文本回答，但不能表达“Step 已结束而 Run 仍为 active”的多 Step 生命周期。
+现行 `run-terminated` 同时接收 `stepId`、`stepStatus` 和 `runStatus`，并在一次归约中终止 Step 与 Run。它能表达单 Step 文本回答，但不能表达“Step 已结束而 Run 仍为 active”的多 Step 生命周期。
 
 多 Step Run 的事件顺序必须拆成：
 
@@ -90,7 +92,7 @@ flowchart LR
 - 最后一个 Model Step 也必须先独立终止，不能依靠 `run-terminated` 顺带结束；
 - Run 可以在第一个 Step 创建前被取消。
 
-独立的 Step 终止和工具循环由 Task 8 实现。在它完成前，当前 reducer 的可执行范围仍是 Task 2 的单 Step 文本生命周期。
+当前 reducer 的可执行范围是单 Step 文本生命周期。多 Step 执行需要独立的 Step 终止事实，才能在一个 Step 完成后让 Run 继续保持 active。
 
 ## 结构共享示例
 
@@ -105,3 +107,11 @@ flowchart LR
 ```
 
 新旧 Snapshot 可以共享 Conversation B；目标 Text Part 必须是新对象。永久回归测试应保护这种消费者可观察的不变量，而不是断言 reducer 内部调用顺序。
+
+## 检查你的理解
+
+1. 为什么 Command 不能直接当作 Domain Event？
+2. 迟到 Event 和所有权错误为什么得到不同处理？
+3. 多 Step Run 为什么必须区分 Step 终止与 Run 终止？
+
+下一步阅读[一次完成的文本回答](../examples/completed-text-run.md)，把 Event 顺序和最终 Snapshot 串起来。

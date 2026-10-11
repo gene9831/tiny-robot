@@ -1,10 +1,10 @@
 # 快速开始
 
-本页按照实施计划的进度介绍概念。当前只覆盖已经进入评审的 Task 1 和 Task 2；后续任务需要的新名词，会在对应任务进入评审时再加入学习路径。
+本页沿用同一个天气问答场景，用三个连续步骤介绍 Runtime：先理解应用怎样提出请求，再理解问答状态怎样保存，最后理解这些状态怎样变成模型调用参数。
 
 读完后，你应该能回答三个问题：应用怎样访问 Runtime、一次问答由哪些对象组成、模型返回内容后状态怎样变化。
 
-## Task 1：先理解公共边界
+## 第一步：理解公共边界
 
 假设用户在聊天窗口里问：“北京今天天气怎么样？”应用不会直接修改对话数据，而是通过 Runtime 提出请求并读取结果。
 
@@ -24,27 +24,27 @@ flowchart LR
 
 Runtime 还需要知道怎样调用模型，但不能长期保存 API key 或某个模型实例。
 
-| 文档中的词                         | 先这样理解                                                           |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| **模型注册（Model Registration）** | 应用必须信任的 Provider 扩展；负责为本次回答创建适合浏览器使用的模型 |
-| **Provider**                       | 把统一的模型调用方式适配到具体模型服务                               |
-| **LanguageModelV4**                | Task 1 固定使用的 AI SDK 模型调用接口                                |
-| **credential**                     | API key 一类的临时凭据；只用于当前回答，不能进入 Snapshot            |
-| **capability**                     | Runtime 构造模型调用时依赖的语义能力，例如是否支持工具调用           |
+| 文档中的词                                 | 先这样理解                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------- |
+| **Provider 连接配置**                      | 应用保存的 endpoint、Provider 类型、模型目录等连接资料                |
+| **Provider 注册（Provider Registration）** | Provider 集成层构造、供 Runtime 解析的可信接入对象                    |
+| **Provider**                               | 把统一的模型选择和调用方式适配到具体模型服务                          |
+| **providerId / modelId**                   | 应用定义的接入实例标识，以及 Provider 接受的真实模型标识              |
+| **LanguageModelV4**                        | Runtime 固定使用的 AI SDK 模型调用接口                                |
+| **credential**                             | API key 一类的认证资料；由应用和 Provider 管理，不进入 Runtime 输入   |
+| **capability**                             | Runtime 构造模型调用时依赖的模型语义能力，例如 streaming 和 reasoning |
 
 这些名称的来源并不相同：`LanguageModelV4` 和 Provider ABI 直接来自 AI SDK；Command 借用 CQRS 中表达业务意图的概念；`RuntimeSnapshot` 的具体数据范围由 Tiny Robot 自己定义。出处和差异见[命名来源与项目定义](../reference/terminology-sources.md)。
 
-::: tip 继续阅读 Task 1
-**中文设计说明：** [Runtime 总览](../concepts/runtime-overview.md) · [Command 与 Runtime API](../concepts/commands-and-runtime.md) · [模型注册与安全边界](../concepts/model-registration.md)
+::: tip 继续理解公共交互
+先阅读 [Runtime 总览](../concepts/runtime-overview.md)，再进入 [Command 与 Runtime API](../concepts/commands-and-runtime.md)。需要核对模型选择、安全和凭据责任时，查看 [Provider 注册与安全边界](../concepts/provider-registration.md)。
 
-**正式设计依据：** [下一代架构总览](../design/architecture-overview.md) · [ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md) · [Runtime 契约](../design/runtime-contract.md) · [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md)
-
-**实施范围（临时工作材料）：** [计划 Task 1](../design/implementation-plan.md#task-1-approve-package-boundaries-and-pin-the-public-abi) · [计划 Task 1.1](../design/implementation-plan.md#task-1-1-document-the-public-abi-and-enforce-generated-api-documentation)
+按需核对：[下一代架构总览](../design/architecture-overview.md) · [ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md) · [Runtime 契约](../design/runtime-contract.md)
 :::
 
-## Task 2：再理解一段问答的数据
+## 第二步：理解一段问答的数据
 
-Task 2 为 Snapshot 增加规范化领域状态。仍以天气问题为例：
+Snapshot 使用规范化的领域状态。仍以天气问题为例：
 
 | 文档中的词       | Tiny Robot 中的定义                    | 在示例中是什么                             |
 | ---------------- | -------------------------------------- | ------------------------------------------ |
@@ -71,7 +71,7 @@ flowchart LR
 
 Conversation、Turn、Run 和 Step 在不同产品中没有统一层级；上表是 Tiny Robot 的项目定义。Message 和 Part 借鉴 AI SDK 的内容结构，但 Runtime 类型不会直接复用 AI SDK 类型。
 
-## Task 2：状态怎样变化
+## 状态怎样变化
 
 | 文档中的词                     | 直白定义                                             | 例子                                    |
 | ------------------------------ | ---------------------------------------------------- | --------------------------------------- |
@@ -88,16 +88,50 @@ flowchart LR
 
 Domain Event 借用领域驱动设计中“已经发生的领域事实”这一含义；reducer 和按 ID 组织状态的方式借鉴 Redux 的状态管理模式。Tiny Robot 仍为事件内容、实体所有权和生命周期定义自己的约束。
 
-::: tip 继续阅读 Task 2
-**中文设计说明：** [Snapshot 与领域模型](../concepts/snapshot-and-domain-model.md) · [Domain Event 与 reducer](../concepts/events-and-reducer.md) · [一次完成的文本回答](../examples/completed-text-run.md) · [多个 Conversation](../examples/multiple-conversations.md)
+::: tip 继续理解状态
+依次阅读 [Snapshot 与领域模型](../concepts/snapshot-and-domain-model.md)、[多个 Conversation](../examples/multiple-conversations.md)、[Domain Event 与 reducer](../concepts/events-and-reducer.md)和[一次完成的文本回答](../examples/completed-text-run.md)。这组页面先解释状态形状，再验证作用域，最后走通一次状态演进。
 
-**正式设计依据：** [ADR-0004：Snapshot、Command 与 Domain Event 分工](../design/adr-0004-snapshot-command-event-runtime.md) · [Runtime 契约](../design/runtime-contract.md) · [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#1-决策与分层)
-
-**实施范围（临时工作材料）：** [计划 Task 2](../design/implementation-plan.md#task-2-define-normalized-snapshot-domain-events-and-reducer-invariants)
+按需核对：[ADR-0004：Snapshot、Command 与 Domain Event 分工](../design/adr-0004-snapshot-command-event-runtime.md) · [Runtime 契约](../design/runtime-contract.md)
 :::
 
-## 跨 Task 参考
+## 第三步：准备模型调用
+
+Runtime 先确认 frozen Run 的 capability 可以满足本次请求，再把 Snapshot 中允许的历史投影为固定 V4 prompt，最后构造完整的 `LanguageModelV4CallOptions`。这个对象是模型调用边界的输入。
+
+| 步骤                          | 负责什么                                      | 产生什么                      |
+| ----------------------------- | --------------------------------------------- | ----------------------------- |
+| capability preflight          | 检查 streaming 和 reasoning                   | 接受本次请求，或稳定拒绝 code |
+| prompt projection             | 按 Message/Part 顺序转换允许历史              | V4 prompt                     |
+| model call options projection | 只组合批准的 output limit、reasoning 和 abort | 完整 allowlisted call options |
+
+```mermaid
+flowchart LR
+  Frozen["冻结的 Run 与历史"] --> Check["能力预检"]
+  Check --> Prompt["Prompt 投影"]
+  Prompt --> Options["调用选项投影"]
+  Options --> Result["V4 调用对象"]
+```
+
+遇到 unknown、未完成或无法完整表达的历史 Part 时，投影会稳定拒绝，而不是删除它再继续。这样可以保证模型看到的历史与 Runtime 已接受的历史一致。
+
+::: tip 继续理解模型调用准备
+先阅读 [Provider 注册与安全边界](../concepts/provider-registration.md)，再阅读[准备一次模型调用](../concepts/model-call-projection.md)。前者解释应用怎样提供接入实例和模型，后者解释 Runtime 怎样构造一次调用。
+
+按需核对：[ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md) · [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#4-capability-descriptor)
+:::
+
+## 检查你的理解
+
+读完本页后，先不用查看源码，尝试回答：
+
+1. 应用为什么通过 Command 请求变化，而不是直接修改 Snapshot？
+2. Turn、Run、Step、Message 和 Part 在一次天气问答中分别表示什么？
+3. 为什么模型调用前要依次经过能力检查、Prompt 投影和调用选项投影？
+
+如果其中一个问题还不能用自己的话回答，按照上方对应的“继续理解”路径进入详细页面。
+
+## 参考资料
 
 - 想核对名词依据：阅读 [命名来源与项目定义](../reference/terminology-sources.md)。
 - 想查看已经实现的公共类型：阅读 [Runtime API 与 TSDoc](../reference/runtime-api.md)。
-- Task 3 及后续任务进入评审时，再在对应章节加入同样的中文说明、正式设计依据和实施范围入口。
+- 想参与文档评审：阅读[学习文档评审指南](../contributing/learning-document-review.md)。

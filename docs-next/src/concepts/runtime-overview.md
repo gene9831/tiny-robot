@@ -6,6 +6,8 @@ Runtime 是应用里的对话管理对象。用户提出一个问题后，它负
 
 Runtime 不依赖 Vue 或 Angular，也不是某个模型服务 SDK 的简单包装。
 
+本页解决的问题是：当应用、模型服务和页面都参与一次问答时，职责应该停在哪一层。读完后，你应该能画出 Runtime 所处的位置，并解释为什么模型响应不能直接成为页面状态。
+
 ## 四层边界
 
 ```mermaid
@@ -67,20 +69,21 @@ UI 面向领域的数据主要从 Snapshot 派生，例如：
 - 焦点、滚动位置和弹窗开关；
 - 只用于动画的瞬时标记。
 
-## 当前 Task 范围
+## 当前可用边界
 
-| 内容                                               | 状态                  |
-| -------------------------------------------------- | --------------------- |
-| Task 1：公共类型、Command、模型注册和 Runtime 接口 | **现行**              |
-| Task 2：Domain Event、reducer、Snapshot 基础状态   | **现行**              |
-| Task 3：capability preflight 和出站投影            | **后续任务**          |
-| Task 4：响应检查关口（Ingress Guard）              | **后续任务**          |
-| 模型适配、执行协调器（coordinator）、工具执行      | **不属于当前 Task 2** |
+| 内容                                            | 文档定位     |
+| ----------------------------------------------- | ------------ |
+| 公共类型、Command、Provider 注册和 Runtime 接口 | 当前公共 API |
+| Domain Event、reducer、Snapshot 基础状态        | 当前领域状态 |
+| capability preflight、Prompt 和调用选项投影     | 当前出站边界 |
+| 响应检查、模型适配、执行协调与完整执行生命周期  | 架构设计     |
 
-因此图中的完整链路用于解释架构职责，并不表示所有节点现在都已经实现。
+因此图中的完整链路同时包含可由当前 API 验证的行为和用于约束后续实现的架构职责。
 
-## 下一步阅读
+## 检查你的理解
 
-- [Command 与 Runtime API](./commands-and-runtime.md)
-- [模型注册与安全边界](./model-registration.md)
-- [Snapshot 与领域模型](./snapshot-and-domain-model.md)
+1. Runtime Domain 为什么不能直接保存 Provider wire object？
+2. Snapshot 与输入框草稿分别由谁拥有？
+3. 模型响应在成为页面可读状态前必须经过哪些边界？
+
+主线下一步是 [Command 与 Runtime API](./commands-and-runtime.md)。需要核对完整分层时，再进入[下一代架构总览](../design/architecture-overview.md)。

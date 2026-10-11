@@ -38,6 +38,18 @@ Runtime 在某个时刻的不可变、规范化领域状态。它是业务与 UI
 
 调用方向 Runtime 提交的语义请求，包含识别目标动作及执行该动作所需的领域输入。
 
+## Provider Connection Configuration
+
+应用拥有的 Provider 连接资料，包含接入标识、endpoint、Provider 类型、模型目录及创建 AI SDK Provider 所需的设置。Credential 由应用与 Provider 集成层管理，不属于 Runtime 输入或领域状态。
+
+## Provider Registration
+
+Provider 集成层根据连接配置构造、供 Runtime 解析的可信接入对象。它以稳定的 `providerId` 标识，声明可选模型，并通过无参工厂为一次 Run 提供已经具备连接与认证行为的 AI SDK Provider；它不是可持久化的连接配置。
+
+## Model Descriptor
+
+Provider Registration 中针对一个真实 `modelId` 的已审核能力声明。Runtime 在创建 Run 时冻结该声明，后续 registration 变化不修改既有 Run。
+
 ## Domain Event
 
 表示 Runtime 中已发生事实的内部事件。Reducer 使用它演进 Snapshot；它与 Provider stream part、对外生命周期事件相互独立。

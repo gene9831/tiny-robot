@@ -61,60 +61,63 @@ v1 固定：
 
 TypeScript consumer 检查 **MUST** 包含 `skipLibCheck: false`，并确认 `json-schema` 与 Node 类型不会作为未声明依赖泄漏给消费者。
 
-## 3. Model registration 与凭据边界
+## 3. Provider Registration、解析与凭据边界
 
-Runtime 接收的是 Run-local model factory，而不是可持久化 Provider 配置：
+应用拥有 Provider Connection Configuration 与 credential。Provider 集成层复用具体 AI SDK Provider creator，把 endpoint、headers 和认证绑定到 Provider Registration 的无参工厂。Runtime 在创建新 Run 时按 `providerId` 解析 registration；registration 为当前 Run 创建 AI SDK Provider V4 的语言模型子集，并声明该接入允许选择的真实模型：
 
 ```ts
-interface RuntimeModelRegistrationV1 {
-  id: string
-  createModel(context: RuntimeModelContextV1): LanguageModelV4
+type RuntimeLanguageProviderV4 = Pick<ProviderV4, 'specificationVersion' | 'languageModel'>
+
+interface RuntimeModelDescriptorV1 {
   capabilities: RuntimeModelCapabilitiesV1
 }
 
-interface RuntimeModelContextV1 {
-  credential?: unknown
+interface RuntimeProviderRegistrationV1 {
+  providerId: string
+  models: Readonly<Record<string, RuntimeModelDescriptorV1>>
+  createProvider(): RuntimeLanguageProviderV4
+}
+
+interface CreateRuntimeOptions {
+  resolveProvider(providerId: string): RuntimeProviderRegistrationV1 | undefined
 }
 ```
 
 上述类型表达语义，不要求实现采用相同名称。
 
-- factory、model、credential **MUST NOT** 进入 Snapshot、历史或序列化 Command。
-- 带凭据的 model **MUST** 为当前 Run 创建，并在 Run 结束后释放引用。
-- Runtime **MUST NOT** 读取、复制、记录或持久化 credential。
+- `providerId` 是应用分配的 Provider Registration 标识，可以表示厂商 Provider、自建 LLM API 或代理网关，不要求等于厂商名称或 `LanguageModelV4.provider`。
+- `models` 的 key **MUST** 是传给 `ProviderV4.languageModel(modelId)` 的真实模型 ID。v1 不定义应用模型别名或第二个 Provider model ID。
+- Runtime **MUST** 在每个新 Run 开始时调用同步 resolver 一次；resolver 返回后，应用配置的变化不得改变该 Run 使用的 registration。Runtime v1 不拥有可变 Provider registry，也不公开动态注册或注销方法。
+- Runtime **MUST** 在创建 Provider 前确认 registration ID、模型 descriptor 和本次调用需要的 capability。未知 Provider、未知模型和能力不足必须以稳定安全错误拒绝。
+- Resolver 返回的 registration，其 `providerId` **MUST** 与请求值一致。
+- Runtime **MUST** 为当前 Run 调用无参 `createProvider()`，再调用 `provider.languageModel(modelId)`。返回值必须满足 V4 specification，且 `LanguageModelV4.modelId` 必须与请求的真实 `modelId` 一致。
+- Send、Retry、Regenerate、Command、resolver 和 `createProvider()` **MUST NOT** 接收 credential。
+- resolver、registration、factory、Provider 和 model **MUST NOT** 进入 Snapshot、历史或序列化 Command。
+- Provider 集成层 **MUST** 使用具体 AI SDK Provider creator 处理 credential 和认证协议；Runtime **MUST NOT** 读取、复制、接收、记录或持久化 credential。
+- Provider 与 model **MUST** 在 Run 结束后从 Runtime 执行状态中释放引用。
 - API key、Authorization、cookie、raw headers 和带 query 的 endpoint URL **MUST NOT** 出现在 Domain Event、Snapshot、日志、fixture、错误或诊断中。
-- `model.provider` 和 `model.modelId` 可作为非敏感标识进入冻结 Run 配置；用户自定义值在日志前仍需长度和字符限制。
-- registration 是能够接收 Run-local credential 并选择目标 endpoint 的 Provider 扩展，也是应用与 Provider 之间的信任边界；应用 **MUST** 只注册其信任的实现。
-- Provider registration 维护者负责确认具体 mapping 与 endpoint 可从受支持浏览器直连。公开或启用该 registration 前 **MUST** 完成真实浏览器验证，并把 CORS、认证 header 和流式响应结果记录在 Provider conformance/live verification 资料中。
+- Run **MUST** 冻结 `providerId`、真实 `modelId` 和模型 capabilities。`LanguageModelV4.provider` 不进入 v1 Snapshot；用户自定义标识在日志前仍需长度和字符限制。
+- Provider Registration 是应用与接入实现之间的信任边界；应用 **MUST** 只解析其信任的实现。
+- Provider Registration 维护者负责确认具体 mapping 与 endpoint 可从受支持浏览器直连。公开或启用该 registration 前 **MUST** 完成真实浏览器验证，并把 CORS、认证 header 和流式响应结果记录在 Provider conformance/live verification 资料中。
 
 ## 4. Capability descriptor
 
-`LanguageModelV4` 不提供足够的能力发现。每个 registration **MUST** 声明 Runtime 构造模型调用时需要依赖的模型语义能力：
+`LanguageModelV4` 不提供足够的能力发现。Provider Registration 中的每个模型 descriptor **MUST** 声明 Runtime 构造模型调用时需要依赖的模型语义能力：
 
 ```ts
 interface RuntimeModelCapabilitiesV1 {
-  streaming: 'native' | 'emulated' | 'unsupported'
-  functionTools: 'native' | 'emulated' | 'unsupported'
-  parallelToolCalls: 'supported' | 'unsupported' | 'unknown'
-  toolChoice: ReadonlyArray<'auto' | 'none' | 'required' | 'named'>
-  reasoningRequest: 'supported' | 'unsupported' | 'unknown'
-  visibleReasoning: 'summary' | 'none'
-  opaqueContinuation: 'run-local' | 'none'
-  usage: 'complete' | 'partial' | 'unavailable'
-  knownLosses: ReadonlyArray<RuntimeMappingLossV1>
-}
-
-interface RuntimeMappingLossV1 {
-  code: string
-  feature: string
-  consequence: string
+  streaming: boolean
+  reasoning: boolean
 }
 ```
 
-- required capability 为 `unsupported` 或 `unknown` 时 **MUST** 在调用前 reject。
-- `emulated` 和每项 loss **MUST** 可由稳定 code 诊断，不能只有自由文本。
+- 本次执行需要的 capability 为 `false` 时 **MUST** 在创建模型前 reject。
+- capability 只描述 Runtime 能否依赖对应的标准 V4 行为，不描述 Provider 原生实现、兼容转换或其他适配机制。
+- `reasoning: false` 时 Runtime **MUST NOT** 构造带 `reasoning` 的调用；调用方明确请求 reasoning 时必须 reject，不能静默删除参数。
+- `reasoning: true` 允许 Runtime 传递标准 `LanguageModelV4CallOptions.reasoning`。具体模型接受的取值、协议字段和转换规则由 Provider mapping 验证；无法满足的取值必须明确拒绝或产生经批准的稳定诊断，不能静默降级。
+- v1 不在 capability 中枚举 reasoning 强度。当 Runtime 需要在调用前展示或限制具体强度时，后续版本可将其演进为 `ReadonlyArray<NonNullable<LanguageModelV4CallOptions['reasoning']>>`；缺少可靠证据的选项不得进入数组。
 - Chat Completions compatible endpoint **MUST** 逐服务声明模型语义能力；格式兼容不能推导 reasoning、usage 或 tool 能力。
-- Provider registration 维护者 **MUST** 在准入阶段验证浏览器直连，并以 conformance 测试、live verification 清单和支持文档记录证据。`RuntimeModelCapabilitiesV1` 只描述构造和解释模型调用所需的语义能力。
+- Provider Registration 维护者 **MUST** 在准入阶段验证浏览器直连，并以 conformance 测试、live verification 清单和支持文档记录证据。Provider mapping 的兼容转换与有损行为记录在 conformance evidence 中，不进入 Runtime capability 或 Snapshot。
 
 ## 5. 允许的 call options
 
@@ -139,7 +142,7 @@ Runtime v1 不公开以下跨 Provider 配置：
 - caller-supplied `providerOptions`；
 - `includeRawChunks: true`。
 
-Provider factory 可以在 Runtime 之外封装 Provider 特有默认值，但这些值不构成 Runtime 公共协议。
+Provider Registration 的 `createProvider` 可以在 Runtime 之外封装 Provider 特有默认值、endpoint 与认证行为，但这些值不构成 Runtime 公共协议。
 
 Provider conformance **MUST** 同时验证允许的 `LanguageModelV4CallOptions` 被映射为预期的脱敏 wire request，且禁止字段不会由 Runtime 注入。验证过程中截获的原始 request、credential 和 authorization material 只能存在于测试进程内存，不得写入 fixture、日志或快照。
 
@@ -150,7 +153,7 @@ v1 支持：
 - system text；
 - user text；
 - assistant text；
-- assistant reasoning summary，仅当 capability 为 `visibleReasoning: summary`；
+- assistant reasoning；
 - assistant function tool call replay；
 - tool result：text、JSON、error text、error JSON、execution denied。
 
@@ -163,7 +166,7 @@ v1 暂缓：
 - provider tool approval response；
 - source/citation replay。
 
-暂缓 part 出现在需要发送的历史中时 **MUST** capability reject，不能静默删除后继续调用。
+暂缓 part 出现在需要发送的历史中时 **MUST** 在 prompt projection 阶段 reject，不能静默删除后继续调用。
 
 ## 7. 允许的 stream parts
 
@@ -257,7 +260,7 @@ tool-input-start(id, toolName)
 
 Readable reasoning 与 continuation metadata 是不同数据：
 
-- 只有 registration 声明 `visibleReasoning: summary` 时，reasoning delta 才可形成 Domain `ReasoningPart`。
+- 只有经评审的 Provider mapping 产生的标准 V4 reasoning part 才可形成 Domain `ReasoningPart`。
 - Generic compatible endpoint 的 `reasoning_content`、`reasoning`、`thinking` 等字段不能自动声明为 summary。
 - OpenAI encrypted reasoning、Anthropic signature/redacted block、Gemini thought signature 等 opaque 数据不得成为 Message Part。
 
@@ -269,7 +272,7 @@ Continuation capsule：
 - **MUST NOT** 被 Runtime、日志或诊断解释；
 - **MUST NOT** 进入 Snapshot、持久化、fixture 或组件 API；
 - **MUST** 在 Run 结束、abort、failure 或 page recovery 时丢弃；
-- 缺失 capsule 导致无法安全续接时，Run 必须 `interrupted` 或下一调用 capability reject。
+- 缺失 capsule 导致无法安全续接时，Run 必须 `interrupted` 或在下一调用前 reject。
 
 ## 11. Unknown、warning 与 lossy mapping
 
@@ -278,7 +281,7 @@ Continuation capsule：
 - `raw`：无条件丢弃，不做 Domain mapping。
 - Provider wire 层的未知事件由所采用的 AI SDK Provider 负责。Tiny Robot 无法在 `includeRawChunks: false` 时证明其存在，因此 package upgrade 和 raw-to-V4 conformance 是信任边界的一部分。
 - `SharedV4Warning` 的自由文本 `details/message` 不得直接显示、持久化或上报；只允许映射为 Tiny Robot 稳定 warning code。
-- 未声明的有损转换 **MUST** reject；已声明 loss 必须出现在 capability descriptor 和文档中。
+- 未声明的有损转换 **MUST** reject；已声明 loss 必须以稳定 code 出现在 Provider conformance evidence、manifest 和支持文档中，不得写入 Runtime capability 或 Snapshot。
 
 ## 12. Error 与 usage
 
@@ -309,7 +312,7 @@ interface RuntimeProviderErrorV1 {
 - error message、response body、headers、request body、stack 和 cause 不得进入 Domain 或诊断。
 - usage 中缺失值保持 unavailable，不能写成 0。
 - `usage.raw` 不进入 Runtime。
-- final usage 可以映射 input、output、reasoning、cache read/write token；是否完整由 capability descriptor 标明。
+- final usage 可以映射 input、output、reasoning、cache read/write token；Provider 未提供的值保持 unavailable，不能根据模型名称或格式兼容性推断。
 
 ## 13. Tool lifecycle 与审批
 
@@ -335,7 +338,7 @@ Model Step emits client tool-call
 - Runtime Domain IDs；
 - 最终 text、允许展示的 reasoning summary；
 - 规范化 ToolCall arguments、approval 和 result；
-- Provider/model 非敏感标识；
+- 应用定义的 `providerId` 与真实 `modelId`；
 - normalized usage、termination、error category/code；
 - boundary version 与恢复行为所需的 capability snapshot。
 
@@ -366,7 +369,7 @@ Model Step emits client tool-call
 10. abort before first delta 与 mid-stream abort；
 11. abrupt EOF、missing end、duplicate end、finish 后 part；
 12. unknown V4 part；
-13. capability reject 与 declared loss；
+13. boolean capability reject 与 Provider declared loss；
 14. credential canary。
 
 测试必须覆盖三个方向，并保持 fixture/断言边界独立：
@@ -400,7 +403,7 @@ Compliance tests 至少断言：
 
 使用 `@ai-sdk/openai` 的 Responses model。Tiny Robot 验证允许的 V4 prompt、output limit、reasoning、function tools、tool choice 与 tool result 被映射为预期的脱敏 Responses request 语义，同时验证 text、reasoning summary、function tool call、usage、finish 和 abort 的 V4 输出；不重复实现 OpenAI semantic event parser。
 
-OpenAI Responses 新增 hosted tool、compaction、background 或其他 custom content 时，除非本契约升级，否则必须 capability reject 或由 Ingress Guard 拒绝，不能自动进入 Domain。
+OpenAI Responses 新增 hosted tool、compaction、background 或其他 custom content 时，除非本契约升级，否则必须由出站 projection 或 Ingress Guard 拒绝，不能自动进入 Domain。
 
 ### OpenAI Chat Completions compatible
 
@@ -424,7 +427,7 @@ Generic compatible adapter 不得把任意 `reasoning_content` 自动声明为�
 
 - Provider wire object 或未清洗 V4 object 进入 Runtime/UI 公共 API；
 - arbitrary headers/providerOptions 从 UI 进入 model call；
-- 静默 capability downgrade 或 lossy mapping；
+- 静默删除已请求的标准调用参数或执行 lossy mapping；
 - 未完成或无法关联的 tool call 进入审批/执行；
 - raw error/header/body/metadata 进入可序列化状态；
 - 把 abort、unexpected EOF、`other` 或结构不完整的 stream 伪装为正常完成。

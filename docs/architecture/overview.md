@@ -9,7 +9,7 @@ Runtime Command / normalized Snapshot
     ↓  capability preflight + allowlist projection
 LanguageModelV4CallOptions
     ↓  LanguageModelV4.doStream()
-AI SDK Provider / Provider Adapter ↔ Provider API
+Run-local AI SDK Provider V4 / Provider Adapter ↔ Provider API
     ↓  LanguageModelV4StreamResult.stream
 Runtime Ingress Guard
     ↓  Domain Events
@@ -26,7 +26,8 @@ Reducer → normalized Snapshot
 
 ### Provider Model Boundary
 
-- 使用 `LanguageModelV4` 作为 Provider 实现与 Runtime 之间的统一模型调用规范；OpenAI Responses、Chat Completions compatible、Anthropic、Gemini 或私有接口由对应 AI SDK Provider 或自定义 Provider 实现该规范。
+- 使用 AI SDK `ProviderV4.languageModel(modelId)` 选择 `LanguageModelV4`，以 `LanguageModelV4` 作为 Provider 实现与 Runtime 之间的统一模型调用规范；OpenAI Responses、Chat Completions compatible、Anthropic、Gemini 或私有接口由对应 AI SDK Provider 或自定义 Provider 实现该规范。
+- 应用拥有 Provider Connection Configuration 和 credential；Provider 集成层复用 AI SDK creator，将 endpoint、headers 与认证转换为可信的 Provider Registration。Runtime 通过同步 resolver 按 `providerId` 获取 registration；registration 声明多个真实 `modelId` 及其能力，并通过无参工厂为当前 Run 创建只包含 Provider V4 语言模型职责的 Provider。`providerId` 是应用分配的接入实例标识，不要求等于厂商名称。
 - 出站侧由 capability preflight 和 allowlist projection 将冻结的 Run 配置、历史和工具投影为允许的 `LanguageModelV4CallOptions` 子集；任意 headers、caller-supplied provider options 和暂缓能力不能穿过该边界。
 - 入站侧只把 `LanguageModelV4StreamResult.stream` 交给 Runtime Ingress Guard；Guard 校验允许的 `LanguageModelV4StreamPart`、事件顺序和终止条件，清洗 error、warning、metadata，并转换为 Domain Event。result 上的 request/response 调试数据必须在 coordinator 边界丢弃。
 - `LanguageModelV4` 是 Provider ABI，不是 Runtime Domain Model；Provider 原始 payload、headers、raw chunks、SDK 对象和未清洗 metadata 不得进入 Snapshot 或组件公共 API。
@@ -37,6 +38,7 @@ Reducer → normalized Snapshot
 - 拥有 Conversation、Turn、Run、Message、ToolCall 等领域状态及其不变量。
 - 通过 command 驱动用例，通过 domain event 和 reducer 生成不可变 Snapshot。
 - 公开稳定的 `getSnapshot`、`subscribe`、`dispatch`，以及 `send`、`abort`、`retryLastRun`、`regenerateLastResponse` 等便利方法。
+- 创建新 Run 时按需解析一次 `providerId`，校验真实 `modelId` 与能力声明，再冻结 `providerId`、`modelId` 和能力。Provider 配置在应用侧的后续变化不影响已经开始或已经完成的 Run。
 - 使用 `AsyncIterable`、`AbortSignal` 和 `Promise` 表达首期异步流程；公共 API 不依赖 RxJS。
 
 ### Selector / Presenter
@@ -64,9 +66,9 @@ Runtime Snapshot 是当前结果的唯一事实来源。流式增量先由 Ingre
 
 ## 浏览器优先与安全
 
-首期 Runtime 全部在浏览器运行，使用 Provider 与用户提供的 API key 直接访问模型服务。Runtime 接收瞬时凭据但不拥有或持久化凭据；用户输入的 BYOK 默认只驻留内存。带凭据的 model 必须按 Run 创建和释放，不能作为 Runtime 长期状态。
+首期 Runtime 全部在浏览器运行，使用 Provider 与用户提供的 API key 直接访问模型服务。应用决定如何保存或更新 BYOK credential，Provider 集成层把它交给 AI SDK Provider；Runtime 不接收、解释或保存 credential。Provider 和 model 只作为执行对象存在，不能进入 Runtime 领域状态。
 
-Provider registration 是应用必须信任的扩展边界：维护者负责验证具体 endpoint 的浏览器直连、CORS、认证 header 和流式响应，并只向 Runtime 提供满足首期运行环境的 registration。Run 只冻结 streaming、tools、reasoning、usage 等会改变模型调用或结果解释的语义能力。
+Provider Registration 是应用必须信任的扩展边界：维护者负责验证具体 endpoint 的浏览器直连、CORS、认证 header 和流式响应，并只向 Runtime 提供满足首期运行环境的 registration。应用可以在自身配置中增加或移除 registration；Runtime 不管理该配置，而是在新 Run 开始时通过 resolver 获取当前 registration。Run 只冻结 `providerId`、真实 `modelId` 以及 streaming、tools、reasoning、usage 等会改变模型调用或结果解释的语义能力。
 
 传输边界必须可替换：首期使用浏览器直连，未来可增加代理传输，而不改变 Runtime 领域协议。工具写操作或破坏性操作在浏览器侧执行前必须经过明确审批。
 

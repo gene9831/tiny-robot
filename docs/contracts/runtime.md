@@ -8,6 +8,7 @@
 - Provider 集成 **MUST** 遵守仓库固定版本的 [LanguageModelV4 Runtime Boundary Contract v1](language-model-v4-runtime-boundary-v1.md)。Runtime 出站只可通过 capability preflight 和 allowlist projection 构造允许的 `LanguageModelV4CallOptions` 子集；入站只可通过 Ingress Guard 消费 `LanguageModelV4StreamResult.stream` 中允许的 `LanguageModelV4StreamPart` 子集。
 - `LanguageModelV4` **MUST NOT** 被视为 Runtime Domain Model。Provider 原始 payload、SDK 私有类型、raw chunks、headers、未经清洗的 error/warning/metadata **MUST NOT** 进入 Domain Event、Snapshot 或组件公共 API。
 - Provider boundary **MUST** 明确上游版本、允许的 call options 与 prompt parts、允许的 stream parts、合法顺序、终止语义、能力声明、有损映射和双向 conformance fixtures；升级必须经过人工评审。
+- 应用 **MUST** 拥有 Provider Connection Configuration 与 credential；Provider 集成层 **MUST** 使用具体 AI SDK Provider creator 处理 endpoint、headers 和认证。Runtime 只在创建新 Run 时通过同步 resolver 按 `providerId` 获取一次无 credential 的 Provider Registration。Runtime v1 不拥有可变 Provider registry。
 
 ## 公共模型
 
@@ -19,7 +20,8 @@
 
 ## Run 生命周期
 
-- 每个 Turn **MAY** 包含多个 Run；每个 Run 固定实际 Provider、模型、选项和允许工具集合。一次模型调用是一个 Model Step；工具循环中的同一 Run **MAY** 包含多个 Model Step。
+- 每个 Turn **MAY** 包含多个 Run；每个 Run 固定应用定义的 `providerId`、真实 `modelId`、模型能力、选项和允许工具集合。一次模型调用是一个 Model Step；工具循环中的同一 Run **MAY** 包含多个 Model Step。
+- Send、Retry、Regenerate、Command、resolver 与 Provider factory **MUST NOT** 接收 credential。Runtime 只管理当前 Run 使用的 Provider 与 model 引用，并必须在 Run 结束时释放这些执行引用。
 - 同一 Conversation 同时 **MUST NOT** 有超过一个 active Run；不同 Conversation **MAY** 并行。
 - `abort` **MUST** 通过 `AbortSignal` 传播，并把终态归约到 Snapshot。
 - 页面恢复时，无法续接的 active Run **MUST** 转换为 `interrupted`，不得伪装为 `failed` 或 `completed`。

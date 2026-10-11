@@ -4,15 +4,8 @@ import type { RuntimeDomainEvent } from '../../src/domain/events'
 import { createRuntimeSnapshot, reduceRuntimeEvent } from '../../src/domain/reducer'
 
 const capabilities: RuntimeModelCapabilitiesV1 = {
-  streaming: 'native',
-  functionTools: 'unsupported',
-  parallelToolCalls: 'unsupported',
-  toolChoice: ['none'],
-  reasoningRequest: 'unsupported',
-  visibleReasoning: 'none',
-  opaqueContinuation: 'none',
-  usage: 'unavailable',
-  knownLosses: [],
+  streaming: true,
+  reasoning: false,
 }
 
 function createTextSnapshot() {
@@ -24,7 +17,7 @@ function createTextSnapshot() {
       conversationId: 'conversation-1',
       turnId: 'turn-1',
       runId: 'run-1',
-      provider: 'provider-1',
+      providerId: 'provider-1',
       modelId: 'model-1',
       capabilities,
     },

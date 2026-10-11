@@ -1,84 +1,62 @@
-import type { LanguageModelV4 } from '@ai-sdk/provider'
+import type { ProviderV4 } from '@ai-sdk/provider'
 
-/** Run-local inputs used to create a provider model. */
-export interface RuntimeModelContextV1 {
-  /**
-   * Provider credential for the current run.
-   *
-   * @remarks
-   * The Runtime must treat this value as opaque. It must not copy, inspect, log,
-   * persist, serialize, or expose the credential through commands, events,
-   * snapshots, diagnostics, fixtures, or UI-facing APIs.
-   */
-  readonly credential?: unknown
-}
-
-/** Describes an intentional loss of information in a provider mapping. */
-export interface RuntimeMappingLossV1 {
-  /** Stable, non-sensitive identifier used to recognize this loss. */
-  readonly code: string
-  /** Provider capability or input feature affected by the loss. */
-  readonly feature: string
-  /** Consumer-visible effect of accepting the lossy mapping. */
-  readonly consequence: string
-}
+/** AI SDK Provider V4 surface consumed by the Runtime language-model boundary. */
+export type RuntimeLanguageProviderV4 = Pick<ProviderV4, 'specificationVersion' | 'languageModel'>
 
 /**
  * Declares the model behavior that the Runtime may rely on before a run.
  *
  * @remarks
- * Capabilities describe the reviewed model-semantic subset, not every feature
- * offered by the upstream provider. Unsupported or unknown required
- * capabilities must be rejected before model creation. Provider registration
- * maintainers own the evidence that each concrete mapping and endpoint works
- * from the supported browser environment.
+ * Each flag describes whether one reviewed model can satisfy the corresponding
+ * LanguageModelV4 behavior. It does not expose whether the provider implements
+ * that behavior natively or through an adapter. Provider registration
+ * maintainers own protocol conversion and the supporting conformance evidence.
  */
 export interface RuntimeModelCapabilitiesV1 {
-  /** Whether streaming is native, emulated, or unavailable for this mapping. */
-  readonly streaming: 'native' | 'emulated' | 'unsupported'
-  /** Whether client-executed function tools are native, emulated, or unavailable. */
-  readonly functionTools: 'native' | 'emulated' | 'unsupported'
-  /** Whether more than one tool call may be active in the same model step. */
-  readonly parallelToolCalls: 'supported' | 'unsupported' | 'unknown'
-  /** Tool-choice modes accepted without provider-specific options. */
-  readonly toolChoice: ReadonlyArray<'auto' | 'none' | 'required' | 'named'>
-  /** Whether the Runtime may request reasoning within the approved subset. */
-  readonly reasoningRequest: 'supported' | 'unsupported' | 'unknown'
-  /** Form of reasoning content that may be exposed to consumers. */
-  readonly visibleReasoning: 'summary' | 'none'
-  /** Whether opaque continuation data may be retained only for the active run. */
-  readonly opaqueContinuation: 'run-local' | 'none'
-  /** Completeness of normalized usage information supplied by the mapping. */
-  readonly usage: 'complete' | 'partial' | 'unavailable'
-  /** Reviewed mapping losses that callers must accept before model creation. */
-  readonly knownLosses: ReadonlyArray<RuntimeMappingLossV1>
+  /** Whether the model can satisfy the Runtime's `doStream()` lifecycle. */
+  readonly streaming: boolean
+  /** Whether the Runtime may include the standard `reasoning` call option. */
+  readonly reasoning: boolean
 }
 
-/** Defines how the browser Runtime creates a run-local model for one provider/model mapping. */
-export interface RuntimeModelRegistrationV1 {
-  /** Stable, non-sensitive identifier selected by {@link SendInput.registrationId}. */
-  readonly id: string
+/** Reviewed Runtime policy for one real model identifier exposed by a provider registration. */
+export interface RuntimeModelDescriptorV1 {
+  /** Model-semantic capabilities copied into each run that selects this descriptor. */
+  readonly capabilities: RuntimeModelCapabilitiesV1
+}
+
+/**
+ * Defines one application-owned and trusted provider integration available to new runs.
+ *
+ * @remarks
+ * A provider integration constructs the registration from application-owned
+ * connection and authentication settings. A registration may expose several
+ * real model identifiers. The application may resolve a different registration
+ * for later runs; a run uses the registration returned when that run begins.
+ */
+export interface RuntimeProviderRegistrationV1 {
+  /** Stable, non-sensitive application identifier for this provider integration. */
+  readonly providerId: string
+  /** Reviewed model descriptors keyed by the real ID passed to `languageModel()`. */
+  readonly models: Readonly<Record<string, RuntimeModelDescriptorV1>>
   /**
-   * Creates the model instance owned by the current run.
+   * Creates the AI SDK Provider V4 language-model surface owned by the current run.
    *
    * @remarks
-   * The registration implementer owns the target endpoint and must verify that
-   * the mapping works from supported browsers before making the registration
-   * available. Applications must register only trusted implementations because
-   * this factory receives the run-local credential.
+   * The registration implementer owns the target endpoint, headers, and
+   * authentication behavior and must verify that each exposed mapping works
+   * from supported browsers. Runtime callers do not supply these settings.
+   * Applications must resolve only trusted registrations.
    *
-   * The Runtime calls `doStream()` with an allowlisted
-   * `LanguageModelV4CallOptions` request. Only
+   * The Runtime selects the requested real model through `languageModel()` and
+   * calls `doStream()` with allowlisted options. Only
    * `LanguageModelV4StreamResult.stream` may cross into the Ingress Guard;
-   * request and response debugging data from the result must be discarded at
-   * the coordinator boundary.
+   * request and response debugging data must be discarded at the coordinator
+   * boundary.
    *
-   * @param context - Opaque run-local inputs required by the provider factory.
-   * @returns A LanguageModelV4 instance that must not be retained after its run ends.
+   * @returns The Provider V4 language-model surface retained only for that run.
    */
-  readonly createModel: (context: RuntimeModelContextV1) => LanguageModelV4
-  /** Reviewed model-semantic capabilities frozen into each run. */
-  readonly capabilities: RuntimeModelCapabilitiesV1
+  readonly createProvider: () => RuntimeLanguageProviderV4
 }
 
 /** Safe, provider-neutral error information exposed through Runtime state. */

@@ -132,13 +132,9 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
         status: 'pending',
         stepIds: [],
         messageIds: [],
-        provider: event.provider,
+        providerId: event.providerId,
         modelId: event.modelId,
-        capabilities: {
-          ...event.capabilities,
-          toolChoice: [...event.capabilities.toolChoice],
-          knownLosses: event.capabilities.knownLosses.map((loss) => ({ ...loss })),
-        },
+        capabilities: { ...event.capabilities },
       }
 
       return {

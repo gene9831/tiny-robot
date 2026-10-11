@@ -64,8 +64,8 @@ export interface RuntimeRun {
   readonly stepIds: ReadonlyArray<string>
   /** Message identifiers produced or consumed as part of this run. */
   readonly messageIds: ReadonlyArray<string>
-  /** Sanitized, non-sensitive provider identifier frozen for this run. */
-  readonly provider: string
+  /** Application-defined provider registration identifier frozen for this run. */
+  readonly providerId: string
   /** Sanitized, non-sensitive model identifier frozen for this run. */
   readonly modelId: string
   /** Reviewed capability descriptor frozen when the run is created. */
@@ -184,18 +184,11 @@ export interface RuntimeToolCall {
  *       status: 'completed',
  *       stepIds: ['step-1'],
  *       messageIds: ['message-user', 'message-assistant'],
- *       provider: 'example-provider',
+ *       providerId: 'example-provider',
  *       modelId: 'example-model',
  *       capabilities: {
- *         streaming: 'native',
- *         functionTools: 'unsupported',
- *         parallelToolCalls: 'unsupported',
- *         toolChoice: ['none'],
- *         reasoningRequest: 'unsupported',
- *         visibleReasoning: 'none',
- *         opaqueContinuation: 'none',
- *         usage: 'partial',
- *         knownLosses: [],
+ *         streaming: true,
+ *         reasoning: false,
  *       },
  *       termination: 'stop',
  *       usage: { inputTokens: 12, outputTokens: 8 },

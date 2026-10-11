@@ -21,7 +21,7 @@ interface RunCreatedEvent {
   readonly conversationId: string
   readonly turnId: string
   readonly runId: string
-  readonly provider: string
+  readonly providerId: string
   readonly modelId: string
   readonly capabilities: RuntimeModelCapabilitiesV1
 }

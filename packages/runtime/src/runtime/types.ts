@@ -1,5 +1,23 @@
-import type { RuntimeCommand, SendInput } from '../commands/types'
+import type { RegenerateLastResponseInput, RetryLastRunInput, RuntimeCommand, SendInput } from '../commands/types'
 import type { RuntimeSnapshot } from '../domain/types'
+import type { RuntimeProviderRegistrationV1 } from '../model/types'
+
+/** Dependencies used when constructing a framework-independent Runtime instance. */
+export interface CreateRuntimeOptions {
+  /**
+   * Resolves the application-owned provider registration available to a new run.
+   *
+   * @remarks
+   * The Runtime invokes this synchronous resolver once when a new run begins.
+   * Applications may update their provider configuration between runs without
+   * rebuilding the Runtime. Returning `undefined` rejects the new run before a
+   * provider or model is created.
+   *
+   * @param providerId - Application-defined provider integration identifier.
+   * @returns The current trusted registration, or `undefined` when unavailable.
+   */
+  readonly resolveProvider: (providerId: string) => RuntimeProviderRegistrationV1 | undefined
+}
 
 /**
  * Public command and snapshot boundary for the framework-independent Runtime.
@@ -36,7 +54,7 @@ export interface TinyRobotRuntime {
   /**
    * Requests a new user turn and response run through convenience input.
    *
-   * @param input - Conversation, registration, content, and optional transient credential.
+   * @param input - Conversation, provider, model, and content for the new run.
    * @returns A promise that settles after the send request is accepted or rejected.
    * @throws A safe Runtime error when capability preflight or command validation fails.
    */
@@ -53,18 +71,18 @@ export interface TinyRobotRuntime {
   /**
    * Starts a new attempt for the latest failed, aborted, or interrupted run.
    *
-   * @param conversationId - Runtime conversation identifier containing the eligible run.
+   * @param input - Conversation containing the eligible run.
    * @returns A promise that settles after the retry request is accepted or rejected.
    */
-  retryLastRun(conversationId: string): Promise<void>
+  retryLastRun(input: RetryLastRunInput): Promise<void>
 
   /**
    * Creates a new run from the same prior context as the latest selected response.
    *
-   * @param conversationId - Runtime conversation identifier containing the eligible turn.
+   * @param input - Conversation containing the eligible turn.
    * @returns A promise that settles after the regenerate request is accepted or rejected.
    */
-  regenerateLastResponse(conversationId: string): Promise<void>
+  regenerateLastResponse(input: RegenerateLastResponseInput): Promise<void>
 
   /**
    * Grants approval for a Runtime tool call that is awaiting user approval.

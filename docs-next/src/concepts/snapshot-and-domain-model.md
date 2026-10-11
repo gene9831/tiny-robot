@@ -4,6 +4,8 @@
 
 `RuntimeSnapshot` 是**一个 `TinyRobotRuntime` 实例当前已知并驻留在内存中的完整、规范化领域状态**。
 
+本页解决的问题是：一次问答涉及多个对象时，Runtime 怎样保存唯一、可查询且不会互相覆盖的领域状态。读完后，你应该能沿着 ID 从 Conversation 找到最终 Part，并说明 Snapshot 不等于后端数据库或 UI state。
+
 这一定义同时限定了三个范围：
 
 - 它属于一个 Runtime 实例，不是全局单例；
@@ -130,11 +132,11 @@ flowchart TB
 stateDiagram-v2
   [*] --> Resident: 创建或恢复 Conversation
   Resident --> Resident: Run 完成 / 切换当前 UI Conversation
-  Resident --> Unloaded: 未来的显式卸载策略
-  Unloaded --> Resident: 未来从持久化恢复
+  Resident --> Unloaded: 契约外：显式卸载策略
+  Unloaded --> Resident: 契约外：从持久化恢复
 ```
 
-显式卸载、容量上限、LRU cache、分页加载和持久化恢复策略尚未设计。本轮不能假定存在自动释放逻辑。销毁整个 Runtime 实例时，其内存引用当然可以随实例一起释放，但这不是 Conversation 级领域事件。
+当前契约不定义显式卸载、容量上限、LRU cache、分页加载或持久化恢复策略，因此应用不能假定 Runtime 会自动释放 Conversation。销毁整个 Runtime 实例时，其内存引用可以随实例一起释放，但这不是 Conversation 级领域事件。
 
 ## 为什么用 ID 表而不是深层嵌套
 
@@ -165,4 +167,12 @@ flowchart LR
 
 Snapshot 是领域事实来源，但并不意味着 UI 所有 state 都塞进 Snapshot。Selector 是无副作用投影；Vue/Angular 可以分别用自己的响应式机制消费同一个 View Model 契约。
 
-完整场景见[一次文本回答](../examples/completed-text-run.md)和[多个 Conversation](../examples/multiple-conversations.md)。多 Step 工具循环、Regenerate 和 Selector 聚合会在对应后续 Task 进入文档，不提前扩展当前 Task 2 的状态契约。
+先通过[多个 Conversation](../examples/multiple-conversations.md)验证 Snapshot 的作用域和所有权隔离。当前状态契约覆盖驻留的规范化 Snapshot 和单 Step 文本生命周期；多 Step、重试、重新生成和恢复必须在保持同一所有权模型的前提下扩展，Selector 仍属于独立的 UI contract。
+
+## 检查你的理解
+
+1. `RuntimeSnapshot` 为什么可以包含多个 Conversation，却仍只属于一个 Runtime？
+2. 规范化实体表怎样避免同一 Message 被复制到多个嵌套对象？
+3. UI 当前选中的 Conversation 为什么不应改变 Snapshot 的数据范围？
+
+主线下一步是[多个 Conversation](../examples/multiple-conversations.md)，用具体场景验证作用域与隔离。

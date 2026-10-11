@@ -3,15 +3,8 @@ import type { RuntimeModelCapabilitiesV1, RuntimeSnapshot } from '../../src/inde
 import { createRuntimeSnapshot, reduceRuntimeEvent } from '../../src/domain/reducer'
 
 const capabilities: RuntimeModelCapabilitiesV1 = {
-  streaming: 'native',
-  functionTools: 'unsupported',
-  parallelToolCalls: 'unsupported',
-  toolChoice: ['none'],
-  reasoningRequest: 'unsupported',
-  visibleReasoning: 'none',
-  opaqueContinuation: 'none',
-  usage: 'partial',
-  knownLosses: [],
+  streaming: true,
+  reasoning: false,
 }
 
 function createActiveRun(stepKind: 'model' | 'tool' = 'model'): RuntimeSnapshot {
@@ -23,7 +16,7 @@ function createActiveRun(stepKind: 'model' | 'tool' = 'model'): RuntimeSnapshot 
       conversationId: 'conversation-1',
       turnId: 'turn-1',
       runId: 'run-1',
-      provider: 'provider-1',
+      providerId: 'provider-1',
       modelId: 'model-1',
       capabilities,
     },
@@ -42,7 +35,7 @@ function createTwoActiveRuns(): RuntimeSnapshot {
       conversationId: 'conversation-2',
       turnId: 'turn-2',
       runId: 'run-2',
-      provider: 'provider-2',
+      providerId: 'provider-2',
       modelId: 'model-2',
       capabilities,
     },
@@ -79,7 +72,7 @@ describe('Runtime reducer run lifecycle', () => {
       status: 'active',
       stepIds: ['step-1'],
       messageIds: [],
-      provider: 'provider-1',
+      providerId: 'provider-1',
       modelId: 'model-1',
       capabilities,
     })
@@ -188,7 +181,7 @@ describe('Runtime reducer run lifecycle', () => {
         conversationId: 'conversation-2',
         turnId: 'turn-1',
         runId: 'run-1',
-        provider: 'provider-1',
+        providerId: 'provider-1',
         modelId: 'model-1',
         capabilities,
       }),

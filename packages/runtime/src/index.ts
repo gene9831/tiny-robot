@@ -1,5 +1,5 @@
 /**
- * Framework-independent command, model-registration, and snapshot contracts for
+ * Framework-independent command, provider-registration, and snapshot contracts for
  * Tiny Robot conversations.
  *
  * @packageDocumentation
@@ -9,7 +9,9 @@ export type {
   ApproveToolCallCommand,
   DenyToolCallCommand,
   RegenerateLastResponseCommand,
+  RegenerateLastResponseInput,
   RetryLastRunCommand,
+  RetryLastRunInput,
   RuntimeCommand,
   SendCommand,
   SendInput,
@@ -30,10 +32,10 @@ export type {
   RuntimeTurn,
 } from './domain/types'
 export type {
-  RuntimeMappingLossV1,
+  RuntimeLanguageProviderV4,
   RuntimeModelCapabilitiesV1,
-  RuntimeModelContextV1,
-  RuntimeModelRegistrationV1,
+  RuntimeModelDescriptorV1,
+  RuntimeProviderRegistrationV1,
   RuntimeProviderErrorV1,
 } from './model/types'
-export type { TinyRobotRuntime } from './runtime/types'
+export type { CreateRuntimeOptions, TinyRobotRuntime } from './runtime/types'

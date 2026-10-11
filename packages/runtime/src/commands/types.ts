@@ -4,8 +4,10 @@ export interface SendCommand {
   readonly type: 'send'
   /** Conversation that receives the new turn. */
   readonly conversationId: string
-  /** Identifier of the reviewed model registration used by the run. */
-  readonly registrationId: string
+  /** Application-defined provider integration selected for the new run. */
+  readonly providerId: string
+  /** Real model identifier selected from the provider registration. */
+  readonly modelId: string
   /** User-authored text to append to the conversation. */
   readonly content: string
 }
@@ -63,18 +65,22 @@ export type RuntimeCommand =
 export interface SendInput {
   /** Conversation that receives the new turn. */
   readonly conversationId: string
-  /** Identifier of the reviewed model registration used by the run. */
-  readonly registrationId: string
+  /** Application-defined provider integration selected for the new run. */
+  readonly providerId: string
+  /** Real model identifier selected from the provider registration. */
+  readonly modelId: string
   /** User-authored text to append to the conversation. */
   readonly content: string
-  /**
-   * Provider credential supplied only for the new run.
-   *
-   * @remarks
-   * The Runtime passes this value only to the model registration that creates
-   * the provider model for the new run. It separates the credential from the
-   * domain command before dispatch and must not copy, inspect, log, persist,
-   * serialize, or expose it through Runtime state.
-   */
-  readonly credential?: unknown
+}
+
+/** Inputs for retrying the latest eligible run. */
+export interface RetryLastRunInput {
+  /** Conversation containing the failed, aborted, or interrupted run to retry. */
+  readonly conversationId: string
+}
+
+/** Inputs for regenerating the latest eligible response. */
+export interface RegenerateLastResponseInput {
+  /** Conversation whose latest eligible turn should receive a new run. */
+  readonly conversationId: string
 }

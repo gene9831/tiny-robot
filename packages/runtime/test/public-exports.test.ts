@@ -1,11 +1,17 @@
 import { describe, expectTypeOf, it } from 'vitest'
+import type { ProviderV4 } from '@ai-sdk/provider'
 import type {
+  CreateRuntimeOptions,
+  RegenerateLastResponseInput,
+  RetryLastRunInput,
   RuntimeCommand,
+  RuntimeLanguageProviderV4,
   RuntimeModelCapabilitiesV1,
-  RuntimeModelContextV1,
-  RuntimeModelRegistrationV1,
+  RuntimeModelDescriptorV1,
+  RuntimeProviderRegistrationV1,
   RuntimeProviderErrorV1,
   RuntimeSnapshot,
+  SendCommand,
   SendInput,
   TinyRobotRuntime,
 } from '../src/index'
@@ -24,16 +30,12 @@ type ForbiddenBoundaryKey =
 
 type PreviousDepth = [never, 0, 1, 2, 3, 4, 5, 6]
 
-type ExpectedRuntimeModelCapabilityKey =
-  | 'streaming'
-  | 'functionTools'
-  | 'parallelToolCalls'
-  | 'toolChoice'
-  | 'reasoningRequest'
-  | 'visibleReasoning'
-  | 'opaqueContinuation'
-  | 'usage'
-  | 'knownLosses'
+type ExpectedRuntimeModelCapabilityKey = 'streaming' | 'reasoning'
+type ExpectedRuntimeProviderRegistrationKey = 'providerId' | 'models' | 'createProvider'
+type ExpectedRuntimeModelDescriptorKey = 'capabilities'
+type ExpectedSendCommandKey = 'type' | 'conversationId' | 'providerId' | 'modelId' | 'content'
+type ExpectedSendInputKey = 'conversationId' | 'providerId' | 'modelId' | 'content'
+type ExpectedRunReuseInputKey = 'conversationId'
 
 type ContainsForbiddenBoundaryKey<T, Depth extends number = 6> = Depth extends 0
   ? false
@@ -52,17 +54,29 @@ type ContainsForbiddenBoundaryKey<T, Depth extends number = 6> = Depth extends 0
         : false
 
 describe('public Runtime boundary', () => {
-  it('exports the approved model registration and runtime surface', () => {
-    expectTypeOf<RuntimeModelRegistrationV1>().toHaveProperty('id')
-    expectTypeOf<RuntimeModelRegistrationV1>().toHaveProperty('createModel')
-    expectTypeOf<RuntimeModelRegistrationV1>().toHaveProperty('capabilities')
-    expectTypeOf<RuntimeModelContextV1>().toHaveProperty('credential')
-    expectTypeOf<RuntimeModelCapabilitiesV1>().toHaveProperty('knownLosses')
+  it('exports the approved provider registration and runtime surface', () => {
+    expectTypeOf<RuntimeLanguageProviderV4>().toEqualTypeOf<
+      Pick<ProviderV4, 'specificationVersion' | 'languageModel'>
+    >()
+    expectTypeOf<keyof RuntimeProviderRegistrationV1>().toEqualTypeOf<ExpectedRuntimeProviderRegistrationKey>()
+    expectTypeOf<keyof RuntimeModelDescriptorV1>().toEqualTypeOf<ExpectedRuntimeModelDescriptorKey>()
+    expectTypeOf<RuntimeProviderRegistrationV1['createProvider']>().parameters.toEqualTypeOf<[]>()
+    expectTypeOf<CreateRuntimeOptions['resolveProvider']>().returns.toEqualTypeOf<
+      RuntimeProviderRegistrationV1 | undefined
+    >()
+    expectTypeOf<RuntimeModelCapabilitiesV1>().toHaveProperty('streaming')
+    expectTypeOf<RuntimeModelCapabilitiesV1>().toHaveProperty('reasoning')
     expectTypeOf<RuntimeProviderErrorV1>().toHaveProperty('category')
+    expectTypeOf<keyof SendCommand>().toEqualTypeOf<ExpectedSendCommandKey>()
+    expectTypeOf<keyof SendInput>().toEqualTypeOf<ExpectedSendInputKey>()
+    expectTypeOf<keyof RetryLastRunInput>().toEqualTypeOf<ExpectedRunReuseInputKey>()
+    expectTypeOf<keyof RegenerateLastResponseInput>().toEqualTypeOf<ExpectedRunReuseInputKey>()
 
     expectTypeOf<TinyRobotRuntime['getSnapshot']>().returns.toEqualTypeOf<RuntimeSnapshot>()
-    expectTypeOf<TinyRobotRuntime['dispatch']>().parameter(0).toEqualTypeOf<RuntimeCommand>()
+    expectTypeOf<TinyRobotRuntime['dispatch']>().parameters.toEqualTypeOf<[command: RuntimeCommand]>()
     expectTypeOf<TinyRobotRuntime['send']>().parameter(0).toEqualTypeOf<SendInput>()
+    expectTypeOf<TinyRobotRuntime['retryLastRun']>().parameter(0).toEqualTypeOf<RetryLastRunInput>()
+    expectTypeOf<TinyRobotRuntime['regenerateLastResponse']>().parameter(0).toEqualTypeOf<RegenerateLastResponseInput>()
   })
 
   it('keeps credentials and provider transport data out of serializable state and commands', () => {

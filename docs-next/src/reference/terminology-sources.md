@@ -10,20 +10,22 @@
 | **借鉴模式** | 借用成熟架构概念，但具体数据结构和行为由 Tiny Robot 定义       |
 | **项目定义** | 外部可能存在同名概念，但没有可直接继承的统一语义               |
 
-## Task 1：公共边界
+## 公共边界
 
-| 名词                         | 来源类型               | 主要来源                                                                                                                             | Tiny Robot 中的采用方式                                                                             |
-| ---------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `LanguageModelV4`            | 直接采用               | [AI SDK `LanguageModelV4` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4.ts) | 作为 Provider ABI，不作为 Runtime 领域模型；实际版本和允许子集由边界契约固定                        |
-| Provider                     | 直接采用基础角色       | [AI SDK Provider architecture](https://github.com/vercel/ai/blob/main/content/docs/02-foundations/02-providers-and-models.mdx)       | Provider 负责适配模型服务；Runtime 不接受 Provider 原始对象进入 Snapshot                            |
-| Command                      | 借鉴模式               | [Microsoft CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)                                         | 表达调用者意图，可能被拒绝；便利方法不能形成第二套语义                                              |
-| Snapshot / `RuntimeSnapshot` | 项目定义               | 状态快照是通用概念；具体范围没有单一外部规范                                                                                         | 特指一个 Runtime 当前驻留的、不可变且规范化的完整领域状态                                           |
-| Model Registration           | 项目定义               | 无直接外部规范                                                                                                                       | 应用必须信任的 Provider 扩展；负责创建本次 Run 使用的模型，并承担目标 endpoint 的浏览器直连验证责任 |
-| credential / capability      | 借用通用安全与能力术语 | [AI SDK Provider architecture](https://github.com/vercel/ai/blob/main/content/docs/02-foundations/02-providers-and-models.mdx)       | credential 是 Run-local 不透明输入；capability 表示 Runtime 构造和解释模型调用时依赖的语义能力      |
+| 名词                              | 来源类型               | 主要来源                                                                                                                             | Tiny Robot 中的采用方式                                                                       |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `LanguageModelV4`                 | 直接采用               | [AI SDK `LanguageModelV4` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4.ts) | 作为 Provider ABI，不作为 Runtime 领域模型；实际版本和允许子集由边界契约固定                  |
+| `ProviderV4`                      | 直接采用               | [AI SDK `ProviderV4` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/provider/v4/provider-v4.ts)                  | 使用 `languageModel(modelId)` 选择真实模型；Runtime 公共边界只依赖批准的语言模型子集          |
+| Command                           | 借鉴模式               | [Microsoft CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)                                         | 表达调用者意图，可能被拒绝；便利方法不能形成第二套语义                                        |
+| Snapshot / `RuntimeSnapshot`      | 项目定义               | 状态快照是通用概念；具体范围没有单一外部规范                                                                                         | 特指一个 Runtime 当前驻留的、不可变且规范化的完整领域状态                                     |
+| Provider Connection Configuration | 项目定义               | [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)                            | 应用拥有的 endpoint、Provider 类型、设置和模型目录；由 Provider 集成层转换为 registration     |
+| Provider Registration             | 项目定义               | [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)                            | Provider 集成层构造的可信 Runtime 接入对象；提供无参 Provider 工厂和模型目录                  |
+| Model Descriptor                  | 项目定义               | [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#3-provider-registration)                   | 描述一个已评审模型的 Runtime capability；创建 Run 时把能力冻结进领域状态                      |
+| credential / capability           | 借用通用安全与能力术语 | [AI SDK Provider architecture](https://github.com/vercel/ai/blob/main/content/docs/02-foundations/02-providers-and-models.mdx)       | credential 由应用和 Provider 管理；capability 表示 Runtime 构造和解释模型调用时依赖的语义能力 |
 
-Task 1 的精确规范引用还包括 Call Options、Stream Parts 和各 Provider 流协议，统一维护在仓库文件 `docs/contracts/language-model-v4-runtime-boundary-v1.md` 的“规范引用”中。
+精确规范引用还包括 Call Options、Stream Parts 和各 Provider 流协议，统一维护在仓库文件 `docs/contracts/language-model-v4-runtime-boundary-v1.md` 的“规范引用”中。
 
-## Task 2：领域状态
+## 领域状态
 
 | 名词              | 来源类型               | 主要来源                                                                                                                                                           | Tiny Robot 中的采用方式                                                                 |
 | ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
@@ -36,9 +38,17 @@ Task 1 的精确规范引用还包括 Call Options、Stream Parts 和各 Provide
 | reducer           | 借鉴模式               | [Redux：State, Actions, and Reducers](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers)                                                   | 纯函数式地从旧 Snapshot 和 Event 计算新 Snapshot，不执行副作用                          |
 | 按 ID 规范化状态  | 借鉴模式               | [Redux：Normalizing State Shape](https://redux.js.org/usage/structuring-reducers/normalizing-state-shape)                                                          | 每类实体使用独立 ID 表，有序关系保存 ID 数组，并保持未变化引用稳定                      |
 
-## 尚未进入当前快速开始的词
+## 模型调用准备
 
-Ingress Guard、Selector、Presenter、View Model、continuation capsule 等名词不属于当前 Task 1/2 的最小认知集合。它们应在对应任务进入评审时，由相应概念页解释并补充来源，不能提前堆入快速开始。
+| 名词                          | 来源类型 | 主要来源                                                                                                                                                      | Tiny Robot 中的采用方式                                                           |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| capability preflight          | 项目定义 | capability 是通用术语；具体检查集合由 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#4-capability-descriptor) 定义 | 在创建模型前比较实际调用要求和 frozen Run 的 boolean capability，拒绝已禁用的要求 |
+| prompt projection             | 项目定义 | [AI SDK `LanguageModelV4Prompt` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-prompt.ts)             | 从 Snapshot 的有序 Message/Part 明确转换允许子集，不直接复用 AI SDK 类型          |
+| model call options projection | 项目定义 | [AI SDK `LanguageModelV4CallOptions` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-call-options.ts)  | 构造 Tiny Robot 批准字段的完整对象；调用方不能注入任意 Provider/HTTP 配置         |
+
+## 其他架构词
+
+Ingress Guard、Selector、Presenter、View Model、continuation capsule 等名词由对应概念页解释并补充来源。快速开始只保留理解基础链路所需的最小词汇。
 
 ## 项目内的权威顺序
 

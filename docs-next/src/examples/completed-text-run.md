@@ -1,8 +1,12 @@
-# 示例：一次完成的文本回答
+# 场景：一次完成的文本回答
 
-用户在一段对话（Conversation）中发送“你好”，模型返回“你好！有什么可以帮你？”。Runtime 为这次回答创建一个 Run，也就是一次回答尝试。本文展示状态更新函数 reducer 怎样记录整个过程；不熟悉这些概念时可先阅读 [快速开始](../guide/quick-start.md)。
+本页把已经学过的 Snapshot、Domain Event 和 reducer 串成一次完整状态演进。开始前应先理解 [Snapshot 与领域模型](../concepts/snapshot-and-domain-model.md)和 [Domain Event 与 reducer](../concepts/events-and-reducer.md)。
 
-## 过程
+场景目标很简单：用户发送“你好”，Runtime 记录一次回答尝试，逐步接收“你好！有什么可以帮你？”，最终让 UI 从完成的 Snapshot 中读到回答。
+
+## 从什么状态开始
+
+Runtime 已经准备好一个空 Snapshot。用户输入和模型返回不会直接写入嵌套消息对象，而是依次形成内部 Event，再由 reducer 更新规范化实体表。
 
 ```mermaid
 flowchart LR
@@ -14,52 +18,39 @@ flowchart LR
   Create --> Start --> Stream --> Finish
 ```
 
+## 状态怎样一步步形成
+
 对应的 Event 顺序是：
 
 1. `conversation-created` → `turn-created` → `run-created`；
 2. `step-started`；
 3. `message-created` → `text-part-started` → 一个或多个 `text-part-delta` → `text-part-ended`；
-4. `run-terminated`，同时携带当前 `stepId`、`stepStatus` 和 `runStatus`。
+4. `run-terminated`，同时把当前 Step 和 Run 写成终态。
 
-第 4 项是 Task 2 当前实现的单 Step 终止方式：同一个 Event 同时把最后一个 Step 和整个 Run 写成终态。它只适用于“当前 Step 结束时，Run 也随之结束”的流程。
+当前 reducer 用一个终止事实完成单 Step 文本回答。因此它可以表达“本次模型调用结束，同时整次回答结束”，但不能表达“当前 Step 已结束而 Run 继续执行”。需要多 Step 时，领域层必须分别表达 Step 终止与 Run 终止，不能继续复用一个合并事实。
 
-最终的多 Step Run 必须把两层事实拆开。最后一个 Step 也有自己的终止 Event，然后才结束 Run：
-
-```text
-step-terminated(stepId: "step-final", stepStatus: "completed")
-run-terminated(runId: "run-1", runStatus: "completed")
-```
-
-当前 Task 2 尚不能表达“一个 Step 已结束，但 Run 继续 active”。独立的 `step-terminated` 以及工具调用后的后续 Step 属于 Task 8 的实施范围；在那之前，不能把本示例解释成已经支持多 Step 执行。
-
-## 最终关系
+最终关系是：
 
 ```mermaid
 flowchart LR
   C["Conversation c1"] --> T["Turn t1"]
   T --> R["Run r1<br/>completed + selected"]
-  R --> S["Model Step s1<br/>stop + usage"]
+  R --> S["Model Step s1<br/>completed"]
   R --> U["输入 Message m-user"]
   R --> A["输出 Message m-assistant"]
   A --> P["Text Part p1<br/>你好！有什么可以帮你？"]
 ```
 
-## Snapshot 片段
+## 最终 Snapshot
 
-下面是便于评审关系的**提议结构示意**，不能直接复制为当前 API。与场景无关的 capability 字段和空表被折叠。
+下面的对象使用当前 `RuntimeSnapshot` 公共类型中的真实字段。为了聚焦场景，示例使用较短的 ID，但没有发明另一套数据结构。
 
 ```ts
-const snapshot = {
+const snapshot: RuntimeSnapshot = {
   schemaVersion: 1,
-
   conversationsById: {
-    c1: {
-      id: 'c1',
-      turnIds: ['t1'],
-      // Run 已完成，所以没有 activeRunId。
-    },
+    c1: { id: 'c1', turnIds: ['t1'] },
   },
-
   turnsById: {
     t1: {
       id: 't1',
@@ -68,22 +59,20 @@ const snapshot = {
       selectedRunId: 'r1',
     },
   },
-
   runsById: {
     r1: {
       id: 'r1',
       turnId: 't1',
       status: 'completed',
       stepIds: ['s1'],
-      inputMessageIds: ['m-user'],
-      outputMessageIds: ['m-assistant'],
-      provider: 'example-provider',
+      messageIds: ['m-user', 'm-assistant'],
+      providerId: 'example-provider',
       modelId: 'example-model',
-      capabilities: capabilitiesFrozenForRun,
+      capabilities: { streaming: true, reasoning: false },
       termination: 'stop',
+      usage: { inputTokens: 6, outputTokens: 10 },
     },
   },
-
   stepsById: {
     s1: {
       id: 's1',
@@ -91,11 +80,8 @@ const snapshot = {
       index: 0,
       kind: 'model',
       status: 'completed',
-      termination: 'stop',
-      usage: { inputTokens: 6, outputTokens: 10 },
     },
   },
-
   messagesById: {
     'm-user': {
       id: 'm-user',
@@ -108,10 +94,9 @@ const snapshot = {
       turnId: 't1',
       runId: 'r1',
       role: 'assistant',
-      partIds: ['p1'],
+      partIds: ['p-assistant'],
     },
   },
-
   partsById: {
     'p-user': {
       id: 'p-user',
@@ -120,33 +105,41 @@ const snapshot = {
       content: '你好',
       status: 'completed',
     },
-    p1: {
-      id: 'p1',
+    'p-assistant': {
+      id: 'p-assistant',
       messageId: 'm-assistant',
       kind: 'text',
       content: '你好！有什么可以帮你？',
       status: 'completed',
     },
   },
-
   toolCallsById: {},
 }
 ```
 
-## UI 得到什么
+## UI 最终读取什么
 
-Selector 可以从 `selectedRunId` 找到 `r1`，再按 `outputMessageIds` 和 `partIds` 生成当前回答的 View Model。UI 不需要理解 Provider stream，也不需要保存另一份回答状态机。
+UI 可以从 `selectedRunId` 找到 `r1`，再按 `messageIds` 和各 Message 的 `partIds` 读取当前回答。它不需要理解 Provider stream，也不需要维护第二份回答状态机。
 
-## 明确不会出现什么
+这也是规范化状态的价值：Conversation、Turn、Run、Message 和 Part 各自只有一份记录，关系通过 ID 明确连接。
 
-Snapshot 中不会出现 API key、Authorization header、Provider 原始 request/response、AI SDK object、原始错误对象或 UI 草稿/焦点/滚动状态。
+## 验证关键边界
+
+如果 Run 已经终止，之后才到达的文本 delta 不得继续修改回答。reducer 返回原 Snapshot，保证终态不会被迟到数据污染。
+
+安全边界同样可以从最终结果验证：Snapshot 只包含领域数据，不包含 credential、Authorization header、Provider 原始 request/response、SDK object 或 UI 草稿。
 
 ## 回归保护
 
-当前工作树中的以下永久测试保护场景的现行部分：
+- `test/reducer/run-lifecycle.test.ts` 保护实体创建、终态和 usage；
+- `test/reducer/content-parts.test.ts` 保护文本精确追加、结束和终态后的迟到数据；
+- `test/reducer/structural-sharing.test.ts` 保护不可变更新和引用稳定；
+- `RuntimeSnapshot` 的 TSDoc 示例保护同一公共结构的 API 文档展示。
 
-- `test/reducer/run-lifecycle.test.ts`：实体创建和终态；
-- `test/reducer/content-parts.test.ts`：文本精确追加和结束；
-- `test/reducer/structural-sharing.test.ts`：不可变更新和引用稳定。
+## 检查你的理解
 
-提议字段在批准并实现前没有对应公共 API 类型检查，不能当作已验证契约。
+1. 为什么文本 delta 先形成 Event，而不是直接修改 Message？
+2. UI 怎样从 `selectedRunId` 找到最终文本？
+3. 如果未来一个 Run 包含多个 Step，当前哪个合并事实必须被拆开？
+
+下一步阅读 [Provider 注册与安全边界](../concepts/provider-registration.md)，理解应用怎样向 Runtime 提供受信任的接入实例和模型目录。
