@@ -40,7 +40,7 @@ TypeScript 类型和英文 TSDoc 适合在编辑器中查询单个符号，但�
 - **正在集成 Runtime**：先看[Command 与 Runtime API](./concepts/commands-and-runtime.md)，再按需查询 [Runtime API](./reference/runtime-api.md)。
 - **正在评审或维护设计**：查看[架构总览](./design/architecture-overview.md)、[文档完整性规范](./contributing/documentation-standard.md)和[学习文档评审指南](./contributing/learning-document-review.md)。
 
-当前学习范围覆盖公共 Runtime 边界、Snapshot、Domain Event、reducer，以及模型能力预检、Prompt 投影和调用选项投影。尚未进入当前能力范围的执行协调和工具流程不会被当作现行教程。
+当前学习范围覆盖公共 Runtime 边界、Snapshot、Domain Event、reducer、模型能力预检、Prompt 投影、调用选项投影，以及 constructed text stream 的入站校验。尚未进入当前能力范围的执行协调、reasoning ingress 和工具流程不会被当作现行教程。
 
 ## 推荐阅读顺序
 
@@ -53,5 +53,6 @@ TypeScript 类型和英文 TSDoc 适合在编辑器中查询单个符号，但�
 7. [一次文本回答](./examples/completed-text-run.md)：串联状态创建、内容追加和终止。
 8. [Provider 注册与安全边界](./concepts/provider-registration.md)：理解接入实例、模型、能力和凭据停在哪一层。
 9. [准备一次模型调用](./concepts/model-call-projection.md)：理解 Snapshot 怎样变成允许的模型调用对象。
+10. [校验一次模型文本流](./concepts/model-step-ingress.md)：理解 Provider stream 怎样被校验并转换为安全的 Domain Event。
 
 如果只想查看某个 TypeScript 类型，请直接进入 [Runtime API 与 TSDoc](./reference/runtime-api.md)。

@@ -21,7 +21,7 @@ function createTextSnapshot() {
       modelId: 'model-1',
       capabilities,
     },
-    { type: 'step-started', runId: 'run-1', stepId: 'step-1', index: 0, kind: 'model' },
+    { type: 'step-started', runId: 'run-1', stepId: 'step-1', kind: 'model' },
     {
       type: 'message-created',
       runId: 'run-1',

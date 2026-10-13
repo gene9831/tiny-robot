@@ -51,7 +51,7 @@ interface RuntimeSnapshot {
 | `conversationsById` | Runtime 当前驻留的 Conversation         | 找到一段对话及其有序 `turnIds`            |
 | `turnsById`         | 每次用户意图及其所有回答尝试            | 找到有序 `runIds` 和当前选中的 Run        |
 | `runsById`          | 每次完整回答尝试                        | 读取状态、冻结的模型信息、Step 和 Message |
-| `stepsById`         | Run 中的模型调用或工具执行              | 读取执行顺序、种类和状态                  |
+| `stepsById`         | Run 中的模型调用或工具执行              | 按 `stepIds` 读取执行种类和状态           |
 | `messagesById`      | system、user、assistant 或 tool Message | 按 `partIds` 读取消息内容                 |
 | `partsById`         | Text、Reasoning、ToolCall 或 Error Part | 读取最终可展示或可投影的内容              |
 | `toolCallsById`     | Runtime 管理的客户端工具请求            | 读取参数、审批和执行状态                  |
@@ -85,7 +85,8 @@ interface RuntimeSnapshot {
   "stepsById": {
     "step-1": {
       "id": "step-1",
-      "runId": "run-1"
+      "runId": "run-1",
+      "kind": "model"
     }
   },
   "messagesById": {
@@ -107,6 +108,23 @@ interface RuntimeSnapshot {
 ```
 
 以第一张表为例，`conversation-1` 是表的 key，也是实体自己的 `id`；它的 `turnIds` 保存 `turn-1`，因此下一步去 `turnsById["turn-1"]` 取实体。其他关系按相同方式逐层查表。数组保存顺序，实体表保存内容，父实体不会内嵌一份子实体副本。
+
+## Step 和 Message 是两条平行关系
+
+Run 同时保存两条有序 ID 数组，但它们不是按位置配对的父子结构：
+
+```text
+Run
+├─ stepIds    → Step[]
+└─ messageIds → Message[] → Part[]
+```
+
+- `stepIds` 按 `step-started` 的接受顺序排列，是 Step 执行顺序的唯一来源；Step 实体不再重复保存 `index`。
+- `messageIds` 保存属于该 Run 的 Message 内容顺序，每个 Message 再用 `partIds` 保存 Part 顺序。
+- 两个数组的长度不要求相同。例如一次文本回答可以有一个 `Step（kind = 'model'）`，同时包含输入和输出两个 Message。
+- 不能用 `stepIds[n]` 与 `messageIds[n]` 推断关联。当前公共模型也没有持久化“某个 Message 由哪个 Step 产生”的直接关系；是否需要该关系，应在多 Step 协调边界确定后单独设计。
+
+因此，人类可读的概念结构不是 `Run → Step → Message → Part`，而是 Run 分别拥有执行时间线和内容时间线。`stepsById` 中的 `kind = 'model' | 'tool'` 只是同一 Step 实体的分类。
 
 ## 一个 Runtime 可以同时有多个 Conversation
 

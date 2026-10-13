@@ -48,6 +48,7 @@ export default withMermaid(
           items: [
             { text: 'Provider 注册与安全边界', link: '/concepts/provider-registration' },
             { text: '能力检查与参数投影', link: '/concepts/model-call-projection' },
+            { text: '校验模型文本流', link: '/concepts/model-step-ingress' },
           ],
         },
         {

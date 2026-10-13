@@ -66,7 +66,8 @@ reducer 不得 trim、重新分词、合并空格或改变换行。空 delta 不
 | 指向已经终止 Run 的迟到 Event                   | 不再改变 Snapshot     |
 | 缺少被引用实体                                  | 抛出领域不变量错误    |
 | Conversation/Turn/Run/Message/Part 所有权不一致 | 抛出领域不变量错误    |
-| Step index 不连续                               | 抛出领域不变量错误    |
+
+`step-started` 不接收位置索引。reducer 按接受顺序把 Step ID 追加到 `Run.stepIds`；该数组是 Step 顺序的唯一来源。
 
 reducer 接收的是内部 Domain Event，因此所有权错误代表程序或适配器缺陷，不应静默吞掉。外部不可信数据应先由 Ingress Guard（响应检查关口）拒绝。
 
@@ -80,16 +81,16 @@ Step 终止表示“一次模型调用或工具执行已经结束”；Run 终�
 
 ```mermaid
 flowchart LR
-  M1["Model Step 1"] -->|step-terminated| T["Tool Step"]
-  T -->|step-terminated| M2["Model Step 2"]
+  M1["Step 1<br/>kind = model"] -->|step-terminated| T["Step 2<br/>kind = tool"]
+  T -->|step-terminated| M2["Step 3<br/>kind = model"]
   M2 -->|step-terminated| R["Run 仍为 active"]
   R -->|run-terminated| Done["Run completed"]
 ```
 
 - `step-terminated` 结束一次模型调用或工具执行；
 - `run-terminated` 结束整个执行尝试，不强制要求 `stepId`；
-- 模型请求工具时，Model Step 已结束，但 Run 仍是 active；
-- 最后一个 Model Step 也必须先独立终止，不能依靠 `run-terminated` 顺带结束；
+- 模型请求工具时，`Step（kind = 'model'）` 已结束，但 Run 仍是 active；
+- 最后一个 `Step（kind = 'model'）` 也必须先独立终止，不能依靠 `run-terminated` 顺带结束；
 - Run 可以在第一个 Step 创建前被取消。
 
 当前 reducer 的可执行范围是单 Step 文本生命周期。多 Step 执行需要独立的 Step 终止事实，才能在一个 Step 完成后让 Run 继续保持 active。

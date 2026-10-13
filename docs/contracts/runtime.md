@@ -20,7 +20,9 @@
 
 ## Run 生命周期
 
-- 每个 Turn **MAY** 包含多个 Run；每个 Run 固定应用定义的 `providerId`、真实 `modelId`、模型能力、选项和允许工具集合。一次模型调用是一个 Model Step；工具循环中的同一 Run **MAY** 包含多个 Model Step。
+- 每个 Turn **MAY** 包含多个 Run；每个 Run 固定应用定义的 `providerId`、真实 `modelId`、模型能力、选项和允许工具集合。一次模型调用是一个 `Step（kind = 'model'）`；一次 Runtime 管理的工具执行是一个 `Step（kind = 'tool'）`。两者是同一 Step 实体的不同 kind，工具循环中的同一 Run **MAY** 包含多个 Step。
+- `Run.stepIds` **MUST** 按 `step-started` 的接受顺序保存 Step，并且是 Step 顺序的唯一来源；Step 实体 **MUST NOT** 重复保存位置索引。
+- `Run.stepIds` 与 `Run.messageIds` 是两条独立的有序关系，长度 **MAY** 不同，且 **MUST NOT** 按数组位置配对。当前公共模型不表达某个 Message 由哪个 Step 产生。
 - Send、Retry、Regenerate、Command、resolver 与 Provider factory **MUST NOT** 接收 credential。Runtime 只管理当前 Run 使用的 Provider 与 model 引用，并必须在 Run 结束时释放这些执行引用。
 - 同一 Conversation 同时 **MUST NOT** 有超过一个 active Run；不同 Conversation **MAY** 并行。
 - `abort` **MUST** 通过 `AbortSignal` 传播，并把终态归约到 Snapshot。

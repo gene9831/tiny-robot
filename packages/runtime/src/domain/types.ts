@@ -60,9 +60,9 @@ export interface RuntimeRun {
   readonly turnId: string
   /** Current lifecycle state of the run. */
   readonly status: RuntimeRunStatus
-  /** Model and tool step identifiers in execution order. */
+  /** Model and tool step identifiers in accepted execution order; the sole source of step ordering. */
   readonly stepIds: ReadonlyArray<string>
-  /** Message identifiers produced or consumed as part of this run. */
+  /** Message identifiers produced or consumed as part of this run; not positionally paired with stepIds. */
   readonly messageIds: ReadonlyArray<string>
   /** Application-defined provider registration identifier frozen for this run. */
   readonly providerId: string
@@ -95,8 +95,6 @@ export interface RuntimeStep {
   readonly id: string
   /** Run that owns this step. */
   readonly runId: string
-  /** Stable ordering position of this step within its run. */
-  readonly index: number
   /** Whether this step invokes a model or executes a Runtime-managed tool. */
   readonly kind: 'model' | 'tool'
   /** Current lifecycle state of the step. */
@@ -198,7 +196,6 @@ export interface RuntimeToolCall {
  *     'step-1': {
  *       id: 'step-1',
  *       runId: 'run-1',
- *       index: 0,
  *       kind: 'model',
  *       status: 'completed',
  *     },

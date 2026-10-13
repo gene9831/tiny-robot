@@ -20,7 +20,7 @@ function createActiveRun(stepKind: 'model' | 'tool' = 'model'): RuntimeSnapshot 
       modelId: 'model-1',
       capabilities,
     },
-    { type: 'step-started', runId: 'run-1', stepId: 'step-1', index: 0, kind: stepKind },
+    { type: 'step-started', runId: 'run-1', stepId: 'step-1', kind: stepKind },
   ] as const
 
   return events.reduce(reduceRuntimeEvent, createRuntimeSnapshot())
@@ -39,7 +39,7 @@ function createTwoActiveRuns(): RuntimeSnapshot {
       modelId: 'model-2',
       capabilities,
     },
-    { type: 'step-started', runId: 'run-2', stepId: 'step-2', index: 0, kind: 'model' },
+    { type: 'step-started', runId: 'run-2', stepId: 'step-2', kind: 'model' },
     {
       type: 'message-created',
       runId: 'run-2',
@@ -79,7 +79,6 @@ describe('Runtime reducer run lifecycle', () => {
     expect(snapshot.stepsById['step-1']).toEqual({
       id: 'step-1',
       runId: 'run-1',
-      index: 0,
       kind: 'model',
       status: 'active',
     })
@@ -188,18 +187,21 @@ describe('Runtime reducer run lifecycle', () => {
     ).toThrow()
   })
 
-  it('rejects a Step whose index does not match the Run order', () => {
-    const snapshot = createActiveRun()
+  it('appends Steps to the Run in start-event order', () => {
+    const snapshot = reduceRuntimeEvent(createActiveRun(), {
+      type: 'step-started',
+      runId: 'run-1',
+      stepId: 'step-2',
+      kind: 'tool',
+    })
 
-    expect(() =>
-      reduceRuntimeEvent(snapshot, {
-        type: 'step-started',
-        runId: 'run-1',
-        stepId: 'step-2',
-        index: 3,
-        kind: 'tool',
-      }),
-    ).toThrow()
+    expect(snapshot.runsById['run-1']?.stepIds).toEqual(['step-1', 'step-2'])
+    expect(snapshot.stepsById['step-2']).toEqual({
+      id: 'step-2',
+      runId: 'run-1',
+      kind: 'tool',
+      status: 'active',
+    })
   })
 
   it('rejects a Message whose Turn does not own the Run', () => {

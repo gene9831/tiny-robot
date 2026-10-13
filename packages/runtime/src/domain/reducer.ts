@@ -160,13 +160,9 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
 
       const run = requireEntity(snapshot.runsById[event.runId], 'run', event.runId)
-      if (event.index !== run.stepIds.length) {
-        throw new Error(`Step index ${event.index} does not match Run order`)
-      }
       const step: RuntimeStep = {
         id: event.stepId,
         runId: event.runId,
-        index: event.index,
         kind: event.kind,
         status: 'active',
       }

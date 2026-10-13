@@ -16,7 +16,7 @@
 
 ## Step
 
-Run 内可识别、可排序的执行阶段，例如模型生成或工具执行。Step 不等于 UI 组件。
+Run 内可识别、可排序的执行阶段。`kind = 'model'` 表示一次模型调用，`kind = 'tool'` 表示一次 Runtime 管理的工具执行；两者是同一 Step 实体的不同 kind，不是两套平行实体。Step 不等于 UI 组件。
 
 ## Message
 
@@ -58,6 +58,6 @@ Provider Registration 中针对一个真实 `modelId` 的已审核能力声明�
 
 Selector/Presenter 从 Snapshot 计算出的、小而稳定的组件输入。它不保存领域状态，也不发起业务动作。
 
-## Model Step
+## Model Step / Tool Step
 
-Run 中一次完整的模型调用。一个 Run 可以包含多个 Model Step，例如工具调用前后的两次模型生成。
+“Model Step”是 `Step（kind = 'model'）` 的简称，“Tool Step”是 `Step（kind = 'tool'）` 的简称。一个 Run 可以包含多个 Step，例如工具调用前后的两次模型生成和中间的工具执行。

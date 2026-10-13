@@ -103,4 +103,4 @@ const expected = {
 2. 为什么未知或未完成的历史 Part 必须拒绝，而不能静默删除？
 3. Provider 专属参数为什么不能通过调用选项投影进入 Runtime 公共协议？
 
-到这里，当前已实现的学习路径已经从应用请求走到模型调用对象。需要回看模型来源时进入 [Provider 注册与安全边界](./provider-registration.md)；需要精确签名时进入 [Runtime API 与 TSDoc](../reference/runtime-api.md)；需要参与评审时使用[学习文档评审指南](../contributing/learning-document-review.md)。
+下一步阅读[校验一次模型文本流](./model-step-ingress.md)，理解 constructed stream 怎样在进入 Domain 前完成顺序、身份和安全校验。需要回看模型来源时进入 [Provider 注册与安全边界](./provider-registration.md)；需要精确签名时进入 [Runtime API 与 TSDoc](../reference/runtime-api.md)；需要参与评审时使用[学习文档评审指南](../contributing/learning-document-review.md)。

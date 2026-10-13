@@ -29,7 +29,7 @@ Snapshot
 
 Open Responses 只作为 OpenAI Responses mapping 和 conformance 的参考，不是 Tiny Robot 公共协议。
 
-一次 Model Step 的 Provider ABI 同时包含出站请求和入站响应：Runtime 构造允许的 `LanguageModelV4CallOptions`，调用 `LanguageModelV4.doStream()`，然后只把 `LanguageModelV4StreamResult.stream` 交给 Ingress Guard。`LanguageModelV4StreamResult.request` 与 `.response` 是 Provider 调试数据，不属于 Runtime 入站协议。
+一次 `Step（kind = 'model'）`（下文简称 Model Step）的 Provider ABI 同时包含出站请求和入站响应：Runtime 构造允许的 `LanguageModelV4CallOptions`，调用 `LanguageModelV4.doStream()`，然后只把 `LanguageModelV4StreamResult.stream` 交给 Ingress Guard。Model Step 与 Tool Step 只是同一 Step 实体的不同 kind。`LanguageModelV4StreamResult.request` 与 `.response` 是 Provider 调试数据，不属于 Runtime 入站协议。
 
 ## 2. 上游基线与升级
 
@@ -206,7 +206,13 @@ doStream pending
 
 `response-metadata` 可缺失，但同一字段重复出现时值必须一致。
 
-允许的 metadata 只有通过字符和长度约束的 response ID、model ID，以及转换为 epoch milliseconds 的有效 timestamp；其他字段不得进入 Domain。
+允许的 metadata 只有 response ID、model ID 和 timestamp。response ID 与 model ID 必须匹配
+`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$`；不匹配的字段按 unavailable 处理。
+timestamp 必须是有效 `Date`，并转换为 `-8_640_000_000_000_000` 到
+`8_640_000_000_000_000` 范围内的整数 epoch milliseconds；无效字段按 unavailable
+处理。Ingress Guard 只在当前 Model Step 内保留规范化 metadata，用于检查重复字段一致性；
+它不把 metadata 写入 Domain Event、返回结果、日志或诊断。两个有效的同名字段值不一致时
+属于 protocol violation。
 
 Text 与 reasoning：
 
@@ -227,6 +233,9 @@ tool-input-start(id, toolName)
 
 - ID 在同一 Model Step 内 **MUST** 唯一且稳定。
 - Runtime Domain ID **MUST** 由 Runtime 生成；Provider ID 只作为 Step 内关联或经 allowlist 的诊断信息。
+- 文本首次开始时，Ingress Guard **MUST** 通过 Runtime 提供的同步 Part ID 分配器取得新的
+  Runtime Domain ID，并只在当前 Step 的内存映射中关联 Provider ID 与 Runtime Part ID。
+  分配器返回空 ID 或当前 Step 已使用的 Runtime Part ID 时属于 protocol violation。
 - delta 按 `ReadableStream` 到达顺序原样 append；不得 trim、重新 tokenize 或改变换行。
 - V4 没有全局 sequence number；Ingress Guard 以观察顺序和 per-ID state machine 校验。
 - start 前 delta、end 后 delta、重复 end、未知 ID、未关闭 part、finish 后 part 均为 protocol violation。
@@ -313,6 +322,8 @@ interface RuntimeProviderErrorV1 {
 - usage 中缺失值保持 unavailable，不能写成 0。
 - `usage.raw` 不进入 Runtime。
 - final usage 可以映射 input、output、reasoning、cache read/write token；Provider 未提供的值保持 unavailable，不能根据模型名称或格式兼容性推断。
+- usage 数值只有在 `0` 到 `Number.MAX_SAFE_INTEGER` 范围内且为整数时才可映射；无效值按
+  unavailable 处理，合法的 `0` 必须保留。
 
 ## 13. Tool lifecycle 与审批
 

@@ -31,7 +31,7 @@ Reducer → normalized Snapshot
 - 出站侧由 capability preflight 和 allowlist projection 将冻结的 Run 配置、历史和工具投影为允许的 `LanguageModelV4CallOptions` 子集；任意 headers、caller-supplied provider options 和暂缓能力不能穿过该边界。
 - 入站侧只把 `LanguageModelV4StreamResult.stream` 交给 Runtime Ingress Guard；Guard 校验允许的 `LanguageModelV4StreamPart`、事件顺序和终止条件，清洗 error、warning、metadata，并转换为 Domain Event。result 上的 request/response 调试数据必须在 coordinator 边界丢弃。
 - `LanguageModelV4` 是 Provider ABI，不是 Runtime Domain Model；Provider 原始 payload、headers、raw chunks、SDK 对象和未清洗 metadata 不得进入 Snapshot 或组件公共 API。
-- 一次 `LanguageModelV4` 调用对应一个 Model Step。包含工具执行的 Run 可以有多个 Model Step。
+- 一次 `LanguageModelV4` 调用对应一个 `Step（kind = 'model'）`。Runtime 管理的工具执行对应 `Step（kind = 'tool'）`；两者是同一 Step 实体的不同 kind。包含工具执行的 Run 可以有多个 Step。
 
 ### Runtime
 

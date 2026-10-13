@@ -30,7 +30,6 @@ interface StepStartedEvent {
   readonly type: 'step-started'
   readonly runId: string
   readonly stepId: string
-  readonly index: number
   readonly kind: 'model' | 'tool'
 }
 

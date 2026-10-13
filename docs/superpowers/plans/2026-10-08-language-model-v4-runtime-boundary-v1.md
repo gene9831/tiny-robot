@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - `LanguageModelV4.specificationVersion` 必须为 `'v4'`；Runtime 只通过 `doStream()` 消费 stream parts。
-- 一次 Model Step 的 ABI 同时包含出站 `LanguageModelV4CallOptions` 和入站 `LanguageModelV4StreamResult.stream`；完整 result 的 request/response 调试数据不得进入 Ingress Guard。
-- 一次 `LanguageModelV4` 调用等于一个 Model Step；一个 Run 可以包含多个 Model Step。
+- 一次 `Step（kind = 'model'）`（下文简称 Model Step）的 ABI 同时包含出站 `LanguageModelV4CallOptions` 和入站 `LanguageModelV4StreamResult.stream`；完整 result 的 request/response 调试数据不得进入 Ingress Guard。
+- 一次 `LanguageModelV4` 调用等于一个 `Step（kind = 'model'）`；Runtime 管理的工具执行是 `Step（kind = 'tool'）`。两者是同一 Step 实体的不同 kind，一个 Run 可以包含多个 Step。
 - 首期 Provider 仍只实现 OpenAI Responses 与 OpenAI Chat Completions compatible；`@ai-sdk/anthropic@4.0.76` 仅用于 DeepSeek Anthropic-compatible wire→V4 和抽象验证，不形成公开 Anthropic registration、生产依赖或首期支持承诺；Gemini 仍只用于抽象审查。
 - DeepSeek 必须分别验证 Chat Completions、Responses、Anthropic-compatible 三种 API 格式；三者只比较 v1 共同子集，格式特有或被服务端忽略的字段必须记录 declared loss 或 reject，不能据此扩大 Runtime allowlist。
 - Runtime 不依赖 Vue、Angular、DOM、UIMessage 或 Provider wire object；Vue 3.4+、Angular 20+ 仅参与 consumer 类型与构建门禁。
@@ -326,18 +326,20 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 **Interfaces:**
 
 - `consumeModelStepStream(input: ModelStepIngressInput): Promise<ModelStepIngressResult>`.
-- Input contains Runtime IDs, capabilities, `ReadableStream<LanguageModelV4StreamPart>`, `AbortSignal` and synchronous `emit(event)`.
-- Result contains normalized terminal/usage and opaque handle, never raw parts.
+- Input contains Runtime Run/Step/Message IDs, capabilities, a synchronous Runtime-owned `createPartId()` allocator, `ReadableStream<LanguageModelV4StreamPart>`, `AbortSignal` and synchronous `emit(event)`.
+- Result contains only normalized terminal/usage and never raw parts. Task 4 does not add an opaque handle；Task 9 alone may add a reviewed continuation handle.
+- Task 4 normalizes response ID/model ID with `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$` and timestamp to an integer epoch-millisecond value within the ECMAScript Date range. It retains accepted metadata only inside the current Step for repeated-field consistency and does not emit or return it.
+- On protocol violation or unexpected EOF, the Guard cancels the reader, emits exactly one interrupted `run-terminated` event, throws a stable sanitized ingress code and emits nothing afterward. Task 5 must not emit a second terminal for that rejection. Abort/provider-error precedence remains Task 6.
 
 **TDD order:**
 
 - [ ] Construct `stream-start → response-metadata → text-start → text-delta* → text-end → finish(stop)`.
-- [ ] Test order, exact whitespace/newlines, safe metadata and one terminal.
+- [ ] Test order, exact whitespace/newlines, Runtime-owned Part ID allocation, safe metadata/usage and one terminal.
 - [ ] Test delta-before-start, duplicate ID/start/end, unknown ID, duplicate finish and post-finish part.
 - [ ] Confirm RED, implement per-Step/per-ID state maps, observed-order emission and exactly-one-finish validation.
 - [ ] Run targeted ingress tests.
 
-**Acceptance criteria:** raw part is never stored/emitted; Provider IDs only correlate inside one Step; metadata passes explicit character/length/range limits.
+**Acceptance criteria:** raw part is never stored/emitted; Provider IDs only correlate inside one Step; metadata passes explicit character/length/range limits; usage preserves valid zero and drops invalid values; protocol failures expose only stable codes and one interrupted terminal.
 
 **Permanent regressions:** text lifecycle, ordering, IDs, terminal silence.
 

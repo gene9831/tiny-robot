@@ -8,10 +8,12 @@
 
 Runtime 已经准备好一个空 Snapshot。用户输入和模型返回不会直接写入嵌套消息对象，而是依次形成内部 Event，再由 reducer 更新规范化实体表。
 
+模型 stream 形成这些文本 Event 前，必须先经过[模型文本流校验](../concepts/model-step-ingress.md)。该边界负责顺序、Provider ID 到 Runtime ID 的转换和数据清洗；本页从已经确认的 Domain Event 开始说明 Snapshot 演进。
+
 ```mermaid
 flowchart LR
   Create["创建<br/>Conversation · Turn · Run"]
-  Start["启动<br/>Model Step"]
+  Start["启动<br/>Step s1 · kind = model"]
   Stream["组装<br/>Message · Text Part"]
   Finish["结束<br/>Step · Run"]
 
@@ -35,11 +37,13 @@ flowchart LR
 flowchart LR
   C["Conversation c1"] --> T["Turn t1"]
   T --> R["Run r1<br/>completed + selected"]
-  R --> S["Model Step s1<br/>completed"]
+  R --> S["Step s1<br/>kind = model · completed"]
   R --> U["输入 Message m-user"]
   R --> A["输出 Message m-assistant"]
   A --> P["Text Part p1<br/>你好！有什么可以帮你？"]
 ```
+
+这里从 Run 画向 Step 和 Message 的线是两条独立关系，不表示 Step 包含 Message。`stepIds` 与 `messageIds` 不按位置配对，长度也不要求相同；本例正好是一个 Step、两个 Message。
 
 ## 最终 Snapshot
 
@@ -77,7 +81,6 @@ const snapshot: RuntimeSnapshot = {
     s1: {
       id: 's1',
       runId: 'r1',
-      index: 0,
       kind: 'model',
       status: 'completed',
     },

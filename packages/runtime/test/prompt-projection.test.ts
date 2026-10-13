@@ -40,7 +40,6 @@ function textAndReasoningSnapshot(runCapabilities: RuntimeModelCapabilitiesV1 = 
       'step-1': {
         id: 'step-1',
         runId: 'run-1',
-        index: 0,
         kind: 'model',
         status: 'active',
       },
