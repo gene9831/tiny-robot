@@ -268,6 +268,66 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
     }
 
+    case 'reasoning-part-started': {
+      if (snapshot.partsById[event.partId] !== undefined) {
+        return snapshot
+      }
+
+      const message = requireEntity(snapshot.messagesById[event.messageId], 'message', event.messageId)
+      requireOwnership(message.runId, event.runId, 'message')
+      const part: RuntimePart = {
+        id: event.partId,
+        messageId: event.messageId,
+        kind: 'reasoning',
+        status: 'streaming',
+        content: '',
+      }
+
+      return {
+        ...snapshot,
+        messagesById: {
+          ...snapshot.messagesById,
+          [message.id]: { ...message, partIds: [...message.partIds, part.id] },
+        },
+        partsById: {
+          ...snapshot.partsById,
+          [part.id]: part,
+        },
+      }
+    }
+
+    case 'reasoning-part-delta': {
+      const part = requireEntity(snapshot.partsById[event.partId], 'part', event.partId)
+      requireRunOwnsPart(snapshot, event.runId, part)
+      if (part.kind !== 'reasoning' || part.status === 'completed' || event.delta.length === 0) {
+        return snapshot
+      }
+
+      return {
+        ...snapshot,
+        partsById: {
+          ...snapshot.partsById,
+          [part.id]: { ...part, content: `${part.content ?? ''}${event.delta}` },
+        },
+      }
+    }
+
+    case 'reasoning-part-ended': {
+      const part = requireEntity(snapshot.partsById[event.partId], 'part', event.partId)
+      requireRunOwnsPart(snapshot, event.runId, part)
+      if (part.kind !== 'reasoning' || part.status === 'completed') {
+        return snapshot
+      }
+
+      return {
+        ...snapshot,
+        partsById: {
+          ...snapshot.partsById,
+          [part.id]: { ...part, status: 'completed' },
+        },
+      }
+    }
+
     case 'run-terminated': {
       const run = requireEntity(snapshot.runsById[event.runId], 'run', event.runId)
       const step = requireEntity(snapshot.stepsById[event.stepId], 'step', event.stepId)

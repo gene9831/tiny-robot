@@ -38,9 +38,10 @@ TypeScript 类型和英文 TSDoc 适合在编辑器中查询单个符号，但�
 
 - **第一次接触 Runtime**：从[快速开始](./guide/quick-start.md)进入，不需要预先阅读源码或实施计划。
 - **正在集成 Runtime**：先看[Command 与 Runtime API](./concepts/commands-and-runtime.md)，再按需查询 [Runtime API](./reference/runtime-api.md)。
+- **正在验证真实 Provider**：走通首个 text/reasoning Run 后，使用[DeepSeek 三种 API 格式实际验证](./examples/deepseek-runtime/)。
 - **正在评审或维护设计**：查看[架构总览](./design/architecture-overview.md)、[文档完整性规范](./contributing/documentation-standard.md)和[学习文档评审指南](./contributing/learning-document-review.md)。
 
-当前学习范围覆盖公共 Runtime 边界、Snapshot、Domain Event、reducer、模型能力预检、Prompt 投影、调用选项投影，以及 constructed text stream 的入站校验。尚未进入当前能力范围的执行协调、reasoning ingress 和工具流程不会被当作现行教程。
+当前学习范围覆盖公共 Runtime 边界、Conversation facade、首个单 Step text/reasoning Run 的执行协调、Snapshot、Domain Event、reducer、Prompt 投影、调用选项投影，以及 constructed text/reasoning stream 的入站校验。Runtime 直接调用 `LanguageModelV4.doStream()`，不使用 `streamText()`。工具流程、重试、恢复和多 Step Run 不会被当作现行能力。
 
 ## 推荐阅读顺序
 

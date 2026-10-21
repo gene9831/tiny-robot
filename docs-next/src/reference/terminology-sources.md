@@ -40,11 +40,10 @@
 
 ## 模型调用准备
 
-| 名词                          | 来源类型 | 主要来源                                                                                                                                                      | Tiny Robot 中的采用方式                                                           |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| capability preflight          | 项目定义 | capability 是通用术语；具体检查集合由 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#4-capability-descriptor) 定义 | 在创建模型前比较实际调用要求和 frozen Run 的 boolean capability，拒绝已禁用的要求 |
-| prompt projection             | 项目定义 | [AI SDK `LanguageModelV4Prompt` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-prompt.ts)             | 从 Snapshot 的有序 Message/Part 明确转换允许子集，不直接复用 AI SDK 类型          |
-| model call options projection | 项目定义 | [AI SDK `LanguageModelV4CallOptions` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-call-options.ts)  | 构造 Tiny Robot 批准字段的完整对象；调用方不能注入任意 Provider/HTTP 配置         |
+| 名词                          | 来源类型 | 主要来源                                                                                                                                                     | Tiny Robot 中的采用方式                                                   |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| prompt projection             | 项目定义 | [AI SDK `LanguageModelV4Prompt` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-prompt.ts)            | 从 Snapshot 的有序 Message/Part 明确转换允许子集，不直接复用 AI SDK 类型  |
+| model call options projection | 项目定义 | [AI SDK `LanguageModelV4CallOptions` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-call-options.ts) | 构造 Tiny Robot 批准字段的完整对象；调用方不能注入任意 Provider/HTTP 配置 |
 
 ## 其他架构词
 

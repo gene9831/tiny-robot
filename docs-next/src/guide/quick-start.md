@@ -24,15 +24,15 @@ flowchart LR
 
 Runtime 还需要知道怎样调用模型，但不能长期保存 API key 或某个模型实例。
 
-| 文档中的词                                 | 先这样理解                                                            |
-| ------------------------------------------ | --------------------------------------------------------------------- |
-| **Provider 连接配置**                      | 应用保存的 endpoint、Provider 类型、模型目录等连接资料                |
-| **Provider 注册（Provider Registration）** | Provider 集成层构造、供 Runtime 解析的可信接入对象                    |
-| **Provider**                               | 把统一的模型选择和调用方式适配到具体模型服务                          |
-| **providerId / modelId**                   | 应用定义的接入实例标识，以及 Provider 接受的真实模型标识              |
-| **LanguageModelV4**                        | Runtime 固定使用的 AI SDK 模型调用接口                                |
-| **credential**                             | API key 一类的认证资料；由应用和 Provider 管理，不进入 Runtime 输入   |
-| **capability**                             | Runtime 构造模型调用时依赖的模型语义能力，例如 streaming 和 reasoning |
+| 文档中的词                                 | 先这样理解                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| **Provider 连接配置**                      | 应用保存的 endpoint、Provider 类型、模型目录等连接资料              |
+| **Provider 注册（Provider Registration）** | Provider 集成层构造、供 Runtime 解析的可信接入对象                  |
+| **Provider**                               | 把统一的模型选择和调用方式适配到具体模型服务                        |
+| **providerId / modelId**                   | 应用定义的接入实例标识，以及 Provider 接受的真实模型标识            |
+| **LanguageModelV4**                        | Runtime 固定使用的 AI SDK 模型调用接口                              |
+| **credential**                             | API key 一类的认证资料；由应用和 Provider 管理，不进入 Runtime 输入 |
+| **capability**                             | 随模型 descriptor 复制到 Run 的 metadata；当前不参与调用 gate       |
 
 这些名称的来源并不相同：`LanguageModelV4` 和 Provider ABI 直接来自 AI SDK；Command 借用 CQRS 中表达业务意图的概念；`RuntimeSnapshot` 的具体数据范围由 Tiny Robot 自己定义。出处和差异见[命名来源与项目定义](../reference/terminology-sources.md)。
 
@@ -46,14 +46,14 @@ Runtime 还需要知道怎样调用模型，但不能长期保存 API key 或某
 
 Snapshot 使用规范化的领域状态。仍以天气问题为例：
 
-| 文档中的词       | Tiny Robot 中的定义                    | 在示例中是什么                             |
-| ---------------- | -------------------------------------- | ------------------------------------------ |
-| **Conversation** | 一段可以连续追问的对话                 | 用户与助手关于天气的整段聊天               |
-| **Turn**         | 用户提出的一次问题或意图               | “北京今天天气怎么样？”                     |
-| **Run**          | Runtime 为一个 Turn 生成答案的一次尝试 | 第一次回答；点击“重新生成”会创建另一次 Run |
-| **Step**         | Run 中一次模型调用或一次工具执行       | 调用模型生成天气回答                       |
-| **Message**      | 由用户、助手或工具产生的一组内容       | 用户的问题，或助手的完整回答               |
-| **Part**         | Message 中最小的内容单元               | 一段文字、一次工具请求或一个错误           |
+| 文档中的词       | Tiny Robot 中的定义                    | 在示例中是什么                                       |
+| ---------------- | -------------------------------------- | ---------------------------------------------------- |
+| **Conversation** | 一段可以连续追问的对话                 | 用户与助手关于天气的整段聊天                         |
+| **Turn**         | 用户提出的一次问题或意图               | “北京今天天气怎么样？”                               |
+| **Run**          | Runtime 为一个 Turn 生成答案的一次尝试 | 当前发送产生第一次回答；后续重新生成会创建另一次 Run |
+| **Step**         | Run 中一次模型调用或一次工具执行       | 调用模型生成天气回答                                 |
+| **Message**      | 由用户、助手或工具产生的一组内容       | 用户的问题，或助手的完整回答                         |
+| **Part**         | Message 中最小的内容单元               | 一段文字、一次工具请求或一个错误                     |
 
 它们之间最常见的关系是：
 
@@ -61,13 +61,13 @@ Snapshot 使用规范化的领域状态。仍以天气问题为例：
 flowchart LR
   C["一段对话<br/>Conversation"] --> T["一个问题<br/>Turn"]
   T --> R1["第一次回答尝试<br/>Run 1"]
-  T --> R2["重新生成<br/>Run 2"]
+  T -.-> R2["后续重新生成能力<br/>Run 2"]
   R1 --> S["一次执行<br/>Step"]
   R1 --> M["一条消息<br/>Message"]
   M --> P["一段内容<br/>Part"]
 ```
 
-同一个 Turn 可以有多个 Run，因为同一个问题可以重新生成。一次 Run 也可以有多个 Step，因为后续工具流程可能多次调用模型或工具。
+领域模型允许同一个 Turn 包含多个 Run，也允许一次 Run 包含多个 Step。当前已实现的 Send 只创建一个单 Step text/reasoning Run；重新生成、工具循环和 multi-Step 执行仍是后续能力。
 
 Conversation、Turn、Run 和 Step 在不同产品中没有统一层级；上表是 Tiny Robot 的项目定义。Message 和 Part 借鉴 AI SDK 的内容结构，但 Runtime 类型不会直接复用 AI SDK 类型。
 
@@ -96,18 +96,16 @@ Domain Event 借用领域驱动设计中“已经发生的领域事实”这一�
 
 ## 第三步：准备模型调用
 
-Runtime 先确认 frozen Run 的 capability 可以满足本次请求，再把 Snapshot 中允许的历史投影为固定 V4 prompt，最后构造完整的 `LanguageModelV4CallOptions`。这个对象是模型调用边界的输入。
+Runtime 把 Snapshot 中允许的历史投影为固定 V4 prompt，再构造完整的 allowlisted `LanguageModelV4CallOptions`。这个对象是模型调用边界的输入。
 
-| 步骤                          | 负责什么                                      | 产生什么                      |
-| ----------------------------- | --------------------------------------------- | ----------------------------- |
-| capability preflight          | 检查 streaming 和 reasoning                   | 接受本次请求，或稳定拒绝 code |
-| prompt projection             | 按 Message/Part 顺序转换允许历史              | V4 prompt                     |
-| model call options projection | 只组合批准的 output limit、reasoning 和 abort | 完整 allowlisted call options |
+| 步骤                          | 负责什么                           | 产生什么                      |
+| ----------------------------- | ---------------------------------- | ----------------------------- |
+| prompt projection             | 按 Message/Part 顺序转换允许历史   | V4 prompt                     |
+| model call options projection | 只组合批准的 output limit 和 abort | 完整 allowlisted call options |
 
 ```mermaid
 flowchart LR
-  Frozen["冻结的 Run 与历史"] --> Check["能力预检"]
-  Check --> Prompt["Prompt 投影"]
+  Frozen["冻结的 Run 与历史"] --> Prompt["Prompt 投影"]
   Prompt --> Options["调用选项投影"]
   Options --> Result["V4 调用对象"]
 ```
@@ -126,7 +124,7 @@ flowchart LR
 
 1. 应用为什么通过 Command 请求变化，而不是直接修改 Snapshot？
 2. Turn、Run、Step、Message 和 Part 在一次天气问答中分别表示什么？
-3. 为什么模型调用前要依次经过能力检查、Prompt 投影和调用选项投影？
+3. 为什么 capability metadata 不参与当前调用 gate，而 Prompt 和调用选项仍必须经过 allowlist 投影？
 
 如果其中一个问题还不能用自己的话回答，按照上方对应的“继续理解”路径进入详细页面。
 

@@ -6,7 +6,8 @@
     "api:build": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs",
     "dev": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs && vitepress dev",
     "build": "node ../packages/runtime/node_modules/typedoc/bin/typedoc --options ../packages/runtime/typedoc.json --emit docs && vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@braintree/sanitize-url": "7.1.2",
@@ -16,6 +17,14 @@
     "debug": "4.4.3",
     "mermaid": "11.2.1",
     "vitepress": "1.6.4",
-    "vitepress-plugin-mermaid": "2.0.17"
+    "vitepress-plugin-mermaid": "2.0.17",
+    "vitest": "4.1.11"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.76",
+    "@ai-sdk/deepseek": "3.0.63",
+    "@ai-sdk/openai": "4.0.89",
+    "@ai-sdk/provider": "4.0.25",
+    "@opentiny/tiny-robot-runtime": "workspace:^"
   }
 }

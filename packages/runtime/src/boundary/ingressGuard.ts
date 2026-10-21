@@ -1,7 +1,12 @@
 import type { LanguageModelV4StreamPart } from '@ai-sdk/provider'
 import type { RuntimeDomainEvent } from '../domain/events'
-import type { RuntimeModelCapabilitiesV1 } from '../model/types'
-import { TextAssemblyViolation, TextPartAssemblers, type TextAssemblyViolationCode } from './assemblers'
+import {
+  ReasoningPartAssemblers,
+  ContentAssemblyViolation,
+  TextPartAssemblers,
+  type ReasoningAssemblyViolationCode,
+  type TextAssemblyViolationCode,
+} from './assemblers'
 import {
   normalizeResponseMetadata,
   normalizeUsage,
@@ -12,18 +17,19 @@ import {
 
 export type ModelStepIngressErrorCode =
   | TextAssemblyViolationCode
+  | ReasoningAssemblyViolationCode
   | 'model_step_finish_duplicate'
   | 'model_step_finish_missing'
   | 'model_step_finish_reason_unsupported'
   | 'model_step_part_after_finish'
   | 'model_step_part_id_allocation_failed'
-  | 'model_step_part_unsupported'
   | 'model_step_response_metadata_conflict'
   | 'model_step_stream_read_failed'
   | 'model_step_stream_start_duplicate'
   | 'model_step_stream_start_missing'
   | 'model_step_stream_unavailable'
   | 'model_step_text_delta_invalid'
+  | 'model_step_reasoning_delta_invalid'
 
 export class ModelStepIngressError extends Error {
   readonly code: ModelStepIngressErrorCode
@@ -51,7 +57,6 @@ export interface ModelStepIngressInput {
   readonly runId: string
   readonly stepId: string
   readonly messageId: string
-  readonly capabilities: RuntimeModelCapabilitiesV1
   readonly stream: ReadableStream<LanguageModelV4StreamPart>
   readonly abortSignal: AbortSignal
   readonly createPartId: () => string
@@ -101,7 +106,7 @@ function allocatePartId(input: ModelStepIngressInput): string {
   }
 }
 
-/** Consumes one constructed V4 text stream and emits only normalized Runtime facts. */
+/** Consumes one constructed V4 text/reasoning stream and emits only normalized Runtime facts. */
 export async function consumeModelStepStream(input: ModelStepIngressInput): Promise<ModelStepIngressResult> {
   let reader: ReadableStreamDefaultReader<LanguageModelV4StreamPart>
   try {
@@ -110,7 +115,9 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
     input.emit(createInterruptedEvent(input))
     throw new ModelStepIngressError('model_step_stream_unavailable')
   }
-  const textParts = new TextPartAssemblers()
+  const runtimePartIds = new Set<string>()
+  const textParts = new TextPartAssemblers(runtimePartIds)
+  const reasoningParts = new ReasoningPartAssemblers(runtimePartIds)
   let metadata: NormalizedResponseMetadata = {}
   let streamStarted = false
   let pendingResult: ModelStepIngressResult | undefined
@@ -145,7 +152,22 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
 
       if (!streamStarted) {
         if (part.type !== 'stream-start') {
-          protocolViolation('model_step_stream_start_missing')
+          if (part.type === 'error') {
+            protocolViolation('model_step_stream_read_failed')
+          }
+          if (
+            part.type === 'response-metadata' ||
+            part.type === 'text-start' ||
+            part.type === 'text-delta' ||
+            part.type === 'text-end' ||
+            part.type === 'reasoning-start' ||
+            part.type === 'reasoning-delta' ||
+            part.type === 'reasoning-end' ||
+            part.type === 'finish'
+          ) {
+            protocolViolation('model_step_stream_start_missing')
+          }
+          continue
         }
         streamStarted = true
         continue
@@ -196,8 +218,41 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
           })
           break
         }
+        case 'reasoning-start': {
+          const runtimePartId = reasoningParts.start(part.id, () => allocatePartId(input))
+          input.emit({
+            type: 'reasoning-part-started',
+            runId: input.runId,
+            messageId: input.messageId,
+            partId: runtimePartId,
+          })
+          break
+        }
+        case 'reasoning-delta': {
+          if (typeof part.delta !== 'string') {
+            protocolViolation('model_step_reasoning_delta_invalid')
+          }
+          const runtimePartId = reasoningParts.append(part.id)
+          input.emit({
+            type: 'reasoning-part-delta',
+            runId: input.runId,
+            partId: runtimePartId,
+            delta: part.delta,
+          })
+          break
+        }
+        case 'reasoning-end': {
+          const runtimePartId = reasoningParts.end(part.id)
+          input.emit({
+            type: 'reasoning-part-ended',
+            runId: input.runId,
+            partId: runtimePartId,
+          })
+          break
+        }
         case 'finish': {
           textParts.assertClosed()
+          reasoningParts.assertClosed()
           if (part.finishReason.unified !== 'stop') {
             protocolViolation('model_step_finish_reason_unsupported')
           }
@@ -214,13 +269,15 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
         }
         case 'raw':
           break
+        case 'error':
+          protocolViolation('model_step_stream_read_failed')
         default:
-          protocolViolation('model_step_part_unsupported')
+          break
       }
     }
   } catch (error) {
     const code =
-      error instanceof ModelStepProtocolViolation || error instanceof TextAssemblyViolation
+      error instanceof ModelStepProtocolViolation || error instanceof ContentAssemblyViolation
         ? error.code
         : 'model_step_stream_read_failed'
 

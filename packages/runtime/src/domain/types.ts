@@ -204,6 +204,7 @@ export interface RuntimeToolCall {
  *     'message-user': {
  *       id: 'message-user',
  *       turnId: 'turn-1',
+ *       runId: 'run-1',
  *       role: 'user',
  *       partIds: ['part-user-text'],
  *     },

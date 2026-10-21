@@ -4,7 +4,7 @@
 
 ## Conversation
 
-一段可持久化的对话上下文，包含有序的 Turn，并负责协调该上下文中的 active Run。
+一段可持久化的对话上下文，包含有序的 Turn，并负责协调该上下文中的 active Run。Conversation ID 由 Runtime 创建并拥有；公共 `TinyRobotConversation` 只是绑定该 ID 与 Command dispatcher 的无状态 facade，不保存领域状态。
 
 ## Turn
 
@@ -33,6 +33,10 @@ Message 中可独立投影和渲染的内容单元，例如 TextPart、Reasoning
 ## Snapshot
 
 Runtime 在某个时刻的不可变、规范化领域状态。它是业务与 UI 查询当前结果的唯一事实来源。
+
+## Domain Selector
+
+从 Snapshot 选择一个领域根节点，并把它拥有的规范化 ID 关系投影成可直接遍历的不可变领域树。它不保存领域状态、不包含 UI 语义；未变化分支保持引用稳定，缺失的查询根与 Snapshot 内部的悬空引用具有不同结果。
 
 ## Command
 

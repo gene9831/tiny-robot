@@ -61,10 +61,8 @@ export type RuntimeCommand =
   | ApproveToolCallCommand
   | DenyToolCallCommand
 
-/** Inputs for starting a user turn through {@link TinyRobotRuntime.send}. */
-export interface SendInput {
-  /** Conversation that receives the new turn. */
-  readonly conversationId: string
+/** Inputs for starting a user turn through {@link TinyRobotConversation.send}. */
+export interface ConversationSendInput {
   /** Application-defined provider integration selected for the new run. */
   readonly providerId: string
   /** Real model identifier selected from the provider registration. */

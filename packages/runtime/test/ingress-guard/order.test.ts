@@ -19,7 +19,6 @@ function createInput(parts: ReadonlyArray<LanguageModelV4StreamPart>, createPart
       runId: 'runtime-run-1',
       stepId: 'runtime-step-1',
       messageId: 'runtime-message-1',
-      capabilities: { streaming: true, reasoning: false } as const,
       stream: streamFromParts(parts),
       abortSignal: new AbortController().signal,
       createPartId,
@@ -106,6 +105,71 @@ const orderViolations: ReadonlyArray<{
     parts: [start, { type: 'text-start', id: 'secret-provider-id' }, finish],
   },
   {
+    name: 'reasoning delta before reasoning start',
+    code: 'model_step_reasoning_id_unknown',
+    parts: [start, { type: 'reasoning-delta', id: 'secret-provider-id', delta: 'secret-delta' }],
+  },
+  {
+    name: 'duplicate active reasoning start',
+    code: 'model_step_reasoning_start_duplicate',
+    parts: [
+      start,
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+    ],
+  },
+  {
+    name: 'duplicate reasoning provider ID after end',
+    code: 'model_step_reasoning_id_duplicate',
+    parts: [
+      start,
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+      { type: 'reasoning-end', id: 'secret-provider-id' },
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+    ],
+  },
+  {
+    name: 'reasoning end before start',
+    code: 'model_step_reasoning_end_before_start',
+    parts: [start, { type: 'reasoning-end', id: 'secret-provider-id' }],
+  },
+  {
+    name: 'duplicate reasoning end',
+    code: 'model_step_reasoning_end_duplicate',
+    parts: [
+      start,
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+      { type: 'reasoning-end', id: 'secret-provider-id' },
+      { type: 'reasoning-end', id: 'secret-provider-id' },
+    ],
+  },
+  {
+    name: 'reasoning delta after end',
+    code: 'model_step_reasoning_delta_after_end',
+    parts: [
+      start,
+      { type: 'reasoning-start', id: 'secret-provider-id' },
+      { type: 'reasoning-end', id: 'secret-provider-id' },
+      { type: 'reasoning-delta', id: 'secret-provider-id', delta: 'secret-delta' },
+    ],
+  },
+  {
+    name: 'finish with an open reasoning block',
+    code: 'model_step_reasoning_open_at_finish',
+    parts: [start, { type: 'reasoning-start', id: 'secret-provider-id' }, finish],
+  },
+  {
+    name: 'duplicate Runtime Part ID across reasoning and text',
+    code: 'model_step_runtime_part_id_duplicate',
+    parts: [
+      start,
+      { type: 'reasoning-start', id: 'reasoning-provider-id' },
+      { type: 'reasoning-end', id: 'reasoning-provider-id' },
+      { type: 'text-start', id: 'text-provider-id' },
+    ],
+    createPartId: () => 'runtime-part-duplicate',
+  },
+  {
     name: 'duplicate finish',
     code: 'model_step_finish_duplicate',
     parts: [start, finish, finish],
@@ -119,11 +183,6 @@ const orderViolations: ReadonlyArray<{
     name: 'EOF without finish',
     code: 'model_step_finish_missing',
     parts: [start],
-  },
-  {
-    name: 'unsupported Task 4 part',
-    code: 'model_step_part_unsupported',
-    parts: [start, { type: 'reasoning-start', id: 'secret-provider-id' }],
   },
   {
     name: 'unsupported finish reason',
@@ -144,7 +203,7 @@ const orderViolations: ReadonlyArray<{
   },
 ]
 
-describe('minimal text Ingress Guard ordering', () => {
+describe('minimal text and reasoning Ingress Guard ordering', () => {
   it.each(orderViolations)(
     'rejects $name with one sanitized interrupted terminal',
     async ({ code, parts, createPartId }) => {
@@ -200,7 +259,6 @@ describe('minimal text Ingress Guard ordering', () => {
         runId: 'runtime-run-1',
         stepId: 'runtime-step-1',
         messageId: 'runtime-message-1',
-        capabilities: { streaming: true, reasoning: false },
         stream,
         abortSignal: new AbortController().signal,
         createPartId: () => 'runtime-part-1',
@@ -209,6 +267,25 @@ describe('minimal text Ingress Guard ordering', () => {
     ).rejects.toMatchObject({ code: 'model_step_stream_read_failed', stack: undefined })
     expect(JSON.stringify(events)).not.toContain('stream-error-canary')
     expect(events.at(-1)).toMatchObject({ type: 'run-terminated', runStatus: 'interrupted' })
+  })
+
+  it('normalizes streamed Provider errors without exposing the thrown value', async () => {
+    const { input, events } = createInput([start, { type: 'error', error: new Error('provider-error-canary') }, finish])
+
+    await expect(consumeModelStepStream(input)).rejects.toMatchObject({
+      code: 'model_step_stream_read_failed',
+      stack: undefined,
+    })
+    expect(JSON.stringify(events)).not.toContain('provider-error-canary')
+    expect(events.filter((event) => event.type === 'run-terminated')).toEqual([
+      {
+        type: 'run-terminated',
+        runId: 'runtime-run-1',
+        stepId: 'runtime-step-1',
+        runStatus: 'interrupted',
+        stepStatus: 'interrupted',
+      },
+    ])
   })
 
   it('rejects a runtime-invalid text delta before it can enter a Domain Event', async () => {
@@ -238,7 +315,6 @@ describe('minimal text Ingress Guard ordering', () => {
         runId: 'runtime-run-1',
         stepId: 'runtime-step-1',
         messageId: 'runtime-message-1',
-        capabilities: { streaming: true, reasoning: false },
         stream,
         abortSignal: new AbortController().signal,
         createPartId: () => 'runtime-part-1',

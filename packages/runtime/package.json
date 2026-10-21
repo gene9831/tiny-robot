@@ -9,9 +9,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "development": "./src/index.ts",
+        "default": "./dist/index.d.ts"
+      },
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./selectors": {
+      "types": {
+        "development": "./src/selectors/index.ts",
+        "default": "./dist/selectors/index.d.ts"
+      },
+      "development": "./src/selectors/index.ts",
+      "import": "./dist/selectors/index.js",
+      "require": "./dist/selectors/index.cjs",
+      "default": "./dist/selectors/index.js"
     }
   },
   "files": [
@@ -19,14 +34,28 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts src/selectors/index.ts --format cjs,esm --dts",
     "docs:build": "typedoc --options typedoc.json --emit docs",
     "docs:check": "typedoc --options typedoc.json",
     "test": "vitest run",
     "type-check": "tsc --noEmit"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.js"
+      },
+      "./selectors": {
+        "types": "./dist/selectors/index.d.ts",
+        "import": "./dist/selectors/index.js",
+        "require": "./dist/selectors/index.cjs",
+        "default": "./dist/selectors/index.js"
+      }
+    }
   },
   "peerDependencies": {
     "@ai-sdk/provider": "4.0.25"

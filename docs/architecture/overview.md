@@ -6,7 +6,7 @@ Tiny Robot 的下一代架构以 AI 应用常用组件和浏览器 Runtime 为�
 
 ```text
 Runtime Command / normalized Snapshot
-    ↓  capability preflight + allowlist projection
+    ↓  allowlist projection
 LanguageModelV4CallOptions
     ↓  LanguageModelV4.doStream()
 Run-local AI SDK Provider V4 / Provider Adapter ↔ Provider API
@@ -27,9 +27,9 @@ Reducer → normalized Snapshot
 ### Provider Model Boundary
 
 - 使用 AI SDK `ProviderV4.languageModel(modelId)` 选择 `LanguageModelV4`，以 `LanguageModelV4` 作为 Provider 实现与 Runtime 之间的统一模型调用规范；OpenAI Responses、Chat Completions compatible、Anthropic、Gemini 或私有接口由对应 AI SDK Provider 或自定义 Provider 实现该规范。
-- 应用拥有 Provider Connection Configuration 和 credential；Provider 集成层复用 AI SDK creator，将 endpoint、headers 与认证转换为可信的 Provider Registration。Runtime 通过同步 resolver 按 `providerId` 获取 registration；registration 声明多个真实 `modelId` 及其能力，并通过无参工厂为当前 Run 创建只包含 Provider V4 语言模型职责的 Provider。`providerId` 是应用分配的接入实例标识，不要求等于厂商名称。
-- 出站侧由 capability preflight 和 allowlist projection 将冻结的 Run 配置、历史和工具投影为允许的 `LanguageModelV4CallOptions` 子集；任意 headers、caller-supplied provider options 和暂缓能力不能穿过该边界。
-- 入站侧只把 `LanguageModelV4StreamResult.stream` 交给 Runtime Ingress Guard；Guard 校验允许的 `LanguageModelV4StreamPart`、事件顺序和终止条件，清洗 error、warning、metadata，并转换为 Domain Event。result 上的 request/response 调试数据必须在 coordinator 边界丢弃。
+- 应用拥有 Provider Connection Configuration 和 credential；应用侧 Provider 集成代码直接复用具体 AI SDK creator，将 endpoint、headers 与认证转换为可信的 Provider Registration。Runtime 通过同步 resolver 按 `providerId` 获取 registration；registration 声明多个真实 `modelId` 及其能力，并通过无参工厂为当前 Run 创建只包含 Provider V4 语言模型职责的 Provider。`providerId` 是应用分配的接入实例标识，不要求等于厂商名称。只有出现跨应用共享且无法由 creator 配置表达的稳定策略时，才评审独立 Provider package。
+- 出站侧由 allowlist projection 将冻结的 Run 配置与历史投影为允许的 `LanguageModelV4CallOptions` 子集；任意 headers、caller-supplied provider options、reasoning 控制和暂缓能力不能穿过该边界。
+- 入站侧只把 `LanguageModelV4StreamResult.stream` 交给 Runtime Ingress Guard；Guard 校验 text/reasoning 生命周期和终止条件，只把当前领域支持的 part 转换为 Domain Event，忽略其他内容 part，并清洗显式 error、warning 与 metadata。result 上的 request/response 调试数据必须在 coordinator 边界丢弃。
 - `LanguageModelV4` 是 Provider ABI，不是 Runtime Domain Model；Provider 原始 payload、headers、raw chunks、SDK 对象和未清洗 metadata 不得进入 Snapshot 或组件公共 API。
 - 一次 `LanguageModelV4` 调用对应一个 `Step（kind = 'model'）`。Runtime 管理的工具执行对应 `Step（kind = 'tool'）`；两者是同一 Step 实体的不同 kind。包含工具执行的 Run 可以有多个 Step。
 
@@ -37,15 +37,15 @@ Reducer → normalized Snapshot
 
 - 拥有 Conversation、Turn、Run、Message、ToolCall 等领域状态及其不变量。
 - 通过 command 驱动用例，通过 domain event 和 reducer 生成不可变 Snapshot。
-- 公开稳定的 `getSnapshot`、`subscribe`、`dispatch`，以及 `send`、`abort`、`retryLastRun`、`regenerateLastResponse` 等便利方法。
+- 根 Runtime 公开稳定的 `createConversation`、`getSnapshot`、`subscribe` 和 `dispatch`；`send` 由 Runtime-owned Conversation facade 提供并复用同一 `dispatch(send)` 路径。`abort`、`retryLastRun`、`regenerateLastResponse` 等后续方法当前只保留公共签名并稳定拒绝。
 - 创建新 Run 时按需解析一次 `providerId`，校验真实 `modelId` 与能力声明，再冻结 `providerId`、`modelId` 和能力。Provider 配置在应用侧的后续变化不影响已经开始或已经完成的 Run。
 - 使用 `AsyncIterable`、`AbortSignal` 和 `Promise` 表达首期异步流程；公共 API 不依赖 RxJS。
 
 ### Selector / Presenter
 
-- 从规范化 Snapshot 投影出面向小组件的 View Model。
-- 负责排序、组合、派生状态和展示需要的降维；必须是可测试的无副作用计算。
-- 不持有第二份可变领域状态，不反向依赖框架。
+- Runtime Domain Selector 从规范化 Snapshot 选择 Conversation、Turn、Run 或 Message，并把其 ID 关系展开成可直接遍历的不可变领域树；未变化分支保持引用稳定。它们不持有第二份领域状态，也不包含 UI 语义或框架响应式对象。
+- Presenter 在 Domain Selector 之上完成面向组件的组合、派生状态和降维；当前 Runtime selector API 不承担 Presenter 职责。
+- Selector 与 Presenter 均不得反向依赖框架。
 
 ### Web layer
 
@@ -87,5 +87,3 @@ Provider Registration 是应用必须信任的扩展边界：维护者负责验�
 - `@opentiny/tiny-robot-vue`
 - `@opentiny/tiny-robot-angular`
 - `@opentiny/tiny-robot-tokens`
-- `@opentiny/tiny-robot-provider-openai`
-- `@opentiny/tiny-robot-provider-anthropic`

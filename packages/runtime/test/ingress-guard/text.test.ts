@@ -10,9 +10,7 @@ import type { RuntimeDomainEvent } from '../../src/domain/events'
 import { createRuntimeSnapshot, reduceRuntimeEvent } from '../../src/domain/reducer'
 import { streamFromParts, textStopParts } from '../fixtures/v4/text-stop'
 
-const capabilities = { streaming: true, reasoning: false } as const
-type ExpectedIngressInputKey =
-  'runId' | 'stepId' | 'messageId' | 'capabilities' | 'stream' | 'abortSignal' | 'createPartId' | 'emit'
+type ExpectedIngressInputKey = 'runId' | 'stepId' | 'messageId' | 'stream' | 'abortSignal' | 'createPartId' | 'emit'
 type ExpectedIngressResultKey = 'terminal' | 'usage'
 
 function createInput(parts: ReadonlyArray<LanguageModelV4StreamPart>, partIds = ['runtime-part-a', 'runtime-part-b']) {
@@ -25,7 +23,6 @@ function createInput(parts: ReadonlyArray<LanguageModelV4StreamPart>, partIds = 
       runId: 'runtime-run-1',
       stepId: 'runtime-step-1',
       messageId: 'runtime-message-1',
-      capabilities,
       stream: streamFromParts(parts),
       abortSignal: new AbortController().signal,
       createPartId: () => availablePartIds.shift() ?? 'unexpected-runtime-part',
@@ -34,7 +31,7 @@ function createInput(parts: ReadonlyArray<LanguageModelV4StreamPart>, partIds = 
   }
 }
 
-describe('minimal text Ingress Guard', () => {
+describe('minimal text and reasoning Ingress Guard', () => {
   it('keeps the internal ingress input and result surfaces allowlisted', () => {
     expectTypeOf<keyof ModelStepIngressInput>().toEqualTypeOf<ExpectedIngressInputKey>()
     expectTypeOf<keyof ModelStepIngressResult>().toEqualTypeOf<ExpectedIngressResultKey>()
@@ -113,7 +110,7 @@ describe('minimal text Ingress Guard', () => {
         runId: 'runtime-run-1',
         providerId: 'runtime-provider-1',
         modelId: 'runtime-model-1',
-        capabilities,
+        capabilities: { streaming: true, reasoning: false },
       },
       {
         type: 'step-started',
@@ -186,6 +183,46 @@ describe('minimal text Ingress Guard', () => {
     expect(events.at(-1)).toMatchObject({ type: 'run-terminated', usage: { outputTokens: 0 } })
     expect(JSON.stringify({ events, result })).not.toContain('canary')
     expect(events.filter((event) => event.type === 'run-terminated')).toHaveLength(1)
+  })
+
+  it('projects standard reasoning and text parts while ignoring future stream parts', async () => {
+    const futurePart = {
+      type: 'provider-future-metadata',
+      secret: 'future-part-canary',
+    } as unknown as LanguageModelV4StreamPart
+    const parts = [
+      { type: 'stream-start', warnings: [] },
+      { type: 'custom', kind: 'anthropic.message_start' },
+      { type: 'reasoning-start', id: 'provider-reasoning-id' },
+      { type: 'reasoning-delta', id: 'provider-reasoning-id', delta: 'reasoning-canary' },
+      { type: 'reasoning-end', id: 'provider-reasoning-id' },
+      futurePart,
+      { type: 'text-start', id: 'provider-text-id' },
+      { type: 'text-delta', id: 'provider-text-id', delta: 'projected answer' },
+      { type: 'text-end', id: 'provider-text-id' },
+      textStopParts.at(-1)!,
+    ] satisfies ReadonlyArray<LanguageModelV4StreamPart>
+    const { input, events } = createInput(parts, ['runtime-reasoning-part', 'runtime-text-part'])
+
+    await expect(consumeModelStepStream(input)).resolves.toMatchObject({
+      terminal: { termination: 'stop' },
+    })
+
+    expect(events).toContainEqual({
+      type: 'text-part-delta',
+      runId: 'runtime-run-1',
+      partId: 'runtime-text-part',
+      delta: 'projected answer',
+    })
+    expect(events).toContainEqual({
+      type: 'reasoning-part-delta',
+      runId: 'runtime-run-1',
+      partId: 'runtime-reasoning-part',
+      delta: 'reasoning-canary',
+    })
+    expect(events.filter((event) => event.type === 'run-terminated')).toHaveLength(1)
+    expect(JSON.stringify(events)).toContain('reasoning-canary')
+    expect(JSON.stringify(events)).not.toContain('provider-reasoning-id')
   })
 
   it('accepts repeated normalized metadata when every accepted field is identical', async () => {

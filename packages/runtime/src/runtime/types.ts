@@ -1,6 +1,42 @@
-import type { RegenerateLastResponseInput, RetryLastRunInput, RuntimeCommand, SendInput } from '../commands/types'
+import type {
+  ConversationSendInput,
+  RegenerateLastResponseInput,
+  RetryLastRunInput,
+  RuntimeCommand,
+} from '../commands/types'
+import type { LanguageModelV4StreamPart } from '@ai-sdk/provider'
 import type { RuntimeSnapshot } from '../domain/types'
 import type { RuntimeProviderRegistrationV1 } from '../model/types'
+
+/** Context for one Provider V4 stream part observed before Ingress Guard projection. */
+export interface RuntimeStreamPartInspection {
+  /** Runtime-owned Run receiving the part. */
+  readonly runId: string
+  /** Runtime-owned Model Step receiving the part. */
+  readonly stepId: string
+  /** Application-defined Provider Registration selected for the Run. */
+  readonly providerId: string
+  /** Provider model identifier selected for the Run. */
+  readonly modelId: string
+  /** The exact part emitted by `LanguageModelV4.doStream()`. */
+  readonly part: LanguageModelV4StreamPart
+}
+
+/** Optional observation hooks that cannot alter Runtime stream processing or state. */
+export interface RuntimeInspector {
+  /**
+   * Observes each Provider V4 stream part before the Ingress Guard handles it.
+   *
+   * @remarks
+   * The Runtime ignores the callback return value and suppresses callback errors.
+   * Parts may contain provider metadata or raw values and must be handled as
+   * sensitive, ephemeral diagnostic data.
+   */
+  readonly streamPart?: (
+    /** V4 part and Runtime-owned context available at the inspection point. */
+    inspection: RuntimeStreamPartInspection,
+  ) => void
+}
 
 /** Dependencies used when constructing a framework-independent Runtime instance. */
 export interface CreateRuntimeOptions {
@@ -17,6 +53,9 @@ export interface CreateRuntimeOptions {
    * @returns The current trusted registration, or `undefined` when unavailable.
    */
   readonly resolveProvider: (providerId: string) => RuntimeProviderRegistrationV1 | undefined
+
+  /** Optional ephemeral inspection hooks for debugging Provider boundary input. */
+  readonly inspect?: RuntimeInspector
 }
 
 /**
@@ -27,6 +66,13 @@ export interface CreateRuntimeOptions {
  * conversations may progress independently and concurrently.
  */
 export interface TinyRobotRuntime {
+  /**
+   * Creates an empty Conversation with a Runtime-owned identifier.
+   *
+   * @returns A stateless facade that binds Conversation commands to the new identifier.
+   */
+  createConversation(): TinyRobotConversation
+
   /**
    * Returns the current immutable Runtime snapshot.
    *
@@ -50,15 +96,6 @@ export interface TinyRobotRuntime {
    * @throws A safe Runtime error when the command is invalid or cannot be accepted.
    */
   dispatch(command: RuntimeCommand): Promise<void>
-
-  /**
-   * Requests a new user turn and response run through convenience input.
-   *
-   * @param input - Conversation, provider, model, and content for the new run.
-   * @returns A promise that settles after the send request is accepted or rejected.
-   * @throws A safe Runtime error when capability preflight or command validation fails.
-   */
-  send(input: SendInput): Promise<void>
 
   /**
    * Requests cancellation of the active run in a conversation.
@@ -99,4 +136,25 @@ export interface TinyRobotRuntime {
    * @returns A promise that settles after the denial is accepted or rejected.
    */
   denyToolCall(toolCallId: string): Promise<void>
+}
+
+/**
+ * Command facade bound to one Runtime-owned Conversation.
+ *
+ * @remarks
+ * The facade stores no messages, runs, or answer state. Consumers read all
+ * domain state from the owning {@link TinyRobotRuntime} Snapshot.
+ */
+export interface TinyRobotConversation {
+  /** Runtime-owned identifier bound to commands sent through this facade. */
+  readonly id: string
+
+  /**
+   * Requests a new user turn and text/reasoning response in this Conversation.
+   *
+   * @param input - Provider, real model, and user text selected for the new run.
+   * @returns A promise that settles after the current run terminates or the request is rejected.
+   * @throws A safe Runtime error when command, registration, descriptor, or model validation fails.
+   */
+  send(input: ConversationSendInput): Promise<void>
 }

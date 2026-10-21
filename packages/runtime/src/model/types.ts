@@ -4,18 +4,17 @@ import type { ProviderV4 } from '@ai-sdk/provider'
 export type RuntimeLanguageProviderV4 = Pick<ProviderV4, 'specificationVersion' | 'languageModel'>
 
 /**
- * Declares the model behavior that the Runtime may rely on before a run.
+ * Carries model capability metadata frozen into each run.
  *
  * @remarks
- * Each flag describes whether one reviewed model can satisfy the corresponding
- * LanguageModelV4 behavior. It does not expose whether the provider implements
- * that behavior natively or through an adapter. Provider registration
- * maintainers own protocol conversion and the supporting conformance evidence.
+ * Task 5 validates and copies these flags but does not use them to gate model
+ * creation, model calls, or standard stream parts. Future UI and explicit
+ * control policies may refine their semantics with separate review.
  */
 export interface RuntimeModelCapabilitiesV1 {
   /** Whether the model can satisfy the Runtime's `doStream()` lifecycle. */
   readonly streaming: boolean
-  /** Whether the Runtime may include the standard `reasoning` call option. */
+  /** Reserved reasoning capability metadata; it does not gate ingress. */
   readonly reasoning: boolean
 }
 

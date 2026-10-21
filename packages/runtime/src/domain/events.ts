@@ -61,6 +61,26 @@ interface TextPartEndedEvent {
   readonly partId: string
 }
 
+interface ReasoningPartStartedEvent {
+  readonly type: 'reasoning-part-started'
+  readonly runId: string
+  readonly messageId: string
+  readonly partId: string
+}
+
+interface ReasoningPartDeltaEvent {
+  readonly type: 'reasoning-part-delta'
+  readonly runId: string
+  readonly partId: string
+  readonly delta: string
+}
+
+interface ReasoningPartEndedEvent {
+  readonly type: 'reasoning-part-ended'
+  readonly runId: string
+  readonly partId: string
+}
+
 interface RunTerminatedEvent {
   readonly type: 'run-terminated'
   readonly runId: string
@@ -82,4 +102,7 @@ export type RuntimeDomainEvent =
   | TextPartStartedEvent
   | TextPartDeltaEvent
   | TextPartEndedEvent
+  | ReasoningPartStartedEvent
+  | ReasoningPartDeltaEvent
+  | ReasoningPartEndedEvent
   | RunTerminatedEvent

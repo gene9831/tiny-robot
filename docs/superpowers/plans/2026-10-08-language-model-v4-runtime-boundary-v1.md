@@ -4,9 +4,9 @@
 
 **Goal:** 在浏览器优先、BYOK 的 Tiny Robot Runtime 中实现已批准的 LanguageModelV4 Boundary v1，使 OpenAI Responses 与 OpenAI Chat Completions compatible 通过统一 `doStream()` 生命周期产生受校验、可归约、可恢复且不会泄漏凭据的多 Step Run，并用 DeepSeek 的 Chat Completions、Responses、Anthropic-compatible 三种 API 格式验证 Provider ABI 抽象。
 
-**Architecture:** 新建独立的 Runtime package 承载公共 Domain/Command/Snapshot API、出站 CallOptions allowlist projection、Ingress Guard、reducer 与 Run coordinator；新建独立的 OpenAI Provider package，复用 AI SDK creator 将应用拥有的 Provider Connection Configuration 与 credential 转换为可声明多个真实模型的 Provider Registration。Runtime 不接收 credential，只在新 Run 开始时通过同步 resolver 解析一次 registration，并调用其无参 Provider 工厂。Domain/Run→V4 CallOptions、V4 CallOptions→wire request、wire response→V4 StreamPart、V4 StreamPart→Domain Event、Domain Event→Snapshot 分层测试；DeepSeek 三种 wire formats 使用各自 AI SDK Provider 做 test-only conformance，不新增首期 Anthropic 公共 Provider export，Runtime 不复用现有 OpenAI-shaped `packages/kit/src/message` 状态模型。
+**Architecture:** 独立的 Runtime package 承载公共 Domain/Command/Snapshot API、出站 CallOptions allowlist projection、Ingress Guard、reducer 与 Run coordinator；应用直接复用具体 AI SDK Provider creator，将其拥有的 Provider Connection Configuration 与 credential 转换为可声明多个真实模型的 Provider Registration，不增加只做转发的 Tiny Robot Provider package。Runtime 不接收 credential，只在新 Run 开始时通过同步 resolver 解析一次 registration，并调用其无参 Provider 工厂。Domain/Run→V4 CallOptions、V4 CallOptions→wire request、wire response→V4 StreamPart、V4 StreamPart→Domain Event、Domain Event→Snapshot 分层测试；docs-next 的独立 DeepSeek live 示例使用三个 AI SDK Provider 验证首个 text/reasoning Run，后续 private conformance fixtures 再覆盖完整三种 wire formats。Runtime 不复用现有 OpenAI-shaped `packages/kit/src/message` 状态模型。
 
-**Tech Stack:** Node.js 22+、TypeScript 5.8、pnpm 10、Vitest、tsup、TypeDoc 0.28.20、`@ai-sdk/provider@4.0.25`、`@ai-sdk/openai@4.0.89`、`@ai-sdk/openai-compatible@3.0.66`、validation-only `@ai-sdk/anthropic@4.0.76`、Vite browser build、Vue 3.4+ consumer、Angular 20+ consumer。
+**Tech Stack:** Node.js 22+、TypeScript 5.8、pnpm 10、Vitest、tsup、TypeDoc 0.28.20、`@ai-sdk/provider@4.0.25`、private docs/validation dependencies `@ai-sdk/openai@4.0.89`、`@ai-sdk/deepseek@3.0.63`、`@ai-sdk/anthropic@4.0.76`、Vite browser build、Vue 3.4+ consumer、Angular 20+ consumer。
 
 **Spec:** `docs/contracts/language-model-v4-runtime-boundary-v1.md`
 
@@ -15,7 +15,7 @@
 - `LanguageModelV4.specificationVersion` 必须为 `'v4'`；Runtime 只通过 `doStream()` 消费 stream parts。
 - 一次 `Step（kind = 'model'）`（下文简称 Model Step）的 ABI 同时包含出站 `LanguageModelV4CallOptions` 和入站 `LanguageModelV4StreamResult.stream`；完整 result 的 request/response 调试数据不得进入 Ingress Guard。
 - 一次 `LanguageModelV4` 调用等于一个 `Step（kind = 'model'）`；Runtime 管理的工具执行是 `Step（kind = 'tool'）`。两者是同一 Step 实体的不同 kind，一个 Run 可以包含多个 Step。
-- 首期 Provider 仍只实现 OpenAI Responses 与 OpenAI Chat Completions compatible；`@ai-sdk/anthropic@4.0.76` 仅用于 DeepSeek Anthropic-compatible wire→V4 和抽象验证，不形成公开 Anthropic registration、生产依赖或首期支持承诺；Gemini 仍只用于抽象审查。
+- 首期不发布 Tiny Robot Provider wrapper；应用直接组合 AI SDK Provider 与 Registration。`@ai-sdk/anthropic@4.0.76` 只存在于 private docs/validation 环境，不形成公开 Anthropic registration、Runtime 生产依赖或首期支持承诺；Gemini 仍只用于抽象审查。
 - DeepSeek 必须分别验证 Chat Completions、Responses、Anthropic-compatible 三种 API 格式；三者只比较 v1 共同子集，格式特有或被服务端忽略的字段必须记录 declared loss 或 reject，不能据此扩大 Runtime allowlist。
 - Runtime 不依赖 Vue、Angular、DOM、UIMessage 或 Provider wire object；Vue 3.4+、Angular 20+ 仅参与 consumer 类型与构建门禁。
 - Runtime 运行在浏览器；应用拥有 BYOK credential，Provider 集成层与 AI SDK Provider 负责认证。Runtime 的 Provider/model 与 opaque continuation 引用是 Run-local；Run 结束、失败、中止或恢复时必须释放。
@@ -26,8 +26,9 @@
 - hosted/provider-executed/dynamic tools、MCP、多模态、structured output、citations、AG-UI 与 Provider approval flow 必须 reject，不能静默降级。
 - TypeScript consumer 门禁必须使用 5.8、`skipLibCheck: false`，并证明 `json-schema` 与 `@types/node` 不会作为未声明依赖泄漏。
 - Runtime 的全部公共导出、公共属性和公共方法必须使用英文 TSDoc 描述外部可观察语义；TypeDoc 缺失文档、无效链接或生成警告必须使验证失败。
+- Runtime 生成 Conversation ID；`createConversation()` 返回只绑定 ID 与 dispatcher、但不保存领域状态的 `TinyRobotConversation`。`TinyRobotConversation.send()` 是 Conversation-scoped convenience，根 Runtime 的 `dispatch()` 是唯一通用 Command 入口。
 - 测试只保留公共契约、主要验收行为和重要安全/协议回归；调查性测试、私有调用序列断言、日志与临时计数器在任务结束前删除。
-- 本计划不授权创建 package、添加生产依赖、修改公共导出或安全/审批策略；相应任务必须先通过下述人工门禁。
+- 创建 package、添加生产依赖、修改公共导出或安全/审批策略必须先通过下述人工门禁；任务只能实现已经通过对应门禁的 surface。
 - 不自动 `git add`、commit、push 或发布；每个任务末尾以人工 review checkpoint 代替 commit。
 
 ## Repository Baseline and Reuse Decision
@@ -60,7 +61,6 @@ packages/runtime/
   src/execution/runCoordinator.ts
   src/execution/modelCallProjection.ts
   src/execution/promptProjection.ts
-  src/execution/capabilityPreflight.ts
   src/boundary/ingressGuard.ts
   src/boundary/assemblers.ts
   src/boundary/normalization.ts
@@ -78,24 +78,13 @@ packages/runtime/
   test/security/credential-canary.test.ts
   test/fixtures/v4/*.ts
 
-packages/provider-openai/
-  package.json
-  tsconfig.json
-  vitest.config.ts
-  src/index.ts
-  src/responses.ts
-  src/compatible.ts
-  src/capabilities.ts
-  test/responses-conformance.test.ts
-  test/compatible-conformance.test.ts
-  test/deepseek-three-format-validation.test.ts
-  test/helpers/deepseekAnthropicValidation.ts
-  test/fixtures/responses/*
-  test/fixtures/compatible/*
-  test/fixtures/deepseek/chat-completions/*
-  test/fixtures/deepseek/responses/*
-  test/fixtures/deepseek/anthropic/*
-  test/live/README.md
+docs-next/
+  src/examples/deepseek-runtime/index.md
+  src/examples/deepseek-runtime/DeepSeekRuntimeDemo.vue
+  src/examples/deepseek-runtime/providerRegistrations.ts
+  test/deepseek-provider-registrations.test.ts
+  test/provider-conformance/*
+  test/fixtures/{openai-responses,openai-compatible,deepseek}/*
 
 tests/consumers/
   typescript-5.8/
@@ -107,7 +96,7 @@ docs/contributing/
   public-api-documentation.md
 ```
 
-后续任务 `Files` 中以 `src/` 或 `test/` 开头的路径均相对于 `packages/runtime/`；Task 11–13 中明确讨论 Provider registration/conformance 的 `src/`、`test/` 路径均相对于 `packages/provider-openai/`。花括号表示逐个创建所列文件，不表示执行时依赖 shell glob。所有其他路径均从仓库根目录解析。
+后续任务 `Files` 中以 `src/` 或 `test/` 开头的路径均相对于 `packages/runtime/`；Task 11–13 的 Provider conformance 路径位于 private `docs-next/test/`，不形成发布入口。花括号表示逐个创建所列文件，不表示执行时依赖 shell glob。所有其他路径均从仓库根目录解析。
 
 ## Public Interface Gate
 
@@ -131,26 +120,37 @@ export interface CreateRuntimeOptions {
 }
 
 export interface TinyRobotRuntime {
+  createConversation(): TinyRobotConversation
   getSnapshot(): RuntimeSnapshot
   subscribe(listener: (snapshot: RuntimeSnapshot) => void): () => void
   dispatch(command: RuntimeCommand): Promise<void>
-  send(input: SendInput): Promise<void>
   abort(conversationId: string): Promise<void>
   retryLastRun(input: RetryLastRunInput): Promise<void>
   regenerateLastResponse(input: RegenerateLastResponseInput): Promise<void>
   approveToolCall(toolCallId: string): Promise<void>
   denyToolCall(toolCallId: string): Promise<void>
 }
+
+export interface TinyRobotConversation {
+  readonly id: string
+  send(input: ConversationSendInput): Promise<void>
+}
+
+export interface ConversationSendInput {
+  readonly providerId: string
+  readonly modelId: string
+  readonly content: string
+}
 ```
 
-`SendCommand` 与 `SendInput` 使用 `providerId + modelId` 表达选择；`RetryLastRunInput` 和 `RegenerateLastResponseInput` 只携带 `conversationId`。所有 Runtime 输入都不包含 credential、endpoint、headers 或 AI SDK Provider 配置。
+`SendCommand` 使用 Runtime-owned `conversationId + providerId + modelId` 表达完整意图；`ConversationSendInput` 只携带已经由 facade 绑定的 Conversation 之外的 `providerId + modelId + content`。Task 5 不暴露 reasoning 控制，省略表示采用 Provider 默认行为。`TinyRobotConversation.send()` 必须构造一个 `SendCommand` 并委托同一 `dispatch()` 路径，不能拥有第二套验证或执行语义。`RetryLastRunInput` 和 `RegenerateLastResponseInput` 只携带 `conversationId`。所有 Runtime 输入都不包含 credential、endpoint、headers 或 AI SDK Provider 配置。
 
 在 Runtime 发布声明中，AI SDK Provider 只通过 `Pick<ProviderV4, 'specificationVersion' | 'languageModel'>` 暴露，模型只通过 `LanguageModelV4` 暴露；Runtime 内部 boundary 模块可以使用 `LanguageModelV4CallOptions`、`LanguageModelV4StreamResult` 与 `LanguageModelV4StreamPart`。Snapshot、Command（序列化形态）、Domain Event 与组件 API 不得引用任何 AI SDK 类型。
 
 ## Human Approval Gates
 
-- **Gate A — package topology:** 批准新增 `@opentiny/tiny-robot-runtime`、`@opentiny/tiny-robot-provider-openai` 与 private consumer fixtures；同时批准构建、版本、发布脚本如何识别它们。
-- **Gate B — dependencies/toolchain:** 批准固定 `@ai-sdk/provider@4.0.25`（Runtime peer + dev）、`@ai-sdk/openai@4.0.89` 与 `@ai-sdk/openai-compatible@3.0.66`（Provider production）、`@ai-sdk/anthropic@4.0.76`（validation-only dev dependency）、`typedoc@0.28.20`（Runtime dev-only documentation gate）、TypeScript 5.8 和 Node 22+ 门禁；确认无 lockfile 仓库策略。
+- **Gate A — package topology:** 批准新增 `@opentiny/tiny-robot-runtime` 与 private consumer/conformance fixtures；不新增公开 Tiny Robot Provider package。
+- **Gate B — dependencies/toolchain:** 批准固定 `@ai-sdk/provider@4.0.25`（Runtime peer + dev）、`@ai-sdk/openai@4.0.89`、`@ai-sdk/deepseek@3.0.63` 与 `@ai-sdk/anthropic@4.0.76`（private docs/validation dependencies）、`typedoc@0.28.20`（Runtime dev-only documentation gate）、TypeScript 5.8 和 Node 22+ 门禁；确认无 lockfile 仓库策略。
 - **Gate C — public API/export:** 批准上述 Provider Registration、model descriptor、resolver、capability、Snapshot、Command 与 `TinyRobotRuntime` 导出位置；这是 `docs/contracts/runtime.md` 所要求的单独公共契约评审。
 - **Gate D — security/tool approval:** 批准应用与 Provider 集成层的 credential 责任、错误 code allowlist、tool risk/approval policy、diagnostic allowlist、compatible endpoint URL/query 处理。
 - **Gate E — Provider truth claims:** OpenAI 与 DeepSeek 每个格式/endpoint 的浏览器直连、CORS、reasoning、usage、tools、model mapping 与 known losses 必须逐服务人工确认；DeepSeek Anthropic-compatible 自动 model mapping、ignored fields 与格式差异必须在 manifest 中显式记录。Provider 维护者只可在真实浏览器验证成功后把对应 registration 加入支持范围。
@@ -163,13 +163,13 @@ Gate A/B/C/D
   └─ Task 1 public boundary + package gates
       └─ Task 1.1 public TSDoc + generated API gate
           ├─ Task 2 domain reducer foundation
-          │    └─ Task 3 capability + text/reasoning projection
+          │    └─ Task 3 text/reasoning history + call-options projection
           └─ Task 4 ingress guard minimal text
 
 Task 3 + Task 4
   └─ Task 5 first vertical text Run
       ├─ Task 6 terminal/error/abort hardening
-      ├─ Task 7 reasoning/tool assembly
+      ├─ Task 7 tool-input assembly
       │    └─ Task 8 tool approval + multi-Step Run
       │         └─ Task 9 continuation capsule
       └─ Task 10 retry/regenerate/concurrency/recovery
@@ -187,7 +187,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 - abort 与 provider error 同时到达时，caller abort 优先，Snapshot 只能得到一个 `aborted` 终态（Task 6）。
 - parallel tool input delta 交错时必须按 ID 独立组装、按观察顺序发事件，final JSON 与累计字符串不一致必须中断（Task 7）。
-- `finish` 到达但仍有开放 text/reasoning/tool input 时不能完成 Run，必须 `interrupted` 且没有 terminal 后事件（Task 6）。
+- `finish` 到达但仍有开放 text/reasoning/tool input 时不能完成 Run，必须 `interrupted` 且没有 terminal 后事件（text/reasoning 属于 Task 5；tool input 属于 Task 7）。
 - DeepSeek 三种格式对相同 text/tool 输入必须得到等价 Domain observable；Anthropic model auto-mapping、ignored field、reasoning/usage/finish 差异必须表现为已声明 loss/reject，不能静默漂移（Task 13）。
 - error/warning/metadata/endpoint/canary 任一位置包含 secret 时，序列化 Domain Event、Snapshot、diagnostic、fixture 与抛出值都不能包含该 secret（Task 14）。
 
@@ -195,7 +195,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 ### Task 1: Approve package boundaries and pin the public ABI
 
-**Goal:** 在不实现模型调用的前提下建立可构建的 Runtime/Provider package、固定依赖策略和唯一公共导出面。
+**Goal:** 在不实现模型调用的前提下建立可构建的 Runtime package、固定依赖策略和唯一公共导出面。
 
 **Dependencies:** Gate A、B、C、D 全部批准。
 
@@ -204,13 +204,12 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 - Create: `packages/runtime/package.json`, `tsconfig.json`, `vitest.config.ts`
 - Create: `packages/runtime/src/index.ts`, `model/types.ts`, `domain/types.ts`, `commands/types.ts`, `runtime/types.ts`
 - Create: `packages/runtime/test/public-exports.test.ts`
-- Create: `packages/provider-openai/package.json`, `tsconfig.json`
 - Modify after approval: `pnpm-workspace.yaml`, root `package.json`
 
 **Interfaces:**
 
-- Produces: `RuntimeLanguageProviderV4`, `RuntimeProviderRegistrationV1`, `RuntimeModelDescriptorV1`, `CreateRuntimeOptions`, `RuntimeModelCapabilitiesV1`, `RuntimeProviderErrorV1`, `RuntimeSnapshot`, `RuntimeCommand`, `TinyRobotRuntime`.
-- Runtime uses exact `@ai-sdk/provider@4.0.25` as dev and peer dependency; Provider uses exact OpenAI packages as production dependencies.
+- Produces: `RuntimeLanguageProviderV4`, `RuntimeProviderRegistrationV1`, `RuntimeModelDescriptorV1`, `CreateRuntimeOptions`, `RuntimeModelCapabilitiesV1`, `RuntimeProviderErrorV1`, `RuntimeSnapshot`, `RuntimeCommand`, `TinyRobotRuntime`, `TinyRobotConversation`, `ConversationSendInput`.
+- Runtime uses exact `@ai-sdk/provider@4.0.25` as dev and peer dependency；具体 AI SDK Provider 只由 private docs/validation consumer 直接依赖，不形成 Runtime 生产依赖或公开 wrapper package。
 
 **TDD order:**
 
@@ -285,35 +284,33 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Permanent regressions:** lifecycle table, append fidelity, terminal immutability, structural sharing, serialization.
 
-### Task 3: Implement capability preflight and text/reasoning call-options projection
+### Task 3: Implement text/reasoning history and call-options projection
 
-**Goal:** 为文本生成建立调用前边界：根据 frozen Run 的 boolean capability 拒绝不可用的 streaming 或 reasoning 请求，并把冻结 Run 配置、允许的 text/reasoning 历史与 `AbortSignal` 投影为完整的 v1 `LanguageModelV4CallOptions` allowlist。Task 8 扩展同一边界以支持完整工具领域关系；Task 9 增加 opaque continuation。
+**Goal:** 为文本生成建立调用前边界：把允许的 text/reasoning 历史与 `AbortSignal` 投影为完整的 v1 `LanguageModelV4CallOptions` allowlist。Task 5 暂不使用 capability gate，也不暴露 reasoning 控制；Task 8 扩展同一边界以支持完整工具领域关系；Task 9 增加 opaque continuation。
 
 **Dependencies:** Task 2; independent of Task 4.
 
-**Files:** Create `src/execution/capabilityPreflight.ts`, `promptProjection.ts`, `modelCallProjection.ts` and `test/{prompt-projection,model-call-projection}.test.ts`.
+**Files:** Create `src/execution/promptProjection.ts`, `modelCallProjection.ts` and `test/{prompt-projection,model-call-projection}.test.ts`.
 
 **Interfaces:**
 
-- `ModelCapabilityRequirements` derives the `reasoning` field from the pinned call-options type；streaming is intrinsic to this `doStream()` path.
-- `assertModelCapabilities(requirements, capabilities): void`.
 - `projectPrompt(snapshot, runId): LanguageModelV4Prompt`；每条内部投影结果直接使用 `LanguageModelV4Message`，并投影 system/user/assistant text 与 assistant reasoning。具体 Provider prompt 转换不属于 Runtime capability。
 - `RuntimeModelCallOptions` uses `Pick`/`Required` to derive the approved key set from the pinned `LanguageModelV4CallOptions`; `buildModelCallOptions(input)` returns this narrow type, and the constructed object uses `satisfies RuntimeModelCallOptions`.
-- `ModelCallProjectionInput` 的完整 key 集合是 Snapshot、Run ID、`maxOutputTokens`、`reasoning` 和 `AbortSignal`；constructed options 的 key 集合是 prompt、`maxOutputTokens`、`reasoning` 和 `abortSignal`。
+- `ModelCallProjectionInput` 的完整 key 集合是 Snapshot、Run ID、`maxOutputTokens` 和 `AbortSignal`；constructed options 的 key 集合是 prompt、`maxOutputTokens` 和 `abortSignal`。
 - 无法完整投影的 history Part 使用稳定 code reject，不能静默删除。
-- Task 3 只消费 Run 已冻结的 capabilities，不解析 Provider Registration、不调用 resolver，也不创建 Provider 或 model；这些职责属于 Task 5 coordinator。
+- Task 3 不解析 Provider Registration、不调用 resolver，也不创建 Provider 或 model；这些职责属于 Task 5 coordinator。Run capability 当前只是冻结 metadata，不参与 projection gate。
 
 **TDD order:**
 
 - [x] Test exact projection for system/user/assistant text and assistant reasoning；用 RuntimeSnapshot 的字面 fixture 独立给出期望 V4 prompt。
-- [x] Test exact input and narrow return key sets: prompt、`maxOutputTokens`、`reasoning` and `abortSignal` derive from the pinned V4 type.
+- [x] Test exact input and narrow return key sets: prompt、`maxOutputTokens` and `abortSignal` derive from the pinned V4 type.
 - [x] Test rejection of unknown、deferred and unsupported history with stable code；不得静默删除 Snapshot part。
-- [x] Through `buildModelCallOptions`, test streaming/reasoning preflight；对应 boolean 为 `false` 时在 Task 5 的 `createProvider` 前拒绝，不能静默删除已请求的 reasoning 参数。
-- [x] Confirm RED, implement allowlist projection/preflight, then rerun.
+- [x] Through `buildModelCallOptions`, test capability metadata does not gate the constructed V4 call.
+- [x] Confirm RED, implement allowlist projection, then rerun.
 
 **Acceptance criteria:** no UIMessage；unknown、deferred 和 unsupported Snapshot part rejects rather than disappearing；Task 5 的文本 `doStream()` request 是 pinned、allowlisted `LanguageModelV4CallOptions`；no mutation。
 
-**Permanent regressions:** allowed text/reasoning prompt matrix、streaming/reasoning boolean capability rejection、exact call-option key set and deferred/unknown/unsupported-part rejection。Declared-loss completeness belongs to Provider conformance in Tasks 11–14.
+**Permanent regressions:** allowed text/reasoning prompt matrix、exact call-option key set、capability metadata non-gating and deferred/unknown/unsupported-part rejection。Declared-loss completeness belongs to Provider conformance in Tasks 11–14.
 
 ### Task 4: Build the minimal text Ingress Guard
 
@@ -329,6 +326,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 - Input contains Runtime Run/Step/Message IDs, capabilities, a synchronous Runtime-owned `createPartId()` allocator, `ReadableStream<LanguageModelV4StreamPart>`, `AbortSignal` and synchronous `emit(event)`.
 - Result contains only normalized terminal/usage and never raw parts. Task 4 does not add an opaque handle；Task 9 alone may add a reviewed continuation handle.
 - Task 4 normalizes response ID/model ID with `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$` and timestamp to an integer epoch-millisecond value within the ECMAScript Date range. It retains accepted metadata only inside the current Step for repeated-field consistency and does not emit or return it.
+- Task 4 projects only the current text subset. Reasoning、custom、tool、source、file、raw and future unknown content parts are ignored without Domain Event or persistence；explicit `error` and structural protocol violations still interrupt with stable sanitized codes.
 - On protocol violation or unexpected EOF, the Guard cancels the reader, emits exactly one interrupted `run-terminated` event, throws a stable sanitized ingress code and emits nothing afterward. Task 5 must not emit a second terminal for that rejection. Abort/provider-error precedence remains Task 6.
 
 **TDD order:**
@@ -345,32 +343,72 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 ### Task 5: Deliver the first vertical text Run
 
+**Status:** Closed. Task 6 的 terminal/error/abort hardening 与 Task 10 的 concurrency/retry/regenerate 仍按原边界后续交付，不阻塞本 Task。
+
 **Goal:** 连接 command → Run-local model → `doStream()` → Guard → events → reducer → Snapshot。
 
 **Dependencies:** Tasks 2、3、4.
 
-**Files:** Create `src/runtime/createRuntime.ts`, `src/execution/runCoordinator.ts`, `test/integration/text-run.test.ts`, `model-factory-lifetime.test.ts`; modify `src/index.ts`.
+**Files:**
+
+- Create: `packages/runtime/src/runtime/createRuntime.ts`
+- Create: `packages/runtime/src/execution/runCoordinator.ts`
+- Create: `packages/runtime/src/execution/inspectStream.ts`
+- Create: `packages/runtime/src/selectors/index.ts`
+- Create: `packages/runtime/test/integration/text-run.test.ts`
+- Create: `packages/runtime/test/integration/model-factory-lifetime.test.ts`
+- Create: `packages/runtime/test/selectors.test.ts`
+- Modify: `packages/runtime/src/runtime/types.ts`
+- Modify: `packages/runtime/src/commands/types.ts`
+- Modify: `packages/runtime/src/index.ts`
+- Modify: `packages/runtime/{package.json,typedoc.json}`
+- Modify: `packages/runtime/test/public-exports.test.ts`
+- Modify: `docs-next/src/concepts/commands-and-runtime.md`
+- Modify: `docs-next/src/concepts/model-step-ingress.md`
+- Modify: `docs-next/src/examples/completed-text-run.md`
+- Modify: `docs-next/src/index.md`
+- Create: `docs-next/src/examples/deepseek-runtime/{index.md,DeepSeekRuntimeDemo.vue}`
+- Create: `docs-next/src/examples/deepseek-runtime/providerRegistrations.ts`
+- Create: `docs-next/test/deepseek-provider-registrations.test.ts`
+- Modify: `docs-next/{package.json,.vitepress/config.mts,.vitepress/theme/index.ts}`
 
 **Interfaces:**
 
 - `createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime`；`resolveProvider(providerId)` 由应用拥有，可在 Runtime 创建后返回新增的自定义 Provider Registration。
-- Coordinator resolves one registration per new Run, validates the real `modelId` and frozen descriptor, calls `createProvider()` once, then calls `provider.languageModel(modelId)` once. It rejects a model ID mismatch and calls `doStream` once per Model Step.
+- `TinyRobotRuntime.createConversation(): TinyRobotConversation` 同步生成 Runtime-owned Conversation ID，通过 `conversation-created` → reducer 发布新 Snapshot 后返回无状态 facade；facade 只保存 `id` 和 dispatcher 引用。
+- `TinyRobotConversation.send(input: ConversationSendInput): Promise<void>` 构造 `{ type: 'send', conversationId: facade.id, ...input }` 并委托 `TinyRobotRuntime.dispatch()`；根 Runtime 不再公开 `send()`，旧 `SendInput` 不再导出。当前公共输入不表达 reasoning 控制，模型采用 Provider 默认行为。
+- `executeTextRun(input: TextRunCoordinatorInput): Promise<void>` 是 `src/execution/runCoordinator.ts` 的内部单文本 Run 入口。它只消费 `SendCommand`、同步 resolver、当前 Snapshot getter、Runtime ID allocator 和同步 Domain Event emitter。
+- Coordinator 在每次被接受的新 Run 开始时同步 resolve one registration，复制 descriptor capabilities metadata，先验证 registration `providerId`、真实 `modelId` 与 descriptor shape，再调用 `createProvider()` once、`provider.languageModel(modelId)` once。Capability metadata 不 gate 调用或入站 part。Provider 和 model 必须都是 V4，model 的真实 `modelId` 必须与请求一致；每个 Model Step 只调用 `doStream(options)` once。
+- Entity/event order is Conversation already exists → resolve/validate registration and descriptor → create/validate Provider and model → `turn-created` → `run-created` → user `message-created`/text start/delta/end → `buildModelCallOptions()` → model `step-started` → assistant `message-created` → `doStream()` → Guard events/terminal。所有 Conversation、Turn、Run、Step、Message、Part ID 由 Runtime 生成；user Part 也通过现有 text events 进入 reducer。
 - Coordinator drops Provider/model references in `finally`；Provider 配置在 resolver 返回后的变化不影响当前 Run。
 - Coordinator receives `LanguageModelV4StreamResult`, passes only `result.stream` to the Guard, and immediately discards `result.request`/`result.response` debugging data.
-- `dispatch(command)` receives only Runtime intent；`send()` wraps the same path。Credential and Provider connection configuration remain outside Runtime.
+- `CreateRuntimeOptions.inspect.streamPart` 是应用显式配置的 observer-only 诊断旁路；Runtime 可在读取链路中使用 pass-through stream，但必须把相同 part 原样、同序交给 Guard，忽略观察器返回值和同步异常，且不能暴露已丢弃的 request/response。
+- `dispatch(command)` receives only Runtime intent；Conversation facade wraps the same path。Credential and Provider connection configuration remain outside Runtime.
+- Snapshot is the only query source. The emitter applies one Domain Event with `reduceRuntimeEvent`; it publishes only when the reducer returns a new Snapshot. Unsubscribed listeners receive no later update.
+- `@opentiny/tiny-robot-runtime/selectors` 作为 Task 5 amendment 公开 `selectConversation`、`selectTurn`、`selectRun`、`selectMessage` 与对应 Selection 类型。Selector 只展开 Snapshot 的规范化 ID 关系，返回可直接遍历的不可变领域树；不包含 UI state、Presenter 字段或框架响应式对象。缺失根返回 `undefined`，空关系返回空数组，悬空引用抛稳定 selector error，未变化分支保持引用稳定。
+- Task 5 later-task methods retain their approved signatures and reject with `{ code: 'runtime_operation_not_implemented' }` without Snapshot change. Task 5 does not implement abort precedence, retry, regenerate, tool approval or concurrency coordination.
 
 **TDD order:**
 
-- [ ] Fake V4 model emits Task 4 fixture; assert subscriber sees one completed Run/Model Step/message/text part.
-- [ ] Add a Provider Registration to the application-owned resolver after Runtime creation; assert the next Send can select it without rebuilding Runtime. Removing it affects only later Run creation.
-- [ ] Fake result seeds canaries into `request.body` and `response.headers`; assert only `stream` crosses the coordinator boundary and no canary reaches events, Snapshot, diagnostics or errors.
-- [ ] Provider/model lifetime test proves `createProvider()` is called without Runtime auth input, Snapshot never receives Provider objects, and Provider/model references are released.
-- [ ] Confirm RED, implement command routing, Runtime IDs, subscription/coordinator/reducer wiring.
-- [ ] Rerun integration plus Tasks 1–4.
+- [x] Add the public compile-time contract first: export `TinyRobotConversation` and `ConversationSendInput`, add `createConversation()`, remove root `send()`/`SendInput`, retain `SendCommand.conversationId`, keep both Send shapes free of reasoning control, and assert the facade exposes exactly `id | send`. Run `pnpm -F @opentiny/tiny-robot-runtime test -- test/public-exports.test.ts`; expect type-check/test failure because the new surface does not exist.
+- [x] In `text-run.test.ts`, write the first failing vertical test with a fake V4 model emitting the Task 4 legal text fixture. Create two Conversations and assert distinct Runtime-owned IDs without overwriting either Snapshot entity；call `conversation.send()` on one and assert one completed Run with one `Step（kind = 'model'）`, independent user/assistant Message IDs, exact Runtime-owned text Parts, normalized usage/termination, reducer-produced subscriber updates, unsubscribe silence, and `getSnapshot()` identity with the final subscriber value. Run the focused file；expect failure because `createRuntime()` and the facade do not exist.
+- [x] In the same file, write a direct `dispatch({ type: 'send', conversationId: conversation.id, ... })` case and assert it produces the same entity/lifecycle shape as `conversation.send()` without a second send implementation. Add an unknown-Conversation case that rejects with `runtime_conversation_missing` before resolver/factory invocation.
+- [x] In `model-factory-lifetime.test.ts`, add resolver lifecycle cases: registration added after Runtime creation is used by the next Run；replacement/removal affects only later Runs；a registration captured at Run start remains in use while the application replaces it；each accepted or rejected send resolves exactly once.
+- [x] Add factory cases that assert registration-ID mismatch, missing descriptor and malformed descriptor reject before `createProvider()`；capability metadata does not gate accepted Runs；accepted Runs call argument-free `createProvider()` once, `languageModel(modelId)` once, and `doStream(allowlistedOptions)` once. Assert Provider/model V4 and model-ID mismatches reject before `doStream()`.
+- [x] Add the safety canary to `result.request.body` and `result.response.headers`; observe emitted Domain Events through the coordinator harness and assert the unique canary is absent from events, every subscriber Snapshot, final Snapshot, thrown errors, and checked-in fixture data. Assert only `result.stream` parts cross the coordinator boundary；启用 observer 时必须把相同 part 原样、同序交给 Guard，且不能让 `request`/`response` 进入诊断旁路。
+- [x] Add exactly-one-terminal cases: accepted finish yields only the Guard's completed terminal；a Task 4 protocol violation yields only the Guard's interrupted terminal and its stable sanitized error, with no coordinator terminal afterward.
+- [x] Add standard V4 reasoning ingress cases: independent/interleaved reasoning lifecycle, exact whitespace/delta order, Runtime-owned Part IDs, Snapshot/subscriber projection, shared text/reasoning ID uniqueness, open reasoning at finish and Provider ID isolation. Capability metadata must not gate a standard reasoning part that actually appears.
+- [x] Add Runtime-enforced Snapshot immutability, later-task method rejection without Snapshot change, and the Task 5 amendment Selector regressions for ordered expansion, selected/active Run semantics, missing/empty/dangling relationships and reference stability.
+- [x] Run both focused integration files and confirm RED for missing Runtime/coordinator behavior, not for fixture or type errors.
+- [x] Implement the minimal public facade, Runtime ID allocation, event publication/subscription, command routing and `executeTextRun()` wiring. Use Task 3 `buildModelCallOptions()` as the only call-options constructor and Task 4 `consumeModelStepStream()` as the only stream consumer. Do not add `doGenerate()`, `streamText()`, headers, provider options, credential inputs or a second answer state.
+- [x] Run `pnpm -F @opentiny/tiny-robot-runtime test -- test/integration`; expect all Task 5 tests pass. Refactor only duplicated test builders and internal validation helpers；retain no investigation-only counters, logs or fixtures.
+- [x] Update English TSDoc and Chinese learning docs to explain `createConversation()` → `conversation.send()` → coordinator → Guard → reducer → Snapshot, direct `doStream()` with no `streamText()`, the precise Model Step meaning, parallel Step/Message relationships, the Domain Selector boundary, and the current single text/reasoning Run limit. Do not document tools, retries, recovery or multi-Step behavior as available.
+- [x] Add the docs-next-only DeepSeek live page with a top-level format selector and in-memory password input. Reuse official `@ai-sdk/deepseek` Chat Completions and `@ai-sdk/anthropic` Messages directly；Responses registration 可以包含应用拥有的 docs-only Provider Adapter，把 DeepSeek raw reasoning event 映射为标准 V4 `reasoning-delta`，同时过滤已消费的 raw part，并以聚焦回归锁定该映射。完整 part 顺序、terminal、error、取消、背压与 declared loss conformance 仍归 Task 11。Assert the three distinct final URLs, no injected reasoning/thinking control and API-key body isolation without claiming live browser support before manual validation；按 Part 顺序展示 Snapshot 中的 text/reasoning。
+- [x] Run Runtime tests, type-check, docs check, build, docs-next build, sensitive/residual symbol scans and `git diff --check`; compare every result with the commands in Final Validation Sequence that apply to Task 5.
 
-**Acceptance criteria:** first text Run works only via `doStream()`; Snapshot is sole query source; no `doGenerate()` path.
+**Acceptance criteria:** Runtime-generated Conversation ID；`conversation.send()` and direct `dispatch(send)` share one coordinator path；first text/reasoning Run works only via `doStream()`；Snapshot is immutable sole query source；resolver/factory/model are Run-local；only `result.stream` parts cross into Guard，observer 只能原样同序观察；Guard owns the unique terminal；no `doGenerate()` or `streamText()` path；capability metadata 不参与 gate；Domain Selector 从 Snapshot 投影可遍历领域树并保持未变化分支引用稳定，不包含 UI/框架职责；docs-next 的 Native/Anthropic registrations 直接复用对应 AI SDK Provider，Responses 使用应用拥有且有聚焦映射回归的 Provider Adapter，完整 conformance 归 Task 11；三者都不注入 reasoning 控制，并且不把 API key 放入 body。
 
-**Permanent regressions:** text vertical slice and factory lifetime.
+**Permanent regressions:** first text/reasoning vertical slice；Conversation facade/direct dispatch equivalence；Runtime-enforced Snapshot immutability；Run-local resolver；Provider/model factory lifetime；request/response canary isolation；exactly-one terminal；interleaved standard reasoning/text、subscriber projection、Provider ID isolation；later-task methods safe rejection；Domain Selector ordered expansion、selected/active Run、missing/empty/dangling relationships and reference stability；Guard 忽略其他未支持内容但不吞显式 error；docs-next 三种 endpoint、无 reasoning 注入与 API-key body isolation。
 
 ### Task 6: Harden terminal, error, abort, EOF, warning, and usage semantics
 
@@ -394,27 +432,25 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Permanent regressions:** terminal table, EOF/open-part, abort race, safe error/warning, usage availability.
 
-### Task 7: Add reasoning and tool-input assemblers
+### Task 7: Add tool-input assemblers
 
-**Goal:** 支持 visible reasoning summary 与 single/parallel function tool input，保证 per-ID 独立和 final input 一致。
+**Goal:** 支持 single/parallel function tool input，保证 per-ID 独立和 final input 一致。Visible standard V4 reasoning 已提前到 Task 5。
 
 **Dependencies:** Tasks 4、6.
 
-**Files:** Modify assemblers/Guard; create reasoning/tool fixtures and tests.
+**Files:** Modify assemblers/Guard; create tool fixtures and tests.
 
 **Interfaces:** assemblers expose `start`/`append`/`end`/`assertClosed` internally. Tool finalization yields `{ toolCallId, toolName, input: JsonObject }` only when accumulated string equals final input.
 
 **TDD order:**
 
-- [ ] Test reviewed V4 reasoning parts without inferring support from Provider-private fields.
-- [ ] Test single/multiple/empty deltas with no trim/re-tokenization.
 - [ ] Test interleaved parallel calls, split args, empty object, malformed/non-object JSON, name/ID/final mismatch.
 - [ ] Test rejection of provider-executed/dynamic/provider tools and approval requests.
 - [ ] Confirm RED, implement independent assembler maps and final validation, rerun.
 
-**Acceptance criteria:** incomplete/malformed call never reaches approval; opaque/private reasoning never becomes Part.
+**Acceptance criteria:** incomplete/malformed call never reaches approval；Task 5 的 reasoning lifecycle 保持不变；opaque/private reasoning never becomes Part.
 
-**Permanent regressions:** reviewed reasoning mapping, parallel assembly, malformed/mismatch/deferred rejection.
+**Permanent regressions:** parallel tool assembly, malformed/mismatch/deferred rejection, Task 5 reasoning non-regression.
 
 ### Task 8: Implement tool registration, approval, execution, result replay, and multi-Step Runs
 
@@ -422,7 +458,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Dependencies:** Tasks 3、5、7; Gate D final approval.
 
-**Files:** Create `src/tools/{registry,execution}.ts` and tool integration tests; modify coordinator, capability preflight, prompt/model-call projection, Domain types/events and reducer.
+**Files:** Create `src/tools/{registry,execution}.ts` and tool integration tests; modify coordinator, prompt/model-call projection, Domain types/events and reducer.
 
 **Interfaces:**
 
@@ -496,9 +532,9 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Dependencies:** Tasks 5–10; Gate E.
 
-**Files:** Create `packages/provider-openai/src/{responses,capabilities}.ts`, update `src/index.ts`, add `test/responses-conformance.test.ts` and `test/fixtures/responses/manifest.json` plus sanitized fixtures during implementation.
+**Files:** Create private helpers under `docs-next/test/provider-conformance/openai-responses/`, including the conformance test, manifest and sanitized fixtures；reuse the application-owned creator composition from `docs-next/src/examples/deepseek-runtime/providerRegistrations.ts` where appropriate.
 
-**Interfaces:** `createOpenAIResponsesRegistration(options): RuntimeProviderRegistrationV1`. Options contain application-owned connection/auth settings and reviewed model descriptors; the creator binds them through `createOpenAI()` and returns a registration with an argument-free Provider factory. Provider 维护者对已发布 registration 的浏览器直连负责；每个 model descriptor 显式声明 tools/reasoning/continuation/usage/losses 等模型语义能力。
+**Interfaces:** private `createOpenAIResponsesRegistration(options): RuntimeProviderRegistrationV1`. Options contain application-owned connection/auth settings and reviewed model descriptors；the creator binds them through `createOpenAI()` and returns a registration with an argument-free Provider factory。该 helper 不从 Runtime package 导出，也不形成新的发布 package。应用维护者对其公开的 registration 浏览器直连负责；每个 model descriptor 显式声明 tools/reasoning/continuation/usage/losses 等模型语义能力。
 
 **TDD order:**
 
@@ -509,7 +545,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 - [ ] Implement Provider configuration/model creation only; do not reimplement OpenAI semantic parser.
 - [ ] Assert exact wire→V4 output, then separately feed V4 into Runtime tests.
 
-**Acceptance criteria:** Provider package owns V4 options→wire request and wire response→V4 proof; Runtime has no OpenAI wire types; hosted/custom/background/compaction content remains rejected.
+**Acceptance criteria:** private conformance suite owns V4 options→wire request and wire response→V4 proof；Runtime has no OpenAI wire types；hosted/custom/background/compaction content does not enter Domain；没有只做 creator 转发的公开 Provider package。
 
 **Permanent regressions:** sanitized V4 request→wire and wire response→V4 suites plus manifest validation.
 
@@ -519,9 +555,9 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Dependencies:** Tasks 5–10; parallel with Task 11 after Gate E.
 
-**Files:** Create `src/compatible.ts`, update capabilities/index, add compatible conformance test/manifest/fixtures.
+**Files:** Create private helpers/tests/manifests/fixtures under `docs-next/test/provider-conformance/openai-compatible/`；reuse the application-owned docs-next registration factory where appropriate.
 
-**Interfaces:** `createOpenAICompatibleRegistration(options): RuntimeProviderRegistrationV1` requires base URL、Provider name、auth settings and a reviewed descriptor for every exposed real model ID, then reuses `createOpenAICompatible()`. Snapshot/diagnostic stores the application-defined safe `providerId`, never the endpoint or query URL.
+**Interfaces:** private `createOpenAICompatibleRegistration(options): RuntimeProviderRegistrationV1` requires base URL、Provider name、auth settings and a reviewed descriptor for every exposed real model ID, then reuses `createOpenAICompatible()`。该 helper 不形成公开 Tiny Robot package。Snapshot/diagnostic stores the application-defined safe `providerId`, never the endpoint or query URL.
 
 **TDD order:**
 
@@ -544,16 +580,16 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Files:**
 
-- Create: `packages/provider-openai/test/deepseek-three-format-validation.test.ts`
-- Create: `packages/provider-openai/test/helpers/deepseekAnthropicValidation.ts`
-- Create: `packages/provider-openai/test/fixtures/deepseek/manifest.json`
-- Create during implementation: sanitized fixtures under `packages/provider-openai/test/fixtures/deepseek/{chat-completions,responses,anthropic}/`
-- Modify: `packages/provider-openai/package.json` only after Gate B, adding exact `@ai-sdk/anthropic@4.0.76` as a dev dependency, never production dependency
+- Create: `docs-next/test/provider-conformance/deepseek-three-format-validation.test.ts`
+- Create: `docs-next/test/provider-conformance/helpers/deepseekAnthropicValidation.ts`
+- Create: `docs-next/test/fixtures/deepseek/manifest.json`
+- Create during implementation: sanitized fixtures under `docs-next/test/fixtures/deepseek/{chat-completions,responses,anthropic}/`
+- Reuse the Gate-B-approved private docs-next dependencies；不得把 `@ai-sdk/anthropic` 加到 Runtime 或新增公开 package
 
 **Interfaces:**
 
-- Chat Completions validation consumes `createOpenAICompatibleRegistration(options)` from Task 12.
-- Responses validation consumes `createOpenAIResponsesRegistration(options)` from Task 11 with a reviewed DeepSeek endpoint profile.
+- Chat Completions validation consumes the private `createOpenAICompatibleRegistration(options)` from Task 12.
+- Responses validation consumes the private `createOpenAIResponsesRegistration(options)` from Task 11 with a reviewed DeepSeek endpoint profile.
 - Anthropic validation uses test-only `createDeepSeekAnthropicValidationModel(credential): LanguageModelV4` backed by `@ai-sdk/anthropic@4.0.76`; the helper is not exported, bundled or published.
 - Produces no new Runtime/Provider public API; its deliverable is a mapping matrix, sanitized fixtures and conformance evidence.
 
@@ -564,7 +600,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 - [ ] Feed the same allowed text/tool `LanguageModelV4CallOptions` to all three formats; compare sanitized wire request semantics and require every format-specific divergence to match a declared loss/reject entry.
 - [ ] Add format-specific cases: Chat Completions `reasoning_content`/indexed tool deltas and vendor finish reasons; Responses semantic SSE/`sequence_number` and completed/incomplete/failed terminals; Anthropic message stream, thinking/tool_use/tool_result, Claude-name→DeepSeek model mapping and ignored headers/fields.
 - [ ] Add negative fixtures proving v1 rejects or declares loss for DeepSeek image/document/search/server-tool/MCP/citation/custom-tool behavior rather than widening the Runtime allowlist.
-- [ ] Run `pnpm -F @opentiny/tiny-robot-provider-openai test -- deepseek-three-format-validation.test.ts`; expect RED until all three adapters/fixtures and manifest declarations exist.
+- [ ] Run `pnpm -F @opentiny/tiny-robot-next-docs test -- deepseek-three-format-validation.test.ts`; expect RED until all three adapters/fixtures and manifest declarations exist.
 - [ ] Configure the three AI SDK Provider paths, keeping the Anthropic helper test-only; do not implement a custom Anthropic parser or export an Anthropic registration.
 - [ ] Feed the three accepted V4 streams into the same Runtime integration harness; assert equivalent text, ToolCall, Run/Step terminal state and normalized usage availability for the common subset, while every expected divergence matches a stable declared-loss/reject code.
 - [ ] Re-run Task 11–13 Provider tests and the Runtime provider-equivalence test; expect pass.
@@ -614,7 +650,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 - [ ] TS consumer uses 5.8, DOM libs, `skipLibCheck: false` and no explicit Node/json-schema types; imports all public APIs.
 - [ ] Minimal Vue 3.4 and Angular 20 consumers instantiate registration/runtime types without framework coupling.
-- [ ] Vite browser consumer bundles Runtime and both Provider factories and fails on Node builtins.
+- [ ] Vite browser consumer bundles Runtime and representative application-owned AI SDK Provider registrations and fails on Node builtins.
 - [ ] Run before declaration fixes and record expected failures.
 - [ ] Fix only dependencies/exports/build declarations; no skipLibCheck, hidden consumer dependency or Node polyfill.
 - [ ] Run:
@@ -622,7 +658,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
   - `pnpm --dir tests/consumers/vue-3.4 build`
   - `pnpm --dir tests/consumers/angular-20 build`
   - `pnpm --dir tests/consumers/browser-bundle build`
-  - `rg "node:|Buffer|process\.versions|json-schema" tests/consumers/browser-bundle/dist packages/runtime/dist/*.d.ts packages/provider-openai/dist/*.d.ts`
+  - `rg "node:|Buffer|process\.versions|json-schema" tests/consumers/browser-bundle/dist packages/runtime/dist/*.d.ts`
 - [ ] Add Node 22 CI commands after local pass/Gate F.
 
 **Acceptance criteria:** all consumers pass; Runtime has no framework/DOM import; browser output has no secret literal/Node builtin/undeclared types.
@@ -635,7 +671,7 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **Dependencies:** Tasks 11–15; Gate E.
 
-**Files:** Create `docs/runtime/getting-started.md`, `docs/providers/{openai-responses,openai-compatible,deepseek-formats}.md`, `packages/provider-openai/test/live/README.md`; modify architecture/testing docs only for approved implementation facts.
+**Files:** Create `docs/runtime/getting-started.md`, `docs/providers/{openai-responses,openai-compatible,deepseek-formats}.md`, `docs-next/test/provider-conformance/live/README.md`; modify architecture/testing docs only for approved implementation facts. The Task 5 docs-next live page remains the earliest manual first-text-Run validation surface and must not be described as the completed Task 16 support matrix.
 
 **TDD/verification order:**
 
@@ -655,10 +691,11 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 node --version
 pnpm --version
 pnpm -F @opentiny/tiny-robot-runtime test
+pnpm -F @opentiny/tiny-robot-runtime type-check
+pnpm -F @opentiny/tiny-robot-runtime docs:check
 pnpm -F @opentiny/tiny-robot-runtime build
-pnpm -F @opentiny/tiny-robot-provider-openai test
-pnpm -F @opentiny/tiny-robot-provider-openai test -- deepseek-three-format-validation.test.ts
-pnpm -F @opentiny/tiny-robot-provider-openai build
+pnpm -F @opentiny/tiny-robot-next-docs test
+pnpm -F @opentiny/tiny-robot-next-docs build
 pnpm --dir tests/consumers/typescript-5.8 type-check
 pnpm --dir tests/consumers/vue-3.4 build
 pnpm --dir tests/consumers/angular-20 build
@@ -671,17 +708,17 @@ git diff --check
 
 ```bash
 rg -n "Authorization|cookie|raw(?:Chunk|Request|Response)|providerMetadata|credential|node:|NodeJS|Buffer|json-schema" \
-  packages/runtime/dist packages/provider-openai/dist tests/consumers/browser-bundle/dist
+  packages/runtime/dist docs-next/.vitepress/dist tests/consumers/browser-bundle/dist
 ```
 
 不要用全仓无关测试替代目标验证；若 package/build/release wiring 扩大，再由 reviewer 指定额外命令。
 
 ## Plan Self-Review Record
 
-- **Spec coverage:** Contract v1 sections 1–18 map to Tasks 1–16; Provider conformance, Guard, reducer and integration suites are separate. DeepSeek three-format validation is additional abstraction evidence and does not expand the approved first-phase implementation scope.
+- **Spec coverage:** Contract v1 sections 1–18 map to Tasks 1–16; the Conversation-scoped API design maps entirely to Task 5 public types, identity, facade routing, integration tests and learning documentation. Provider conformance, Guard, reducer and integration suites remain separate. The Task 5 docs-next page validates only the current first text/reasoning Run and outbound mapping；later DeepSeek three-format fixtures remain additional abstraction evidence and do not expand the approved first-phase implementation scope.
 - **Step scan:** each task has checkable RED/implementation/GREEN actions; no unnamed “handle edge cases”.
-- **Type consistency:** public names originate in Task 1; Domain Events stay internal; Snapshot/Command never import V4.
-- **Task boundary consistency:** Task 3 projects text/reasoning calls；Task 8 adds complete tool Domain relationships、capability/options projection and replay；Task 9 alone adds opaque continuation.
-- **Review Focus:** all five high-risk cases have owner tests in Tasks 6、7、13、14.
+- **Type consistency:** Provider/Domain public names originate in Task 1；the approved Task 5 amendment replaces `SendInput` and root `send()` with `ConversationSendInput`, `TinyRobotConversation` and `createConversation()` while retaining self-contained `SendCommand`；Task 5 Send 不表达 reasoning 控制；Domain Events stay internal；Snapshot/Command never import V4 types.
+- **Task boundary consistency:** Task 3 projects text/reasoning history into prompt；Task 5 adds standard reasoning ingress；Task 7 adds tool-input assembly；Task 8 adds complete tool Domain relationships、capability/options projection and replay；Task 9 alone adds opaque continuation.
+- **Review Focus:** all five cross-plan high-risk cases have owner tests in Tasks 6、7、13、14；Task 5 additionally owns unknown Conversation, ID uniqueness, resolver replacement/removal, factory rejection, request/response canary and exactly-one-terminal tests from the Conversation-scoped spec.
 - **Proportion:** bodies are omitted; only signatures, ownership, assertions and fixed mappings remain.
-- **Repository safety:** this plan adds only this temporary Markdown file. It does not alter staged design docs, package metadata, lockfiles, dependencies, Git index or branch.
+- **Repository safety:** the Conversation-scoped spec and this plan amendment are temporary working artifacts and are not committed by default。Task 5 的 approved dependency exception 只修改 private docs-next package metadata；安装同步了仓库既有但未跟踪的本地 `pnpm-lock.yaml`，不把它加入 Git。该例外不修改 Git index、branch 或 Runtime production dependencies，并保留获批的 contract 文档基线。

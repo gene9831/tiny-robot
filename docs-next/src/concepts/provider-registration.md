@@ -1,6 +1,6 @@
 # Provider 注册与安全边界
 
-应用可能同时接入官方模型服务、兼容接口和自己的私有 LLM API。应用先保存 Provider 连接配置，再由对应的 Provider 集成层复用 AI SDK creator，构造 Runtime 可以解析的 Provider Registration。
+应用可能同时接入官方模型服务、兼容接口和自己的私有 LLM API。应用先保存 Provider 连接配置，再由应用侧 Provider 集成代码直接复用对应的 AI SDK creator，构造 Runtime 可以解析的 Provider Registration。单纯转发 creator 配置不需要 Tiny Robot 再发布一个 Provider package。
 
 这里的 `providerId` 是应用定义的接入实例标识，例如 `company-gateway` 或 `personal-openai`；它不要求等于厂商名称。每个模型使用 Provider 接受的真实 `modelId`。读完本页后，你应该能区分连接配置、Runtime registration 和 AI SDK Provider，并说明 credential 停在哪一层。
 
@@ -24,7 +24,7 @@ const config = {
 }
 ```
 
-Provider 集成包把这份配置和应用拥有的 credential 交给具体 AI SDK creator，并返回 Runtime registration：
+应用侧 Provider 集成代码把这份配置和应用拥有的 credential 交给具体 AI SDK creator，并返回 Runtime registration：
 
 ```ts
 const registration = createOpenAICompatibleRegistration({
@@ -66,9 +66,9 @@ sequenceDiagram
   Provider-->>Runtime: LanguageModelV4
 ```
 
-应用可以在 Runtime 创建后增加、更新或移除自己的 Provider 配置。resolver 在新的 Run 开始时读取当前配置，因此后续 Run 可以使用新加入的 Provider；已经创建的 Run 继续使用创建时冻结的 `providerId`、`modelId` 和 capability。
+应用可以在 Runtime 创建后增加、更新或移除自己的 Provider 配置。resolver 在新的 Run 开始时读取当前配置，因此后续 Run 可以使用新加入的 Provider；已经创建的 Run 继续使用创建时冻结的 `providerId`、`modelId` 和 capability metadata。
 
-当前公共类型已经定义 registration 和 resolver 边界。把 resolver、模型创建和 Run 生命周期串联起来属于执行协调层；在该层形成可运行能力前，本页代码用于说明已批准接口，不代表当前包已经能够发出模型请求。
+当前执行协调层已经把 resolver、Run-local Provider/model 创建和首个单 Step text/reasoning Run 串联起来。`conversation.send()` 或等价的 `dispatch(send)` 会通过这里描述的 registration 实际调用一次 `LanguageModelV4.doStream()`；工具循环、重试、恢复和多 Step 仍属于后续能力。
 
 ## ProviderV4 是复用的模型选择接口
 
@@ -105,13 +105,13 @@ flowchart LR
   Verify --> Register --> Runtime --> API
 ```
 
-自定义或 OpenAI-compatible endpoint 承担同样的验证责任。Runtime 只消费应用解析出的受信任注册，并把实际请求失败归一化为安全、稳定的错误信息。
+自定义或 OpenAI-compatible endpoint 承担同样的验证责任。Runtime 只消费应用解析出的受信任注册。Task 5 已能安全处理中途出现的标准 V4 `error` part 和协议错误，但 `doStream()` 直接抛出的 Provider/transport error 尚未归一化为完整 Run 终态；该能力属于 Task 6。
 
-## capability 描述每个模型的可依赖行为
+## capability 当前作为模型 metadata
 
-`RuntimeModelCapabilitiesV1` 属于模型描述符，而不是整个 Provider。当前 `streaming` 和 `reasoning` 都是 boolean：`true` 表示 Runtime 可以为该模型依赖对应的标准 V4 行为，`false` 表示需要该能力的调用会在模型创建前被拒绝。
+`RuntimeModelCapabilitiesV1` 属于模型描述符，而不是整个 Provider。当前 `streaming` 和 `reasoning` 仍随 descriptor 复制到 Run，但 Task 5 不用它们拒绝 factory、模型调用或合法的标准 V4 stream part。
 
-capability 不区分能力由服务原生实现还是由 Provider 适配器转换。具体协议字段、模型识别和取值兼容性由 Provider mapping 负责。当 Runtime 需要在调用前展示模型接受的 reasoning 强度时，`reasoning` 可以演进为标准 reasoning 选项集合；模型描述符仍是这项信息的归属位置。
+这些字段暂时只为后续 UI 与能力设计保留，不表达 reasoning 默认开启或关闭，也不证明某个控制值能映射到 wire request。当前 Send 不提供 reasoning 控制；当 Runtime 需要显式控制时，再基于 conformance evidence 演进 descriptor。
 
 ## 为什么 Runtime Part 保持自有类型
 
@@ -133,4 +133,4 @@ flowchart LR
 3. 新增 Provider 配置为什么只影响后续 Run？
 4. Provider 接口可以复用 AI SDK，Runtime Part 为什么仍保持自有类型？
 
-下一步阅读[准备一次模型调用](./model-call-projection.md)，理解 Runtime 怎样使用 Run 已冻结的 capability 和历史构造调用对象。设计依据见 [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)和 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md)。
+下一步阅读[准备一次模型调用](./model-call-projection.md)，理解 Runtime 怎样使用 Run 历史构造调用对象，以及为什么当前 capability 只作为冻结 metadata。设计依据见 [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)和 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md)。

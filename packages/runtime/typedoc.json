@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts"],
+  "entryPoints": ["src/index.ts", "src/selectors/index.ts"],
   "tsconfig": "tsconfig.json",
   "out": "../../docs-next/src/public/api/runtime",
   "emit": "none",

@@ -1,15 +1,13 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import type { RuntimeModelCapabilitiesV1, RuntimeSnapshot } from '../src/index'
-import type { ModelCapabilityRequirements } from '../src/execution/capabilityPreflight'
 import {
   buildModelCallOptions,
   type ModelCallProjectionInput,
   type RuntimeModelCallOptions,
 } from '../src/execution/modelCallProjection'
 
-type ExpectedModelCallProjectionInputKey = 'snapshot' | 'runId' | 'maxOutputTokens' | 'reasoning' | 'abortSignal'
-type ExpectedRuntimeModelCallOptionKey = 'prompt' | 'maxOutputTokens' | 'reasoning' | 'abortSignal'
-type ExpectedModelCapabilityRequirementKey = 'reasoning'
+type ExpectedModelCallProjectionInputKey = 'snapshot' | 'runId' | 'maxOutputTokens' | 'abortSignal'
+type ExpectedRuntimeModelCallOptionKey = 'prompt' | 'maxOutputTokens' | 'abortSignal'
 
 function snapshot(capabilityOverrides: Partial<RuntimeModelCapabilitiesV1> = {}): RuntimeSnapshot {
   return {
@@ -60,11 +58,7 @@ function snapshot(capabilityOverrides: Partial<RuntimeModelCapabilitiesV1> = {})
 }
 
 describe('model call options projection', () => {
-  it('derives capability requirements from the call options that affect model support', () => {
-    expectTypeOf<keyof ModelCapabilityRequirements>().toEqualTypeOf<ExpectedModelCapabilityRequirementKey>()
-  })
-
-  it('exposes exactly the approved text and reasoning call inputs', () => {
+  it('exposes exactly the approved text call inputs', () => {
     expectTypeOf<keyof ModelCallProjectionInput>().toEqualTypeOf<ExpectedModelCallProjectionInputKey>()
   })
 
@@ -81,7 +75,6 @@ describe('model call options projection', () => {
       snapshot: runtimeSnapshot,
       runId: 'run-1',
       maxOutputTokens: 512,
-      reasoning: 'low',
       abortSignal: controller.signal,
     })
 
@@ -93,10 +86,9 @@ describe('model call options projection', () => {
         },
       ],
       maxOutputTokens: 512,
-      reasoning: 'low',
       abortSignal: controller.signal,
     })
-    expect(Object.keys(options).sort()).toEqual(['abortSignal', 'maxOutputTokens', 'prompt', 'reasoning'])
+    expect(Object.keys(options).sort()).toEqual(['abortSignal', 'maxOutputTokens', 'prompt'])
   })
 
   it('omits optional options instead of injecting provider defaults', () => {
@@ -120,24 +112,13 @@ describe('model call options projection', () => {
     expect(Object.keys(options).sort()).toEqual(['abortSignal', 'prompt'])
   })
 
-  it('rejects unsupported streaming with a stable code', () => {
+  it('does not use model capability metadata to gate the V4 streaming call', () => {
     expect(() =>
       buildModelCallOptions({
-        snapshot: snapshot({ streaming: false }),
+        snapshot: snapshot({ streaming: false, reasoning: false }),
         runId: 'run-1',
         abortSignal: new AbortController().signal,
       }),
-    ).toThrow(expect.objectContaining({ code: 'model_streaming_unsupported' }))
-  })
-
-  it('rejects a reasoning request when the capability is disabled', () => {
-    expect(() =>
-      buildModelCallOptions({
-        snapshot: snapshot({ reasoning: false }),
-        runId: 'run-1',
-        reasoning: 'medium',
-        abortSignal: new AbortController().signal,
-      }),
-    ).toThrow(expect.objectContaining({ code: 'model_reasoning_unsupported' }))
+    ).not.toThrow()
   })
 })

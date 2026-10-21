@@ -1,42 +1,30 @@
 # 准备一次模型调用
 
-Runtime 在调用模型前，需要把一次回答尝试（Run）中已经冻结的历史和配置转换成固定版本 AI SDK 接受的调用对象。这项工作分成三个无副作用步骤：能力预检（capability preflight）判断本次请求能否安全执行，prompt projection 生成模型可读的历史，model call options projection 生成最终 `LanguageModelV4CallOptions`。
+Runtime 在调用模型前，需要把一次回答尝试（Run）中已经冻结的历史和配置转换成固定版本 AI SDK 接受的调用对象。这项工作分成两个无副作用步骤：prompt projection 生成模型可读的历史，model call options projection 生成最终 `LanguageModelV4CallOptions`。
 
 这三个步骤的结果定义了模型调用边界接收的输入：一个只含批准字段的新对象。投影过程不创建模型、不发出请求，也不修改 Snapshot。
 
-本页解决的问题是：Runtime 怎样把自己的领域状态安全、完整地转换为固定版本的模型调用对象。读完后，你应该能说明能力预检、Prompt 投影和调用选项投影为什么必须分开。
+本页解决的问题是：Runtime 怎样把自己的领域状态安全、完整地转换为固定版本的模型调用对象。读完后，你应该能说明 Prompt 投影和调用选项投影为什么必须分开。
 
-## 为什么调用前要分三步
+## 为什么调用前要分两步
 
 ```mermaid
 flowchart LR
   Input["冻结 Run 配置<br/>Snapshot 历史 · AbortSignal"]
-  Check["能力预检<br/>确认 streaming · reasoning"]
   Prompt["Prompt 投影<br/>按 Message / Part 顺序转换"]
   Options["调用选项投影<br/>只构造批准字段"]
   V4["LanguageModelV4CallOptions"]
 
-  Input --> Check --> Prompt --> Options --> V4
+  Input --> Prompt --> Options --> V4
 ```
 
-能力预检回答“这个 Run 已冻结的模型能力能否满足本次请求”。Prompt 投影回答“哪些已经完成的领域内容可以发送给模型”。调用选项投影最后把两者组合起来，并确保调用方没有入口注入额外字段。
+Prompt 投影回答“哪些已经完成的领域内容可以发送给模型”。调用选项投影把结果组合成固定字段集合，并确保调用方没有入口注入额外字段。
 
-这里准备的调用用于文本生成，并可按 frozen Run 的 capability 请求 reasoning。已经进入 Snapshot 的标准 reasoning Part 与 text Part 一样按历史顺序投影；具体 Provider 怎样转换 prompt 不属于 Runtime capability。输入边界只包含 Snapshot、Run ID、输出长度限制、reasoning 级别和 `AbortSignal`。
+这里准备的调用用于文本生成。已经进入 Snapshot 的标准 reasoning Part 与 text Part 一样按历史顺序投影；具体 Provider 怎样转换 prompt 不属于 Runtime。输入边界只包含 Snapshot、Run ID、输出长度限制和 `AbortSignal`。当前 Send API 不表达 reasoning 控制，Runtime 不发送 `reasoning` call option。
 
-## 能力预检
+## Capability 当前只作为冻结 metadata
 
-`RuntimeModelCapabilitiesV1` 是 Provider 注册维护者基于 conformance evidence 为单个模型提供、并在 Run 创建时冻结的声明。Runtime 使用它作调用决策，但不会把这项声明描述成 Runtime 独立验证过的服务能力。
-
-能力预检检查：
-
-- `streaming` 必须为 `true`；
-- 调用包含 `reasoning` 时，`reasoning` capability 必须为 `true`。
-
-失败以稳定 code 表示，例如 `model_streaming_unsupported` 或 `model_reasoning_unsupported`。Provider 原始错误文本、认证资料和原始响应不会成为错误内容。调用方明确请求 reasoning 而 capability 为 `false` 时，Runtime 拒绝调用，不会删除参数后继续执行。
-
-boolean capability 只表达 Runtime 能否依赖标准 V4 行为。原生实现、兼容转换、具体协议字段和有损映射属于 Provider；相关证据由 conformance test、manifest 和支持文档承载，不进入 Snapshot。
-
-当前 capability 不枚举模型接受的 reasoning 强度。Provider 负责把标准 `LanguageModelV4CallOptions.reasoning` 转换为具体请求，并明确处理不支持的取值。当 Runtime 需要在调用前展示模型可选强度时，可以把这一能力演进为 `ReadonlyArray<NonNullable<LanguageModelV4CallOptions['reasoning']>>`，由每个模型描述符提供自己接受的标准选项集合。
+`RuntimeModelCapabilitiesV1` 仍由模型 descriptor 提供并复制到 Run，供后续 UI 或能力设计使用。Task 5 不用它 gate Provider factory、模型调用或入站 stream part。等产品需要显式开启、关闭或选择 reasoning effort 时，再设计可验证的控制能力；当前 boolean 不承担模型默认行为或 wire mapping 的语义。
 
 ## Prompt 怎样从 Snapshot 产生
 
@@ -54,14 +42,13 @@ boolean capability 只表达 Runtime 能否依赖标准 V4 行为。原生实现
 
 ## 正常场景
 
-假设 Run 的历史依次包含 system text 和 user text，并为这次调用请求 `low` reasoning。调用选项投影可以产生：
+假设 Run 的历史依次包含 system text 和 user text。调用选项投影可以产生：
 
 ```ts
 const options = buildModelCallOptions({
   snapshot,
   runId: 'run-1',
   maxOutputTokens: 512,
-  reasoning: 'low',
   abortSignal,
 })
 
@@ -72,7 +59,6 @@ const expected = {
     { role: 'user', content: [{ type: 'text', text: 'Explain the boundary.' }] },
   ],
   maxOutputTokens: 512,
-  reasoning: 'low',
   abortSignal,
 }
 ```
@@ -95,11 +81,11 @@ const expected = {
 以下永久测试保护这些行为：
 
 - `test/prompt-projection.test.ts`：角色/Part 顺序、精确文本、reasoning 投影与 fail-closed rejection；
-- `test/model-call-projection.test.ts`：streaming/reasoning capability、完整输入与输出 key 集合，以及可选字段省略规则。
+- `test/model-call-projection.test.ts`：完整输入与输出 key 集合、可选字段省略规则，以及 capability metadata 不参与调用 gate。
 
 ## 检查你的理解
 
-1. 为什么 capability 不负责描述 Provider 的原生或兼容实现方式？
+1. 为什么当前 capability metadata 不参与模型调用 gate？
 2. 为什么未知或未完成的历史 Part 必须拒绝，而不能静默删除？
 3. Provider 专属参数为什么不能通过调用选项投影进入 Runtime 公共协议？
 

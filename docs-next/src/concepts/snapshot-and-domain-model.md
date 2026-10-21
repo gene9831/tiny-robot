@@ -174,18 +174,32 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-  Snapshot["RuntimeSnapshot"] --> Selector["selectConversationView(id)"]
-  Selector --> VM["ConversationViewModel"]
-  VM --> Vue["Vue renderer"]
-  VM --> Angular["Angular renderer"]
+  Snapshot["RuntimeSnapshot<br/>规范化存储"] --> Selector["selectConversation(snapshot, id)"]
+  Selector --> Selection["ConversationSelection<br/>可直接遍历的领域树"]
+  Selection --> Vue["Vue 响应式适配"]
+  Selection --> Angular["Angular 响应式适配"]
 
   UIState["draft · focus · scroll"] --> Vue
   UIState --> Angular
 ```
 
-Snapshot 是领域事实来源，但并不意味着 UI 所有 state 都塞进 Snapshot。Selector 是无副作用投影；Vue/Angular 可以分别用自己的响应式机制消费同一个 View Model 契约。
+Snapshot 是领域事实来源，但并不意味着 UI 必须按 `...ById` 和 ID 数组逐级查表，也不意味着 UI 所有 state 都塞进 Snapshot。`selectConversation` 会把一个 Conversation 投影成可直接遍历的 `turns → runs → messages → parts` 领域树；`activeRun` 表示当前仍在执行的 Run，`selectedRun` 表示同一 Turn 的多次执行尝试中当前被选作该轮回答结果的 Run。两者都复用树中已有的 Run 对象。
 
-先通过[多个 Conversation](../examples/multiple-conversations.md)验证 Snapshot 的作用域和所有权隔离。当前状态契约覆盖驻留的规范化 Snapshot 和单 Step 文本生命周期；多 Step、重试、重新生成和恢复必须在保持同一所有权模型的前提下扩展，Selector 仍属于独立的 UI contract。
+```ts
+import { selectConversation } from '@opentiny/tiny-robot-runtime/selectors'
+
+const conversation = selectConversation(runtime.getSnapshot(), conversationId)
+const turn = conversation?.turns.at(-1)
+const answer = turn?.selectedRun
+
+answer?.messages.forEach((message) => {
+  message.parts.forEach(renderPart)
+})
+```
+
+Selector 不创建 Vue `ref`、Angular `Signal` 或组件展示字段。它利用 Snapshot 的不可变更新保留未变化分支的引用，因此框架适配层可以把 Snapshot 放进浅层响应式容器，再用 `computed` 选择所需领域树。需要格式化文案、折叠状态或其他组件输入时，Presenter 可以继续在 Selection 上投影 View Model。
+
+先通过[多个 Conversation](../examples/multiple-conversations.md)验证 Snapshot 的作用域和所有权隔离。当前状态契约覆盖驻留的规范化 Snapshot 和单 Step 文本生命周期；多 Step、重试、重新生成和恢复必须在保持同一所有权模型的前提下扩展，Selector 仍属于独立的领域投影边界。
 
 ## 检查你的理解
 

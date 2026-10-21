@@ -7,6 +7,7 @@
 export type {
   AbortCommand,
   ApproveToolCallCommand,
+  ConversationSendInput,
   DenyToolCallCommand,
   RegenerateLastResponseCommand,
   RegenerateLastResponseInput,
@@ -14,7 +15,6 @@ export type {
   RetryLastRunInput,
   RuntimeCommand,
   SendCommand,
-  SendInput,
 } from './commands/types'
 export type {
   JsonObject,
@@ -38,4 +38,11 @@ export type {
   RuntimeProviderRegistrationV1,
   RuntimeProviderErrorV1,
 } from './model/types'
-export type { CreateRuntimeOptions, TinyRobotRuntime } from './runtime/types'
+export { createRuntime } from './runtime/createRuntime'
+export type {
+  CreateRuntimeOptions,
+  RuntimeInspector,
+  RuntimeStreamPartInspection,
+  TinyRobotConversation,
+  TinyRobotRuntime,
+} from './runtime/types'
