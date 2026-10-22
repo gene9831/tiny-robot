@@ -8,7 +8,7 @@
 
 需要调试 Provider 输出时，应用可以配置 `inspect.streamPart`，在 Guard 投影前瞬时观察每个 V4 part 及其 Run、Step、Provider、model 上下文。观察器不能改变 part 或顺序，返回值会被忽略，同步异常也不会中断 Run。原 part 可能包含敏感 metadata 或 raw value；Runtime 不记录这些数据，应用应明确区分本地诊断与生产日志/上报，后两者必须先按 allowlist 脱敏。request 与 response 始终不可见。
 
-现行能力处理首个单 Step constructed text/reasoning stream。工具组装与执行、file/source 展示、重试、恢复和多 Step continuation 尚未实现；超出当前投影子集的内容 part 会被忽略，不会被误解释成文本或写入 Snapshot。显式 Provider `error` 和结构性协议错误仍会产生稳定的 interrupted error。
+现行能力处理首个 constructed text/reasoning Model Step，并能把调用方取消、Provider 失败和协议中断区分为 `aborted`、`failed`、`interrupted`。工具输入组装与执行、file/source 展示、重试、恢复和多 Step continuation 尚未实现；超出当前投影子集的内容 part 会被忽略，不会被误解释成文本或写入 Snapshot。
 
 ## 正常场景
 
@@ -49,17 +49,24 @@ stateDiagram-v2
   Streaming --> TextOpen: text-start
   TextOpen --> TextOpen: text-delta
   TextOpen --> Streaming: text-end
-  Streaming --> FinishObserved: finish(stop)
+  Streaming --> FinishObserved: finish(stop / length / content-filter / other)
+  Streaming --> StepCompleted: finish(tool-calls) + EOF
+  StepCompleted --> RunActive: 等待后续工具能力
+  Streaming --> Failed: 显式 error / finish(error)
   FinishObserved --> Completed: EOF
   WaitingForStart --> Interrupted: 非 stream-start
-  Streaming --> Interrupted: 未知文本 ID / 重复生命周期 / 显式 error
+  Streaming --> Interrupted: 未知文本 ID / 重复生命周期 / unexpected EOF
   TextOpen --> Interrupted: finish
   FinishObserved --> Interrupted: 任意后续 part
+  WaitingForStart --> Aborted: caller abort
+  Streaming --> Aborted: caller abort
 ```
 
-Guard 不在观察到 `finish` 时立即发出 completed terminal。它先等待 EOF；如果 finish 后还有任何 part，就改为一个 `interrupted` terminal。这样 reducer 不会先收到成功终态，再发现协议已经违反。
+Guard 不在观察到 `finish` 时立即接受终止结果。它先确认 text/reasoning assembler 已关闭，再等待 EOF；如果 finish 后还有任何 part，就改为一个 `interrupted` terminal。这样 reducer 不会先收到成功终态，再发现协议已经违反。
 
-协议失败后 Guard 取消 reader，发出 exactly one `run-terminated(interrupted)`，再用稳定 code reject。错误不包含 Provider ID、delta、metadata、原始 finish reason、异常 message、stack 或 cause；terminal 后不再发出内容 Event。
+调用方 abort 的优先级最高，产生 exactly one `run-terminated(aborted)`；显式 Provider error 产生 `failed`；exception、unexpected EOF 和协议错误产生 `interrupted`。Guard 会取消 reader，并只暴露稳定的 category、code、retryable 和合法 `httpStatus`。错误不包含 Provider ID、delta、metadata、原始 finish reason、动态 code、异常 message、stack 或 cause；terminal 后不再发出内容 Event。
+
+Finish reason 的稳定映射是：`stop` → `completed/stop`，`length` → `completed/max_output_tokens`，`content-filter` → `completed/content_filter`，`error` → `failed`，`other` → `interrupted`。`tool-calls` 只产生 `model-step-completed(tool_calls)`：当前 Model Step completed，但 Run 保持 active，等待后续工具流程；这不表示工具组装或执行已经可用。
 
 ## Metadata 与 usage 怎样停在边界内
 
@@ -87,7 +94,7 @@ stream part、usage、finish reason 和 response metadata 的上游形状直接�
 
 - 第一方来源：[AI SDK `LanguageModelV4StreamPart` 源码](https://github.com/vercel/ai/blob/main/packages/provider/src/language-model/v4/language-model-v4-stream-part.ts)
 - 正式设计依据：[LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#7-允许的-stream-parts) · [ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md)
-- 永久测试：`test/ingress-guard/text.test.ts` 保护 text/reasoning 合法映射、双 ID、metadata/usage allowlist 与 reducer 结果；`test/ingress-guard/order.test.ts` 保护两类内容的非法顺序、共享 Runtime ID、EOF、脱敏错误和 terminal silence。
+- 永久测试：`test/ingress-guard/text.test.ts` 保护 text/reasoning 合法映射、双 ID、metadata/usage allowlist 与 reducer 结果；`test/ingress-guard/order.test.ts` 保护两类内容的非法顺序、共享 Runtime ID、EOF、脱敏错误和 terminal silence；`test/ingress-guard/terminal.test.ts` 与 `test/integration/abort-error.test.ts` 保护完整 finish 映射、usage availability、安全 error 和 abort 竞争优先级。
 
 ## 检查你的理解
 
@@ -95,4 +102,4 @@ stream part、usage、finish reason 和 response metadata 的上游形状直接�
 2. 为什么 completed terminal 要等到 finish 后的 EOF 才发出？
 3. metadata 已经通过字符限制后，为什么仍不进入 Snapshot？
 
-当前学习路径已经覆盖模型调用前投影和 constructed text/reasoning stream 的入站校验。需要核对最终状态时回到[一次完成的文本回答](../examples/completed-text-run.md)；需要精确的规范性限制时查看 [LanguageModelV4 Boundary v1](../design/language-model-v4-runtime-boundary-v1.md)。
+当前学习路径已经覆盖模型调用前投影和 constructed text/reasoning stream 的入站校验。下一步进入[观察 Run 如何结束](../examples/runtime-terminal-semantics/)，通过可重复运行的本地场景比较各种终态；需要精确的规范性限制时查看 [LanguageModelV4 Boundary v1](../design/language-model-v4-runtime-boundary-v1.md)。

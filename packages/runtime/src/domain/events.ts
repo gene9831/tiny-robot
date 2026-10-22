@@ -92,6 +92,14 @@ interface RunTerminatedEvent {
   readonly usage?: RuntimeTokenUsage
 }
 
+interface ModelStepCompletedEvent {
+  readonly type: 'model-step-completed'
+  readonly runId: string
+  readonly stepId: string
+  readonly termination: 'tool_calls'
+  readonly usage?: RuntimeTokenUsage
+}
+
 /** Internal facts accepted by the Runtime reducer. */
 export type RuntimeDomainEvent =
   | ConversationCreatedEvent
@@ -105,4 +113,5 @@ export type RuntimeDomainEvent =
   | ReasoningPartStartedEvent
   | ReasoningPartDeltaEvent
   | ReasoningPartEndedEvent
+  | ModelStepCompletedEvent
   | RunTerminatedEvent

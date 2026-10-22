@@ -185,18 +185,6 @@ const orderViolations: ReadonlyArray<{
     parts: [start],
   },
   {
-    name: 'unsupported finish reason',
-    code: 'model_step_finish_reason_unsupported',
-    parts: [
-      start,
-      {
-        type: 'finish',
-        finishReason: { unified: 'length', raw: 'secret-raw-finish' },
-        usage: completeUsage,
-      },
-    ],
-  },
-  {
     name: 'conflicting response metadata',
     code: 'model_step_response_metadata_conflict',
     parts: [start, { type: 'response-metadata', id: 'response-a' }, { type: 'response-metadata', id: 'response-b' }],
@@ -273,7 +261,7 @@ describe('minimal text and reasoning Ingress Guard ordering', () => {
     const { input, events } = createInput([start, { type: 'error', error: new Error('provider-error-canary') }, finish])
 
     await expect(consumeModelStepStream(input)).rejects.toMatchObject({
-      code: 'model_step_stream_read_failed',
+      code: 'model_step_provider_error',
       stack: undefined,
     })
     expect(JSON.stringify(events)).not.toContain('provider-error-canary')
@@ -282,8 +270,13 @@ describe('minimal text and reasoning Ingress Guard ordering', () => {
         type: 'run-terminated',
         runId: 'runtime-run-1',
         stepId: 'runtime-step-1',
-        runStatus: 'interrupted',
-        stepStatus: 'interrupted',
+        runStatus: 'failed',
+        stepStatus: 'failed',
+        error: {
+          category: 'unknown',
+          code: 'provider_error',
+          retryable: false,
+        },
       },
     ])
   })

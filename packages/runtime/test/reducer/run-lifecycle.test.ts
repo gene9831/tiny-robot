@@ -121,6 +121,26 @@ describe('Runtime reducer run lifecycle', () => {
     expect(ignoredSecondTerminal).toBe(completed)
   })
 
+  it('completes a tool-call Model Step while preserving the active Run', () => {
+    const active = createActiveRun()
+    const awaitingTool = reduceRuntimeEvent(active, {
+      type: 'model-step-completed',
+      runId: 'run-1',
+      stepId: 'step-1',
+      termination: 'tool_calls',
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    expect(awaitingTool.runsById['run-1']).toMatchObject({
+      status: 'active',
+      termination: 'tool_calls',
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+    expect(awaitingTool.stepsById['step-1']?.status).toBe('completed')
+    expect(awaitingTool.conversationsById['conversation-1']?.activeRunId).toBe('run-1')
+    expect(awaitingTool.turnsById['turn-1']?.selectedRunId).toBeUndefined()
+  })
+
   it.each([
     ['completed', 'completed'],
     ['failed', 'failed'],

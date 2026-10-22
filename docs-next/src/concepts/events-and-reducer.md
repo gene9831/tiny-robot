@@ -28,7 +28,7 @@ flowchart LR
 
 ## 当前 reducer 处理的事实
 
-reducer 当前覆盖单 Step 文本生命周期：
+reducer 当前覆盖 text/reasoning Model Step 生命周期及其稳定终止结果：
 
 | Event                  | 对 Snapshot 的影响                     |
 | ---------------------- | -------------------------------------- |
@@ -40,6 +40,7 @@ reducer 当前覆盖单 Step 文本生命周期：
 | `text-part-started`    | 创建 streaming Text Part               |
 | `text-part-delta`      | 按到达顺序原样追加文本                 |
 | `text-part-ended`      | Text Part 进入 completed               |
+| `model-step-completed` | Model Step completed，Run 保持 active  |
 | `run-terminated`       | 当前实现同时终止 Step 与 Run           |
 
 这些是内部事件，不属于 Runtime 公共导出，也不能直接等同于 AI SDK stream part。
@@ -75,25 +76,25 @@ reducer 接收的是内部 Domain Event，因此所有权错误代表程序或�
 
 Step 终止表示“一次模型调用或工具执行已经结束”；Run 终止表示“针对这个 Turn 的整次回答尝试已经结束”。这是两个不同层级的事实。
 
-现行 `run-terminated` 同时接收 `stepId`、`stepStatus` 和 `runStatus`，并在一次归约中终止 Step 与 Run。它能表达单 Step 文本回答，但不能表达“Step 已结束而 Run 仍为 active”的多 Step 生命周期。
+现行 `run-terminated` 同时接收 `stepId`、`stepStatus` 和 `runStatus`，用于最后一个 Model Step 与整个 Run 一起终止。模型以 `tool-calls` 结束时，独立的 `model-step-completed` 会把当前 Model Step 写成 completed，同时让 Run 保持 active；它只表达终止事实，不执行工具。
 
 多 Step Run 的事件顺序必须拆成：
 
 ```mermaid
 flowchart LR
-  M1["Step 1<br/>kind = model"] -->|step-terminated| T["Step 2<br/>kind = tool"]
-  T -->|step-terminated| M2["Step 3<br/>kind = model"]
-  M2 -->|step-terminated| R["Run 仍为 active"]
-  R -->|run-terminated| Done["Run completed"]
+  M1["Model Step<br/>active"] -->|model-step-completed<br/>tool_calls| R["Run 仍为 active"]
+  R --> Future["后续工具审批与执行能力"]
+  Future --> M2["后续 Model Step"]
+  M2 -->|run-terminated| Done["Step 与 Run 进入终态"]
 ```
 
-- `step-terminated` 结束一次模型调用或工具执行；
-- `run-terminated` 结束整个执行尝试，不强制要求 `stepId`；
+- `model-step-completed` 结束当前模型调用，但不结束整个执行尝试；
+- `run-terminated` 在当前实现中同时结束指定 Step 和整个执行尝试；
 - 模型请求工具时，`Step（kind = 'model'）` 已结束，但 Run 仍是 active；
-- 最后一个 `Step（kind = 'model'）` 也必须先独立终止，不能依靠 `run-terminated` 顺带结束；
-- Run 可以在第一个 Step 创建前被取消。
+- 工具审批、Tool Step 创建和后续 Model Step 仍由后续工具流程补齐；
+- 当前 abort 针对已经开始的 active Model Step，通过同一个 `run-terminated` 记录 `aborted`。
 
-当前 reducer 的可执行范围是单 Step 文本生命周期。多 Step 执行需要独立的 Step 终止事实，才能在一个 Step 完成后让 Run 继续保持 active。
+当前 reducer 已能表达“Model Step completed 而 Run active”，但尚不能自行推进工具审批、Tool Step 和 continuation。后续工具 coordinator 消费这个稳定状态继续 Run，而不是把 `tool-calls` 伪装成 completed Run。
 
 ## 结构共享示例
 

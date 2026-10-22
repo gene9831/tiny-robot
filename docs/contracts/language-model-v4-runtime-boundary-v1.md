@@ -203,7 +203,7 @@ Ingress Guard v1 投影：
 - `providerMetadata`：只允许第 10 节的 Run-local opaque continuation；
 - tool、file、reasoning-file、source、custom content 以及未知未来 part：v1 忽略且不持久化。
 
-忽略只代表 v1 没有为该 part 建立领域投影，不代表相应能力已实现。显式 `error` 必须清洗为稳定 interrupted error；已投影 text/reasoning 的生命周期错误、缺少或重复 `finish`、不支持的 finish reason 以及 finish 后任意 part 仍是 protocol violation。
+忽略只代表 v1 没有为该 part 建立领域投影，不代表相应能力已实现。显式 `error` 必须清洗为稳定 Provider error 并使 Run `failed`；已投影 text/reasoning 的生命周期错误、缺少或重复 `finish`、不支持的 finish reason 以及 finish 后任意 part 仍是 protocol violation。
 
 ## 8. 顺序、ID 与组装
 
@@ -301,7 +301,7 @@ Continuation capsule：
 - 未知 `LanguageModelV4StreamPart.type`：Guard 忽略且不持久化，不形成 Domain Event 或错误；显式 inspector 仍可观察原 part。
 - 已知 part 上的未知字段：默认忽略且不持久化；若改变安全、关联或终止语义则 protocol violation。
 - `raw`：无条件丢弃，不做 Domain mapping。
-- `error`：不得按未知内容忽略；必须清洗为稳定安全错误并中断 Run。
+- `error`：不得按未知内容忽略；必须清洗为稳定安全错误并使 Run `failed`。
 - Provider wire 层的未知事件由所采用的 AI SDK Provider 负责；需要 raw chunk 完成规范化的 Provider adapter 必须自行请求并映射，不得依赖 Runtime 或 inspector 配置。package upgrade 和 raw-to-V4 conformance 是信任边界的一部分。
 - `SharedV4Warning` 的自由文本 `details/message` 不得直接显示、持久化或上报；只允许映射为 Tiny Robot 稳定 warning code。
 - 未声明的有损转换 **MUST** reject；已声明 loss 必须以稳定 code 出现在 Provider conformance evidence、manifest 和支持文档中，不得写入 Runtime capability 或 Snapshot。

@@ -328,6 +328,28 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
     }
 
+    case 'model-step-completed': {
+      const run = requireEntity(snapshot.runsById[event.runId], 'run', event.runId)
+      const step = requireEntity(snapshot.stepsById[event.stepId], 'step', event.stepId)
+      requireOwnership(step.runId, run.id, 'step')
+
+      return {
+        ...snapshot,
+        runsById: {
+          ...snapshot.runsById,
+          [run.id]: {
+            ...run,
+            termination: event.termination,
+            ...(event.usage === undefined ? {} : { usage: { ...event.usage } }),
+          },
+        },
+        stepsById: {
+          ...snapshot.stepsById,
+          [step.id]: { ...step, status: 'completed' },
+        },
+      }
+    }
+
     case 'run-terminated': {
       const run = requireEntity(snapshot.runsById[event.runId], 'run', event.runId)
       const step = requireEntity(snapshot.stepsById[event.stepId], 'step', event.stepId)

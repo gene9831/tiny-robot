@@ -100,8 +100,14 @@ export interface TinyRobotRuntime {
   /**
    * Requests cancellation of the active run in a conversation.
    *
+   * @remarks
+   * Caller cancellation takes precedence over a Provider error or exception
+   * observed by the same model execution. The resulting Snapshot contains one
+   * `aborted` run terminal with a normalized, non-sensitive error.
+   *
    * @param conversationId - Runtime conversation identifier whose active run should be aborted.
    * @returns A promise that settles after the abort request is accepted or rejected.
+   * @throws A safe Runtime error when the Conversation does not exist or has no active execution.
    */
   abort(conversationId: string): Promise<void>
 

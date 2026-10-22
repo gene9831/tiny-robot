@@ -71,14 +71,14 @@ UI 面向领域的数据主要从 Snapshot 派生，例如：
 
 ## 当前可用边界
 
-| 内容                                                      | 当前状态     |
-| --------------------------------------------------------- | ------------ |
-| 公共类型、Command、Provider 注册和 Runtime 接口           | 当前公共 API |
-| Domain Event、reducer、不可变 Snapshot 与 Domain Selector | 当前领域能力 |
-| Prompt、调用选项投影和 Run-local Provider/model 创建      | 当前出站边界 |
-| 单 Step text/reasoning `doStream()`、Ingress Guard 与终态 | 当前执行能力 |
-| Provider/transport error normalization、abort、retry      | 后续能力     |
-| tool approval、multi-Step、regenerate、持久化与恢复       | 后续能力     |
+| 内容                                                       | 当前状态     |
+| ---------------------------------------------------------- | ------------ |
+| 公共类型、Command、Provider 注册和 Runtime 接口            | 当前公共 API |
+| Domain Event、reducer、不可变 Snapshot 与 Domain Selector  | 当前领域能力 |
+| Prompt、调用选项投影和 Run-local Provider/model 创建       | 当前出站边界 |
+| 单 Step text/reasoning `doStream()`、Ingress Guard 与终态  | 当前执行能力 |
+| Provider error normalization、terminal 语义与 caller abort | 当前执行能力 |
+| retry、tool approval、multi-Step、regenerate、持久化与恢复 | 后续能力     |
 
 因此图中的首个单 Step text/reasoning 链路已经可以由当前 API 和示例验证；表中标为后续能力的部分仍只用于约束后续实现，不能当作当前可调用行为。
 

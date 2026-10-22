@@ -31,7 +31,7 @@ flowchart LR
 
 Reasoning 是可选的独立 Part：Provider 未产生标准 reasoning part 时，本例只有文本；实际产生时，它按 stream 观察顺序出现在 assistant Message 的 `partIds` 中，不会与最终文本拼成同一 Part。
 
-当前 reducer 用一个终止事实完成单 Step 文本回答。因此它可以表达“本次模型调用结束，同时整次回答结束”，但不能表达“当前 Step 已结束而 Run 继续执行”。需要多 Step 时，领域层必须分别表达 Step 终止与 Run 终止，不能继续复用一个合并事实。
+正常 `finish(stop)` 场景用一个 `run-terminated` 事实同时完成当前 Model Step 和整次回答。若模型以 `tool-calls` 结束，reducer 改用独立的 `model-step-completed`，把 Step 写成 completed 而让 Run 保持 active；工具审批、执行和后续 Model Step 仍由后续能力负责。
 
 最终关系是：
 

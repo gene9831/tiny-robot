@@ -422,11 +422,11 @@ Task 4 可在 Task 2/3 之外独立实施和评审；Tasks 11、12 在 Runtime v
 
 **TDD order:**
 
-- [ ] Table-test all finish reasons and missing-vs-zero usage.
-- [ ] Test exception, abrupt EOF, missing finish, open part at finish, duplicate finish and post-finish data.
-- [ ] Race abort with provider error/exception; caller abort wins and one terminal exists.
-- [ ] Put canaries in dynamic error/warning data; only stable category/code/retryable/httpStatus survive.
-- [ ] Confirm RED, implement precedence/normalization, rerun terminal and vertical tests.
+- [x] Table-test all finish reasons and missing-vs-zero usage.
+- [x] Test exception, abrupt EOF, missing finish, open part at finish, duplicate finish and post-finish data.
+- [x] Race abort with provider error/exception; caller abort wins and one terminal exists.
+- [x] Put canaries in dynamic error/warning data; only stable category/code/retryable/httpStatus survive.
+- [x] Confirm RED, implement precedence/normalization, rerun terminal and vertical tests.
 
 **Acceptance criteria:** failed/aborted/interrupted never conflate; accepted finish requires closed assemblers; raw thrown values never cross the boundary.
 

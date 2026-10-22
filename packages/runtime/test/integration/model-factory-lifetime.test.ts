@@ -133,6 +133,7 @@ function createCoordinatorHarness(resolveProvider: (providerId: string) => Runti
         getSnapshot: () => snapshot,
         emit,
         createId: (kind) => `${kind}-${++idCounter}`,
+        abortSignal: new AbortController().signal,
       }),
   }
 }

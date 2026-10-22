@@ -38,6 +38,7 @@ TypeScript 类型和英文 TSDoc 适合在编辑器中查询单个符号，但�
 
 - **第一次接触 Runtime**：从[快速开始](./guide/quick-start.md)进入，不需要预先阅读源码或实施计划。
 - **正在集成 Runtime**：先看[Command 与 Runtime API](./concepts/commands-and-runtime.md)，再按需查询 [Runtime API](./reference/runtime-api.md)。
+- **正在理解模型终态**：使用[观察 Run 如何结束](./examples/runtime-terminal-semantics/)在本地稳定重现完成、失败、中止和中断。
 - **正在验证真实 Provider**：走通首个 text/reasoning Run 后，使用[DeepSeek 三种 API 格式实际验证](./examples/deepseek-runtime/)。
 - **正在评审或维护设计**：查看[架构总览](./design/architecture-overview.md)、[文档完整性规范](./contributing/documentation-standard.md)和[学习文档评审指南](./contributing/learning-document-review.md)。
 
@@ -55,5 +56,6 @@ TypeScript 类型和英文 TSDoc 适合在编辑器中查询单个符号，但�
 8. [Provider 注册与安全边界](./concepts/provider-registration.md)：理解接入实例、模型、能力和凭据停在哪一层。
 9. [准备一次模型调用](./concepts/model-call-projection.md)：理解 Snapshot 怎样变成允许的模型调用对象。
 10. [校验一次模型文本流](./concepts/model-step-ingress.md)：理解 Provider stream 怎样被校验并转换为安全的 Domain Event。
+11. [观察 Run 如何结束](./examples/runtime-terminal-semantics/)：比较正常完成、Provider 失败、用户中止、协议中断和 usage 边界。
 
 如果只想查看某个 TypeScript 类型，请直接进入 [Runtime API 与 TSDoc](./reference/runtime-api.md)。

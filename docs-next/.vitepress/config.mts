@@ -49,6 +49,7 @@ export default withMermaid(
             { text: 'Provider 注册与安全边界', link: '/concepts/provider-registration' },
             { text: '能力检查与参数投影', link: '/concepts/model-call-projection' },
             { text: '校验模型文本流', link: '/concepts/model-step-ingress' },
+            { text: '观察 Run 如何结束', link: '/examples/runtime-terminal-semantics/' },
             { text: '验证 DeepSeek 三种格式', link: '/examples/deepseek-runtime/' },
           ],
         },

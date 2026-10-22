@@ -1,5 +1,5 @@
 import type { LanguageModelV4, LanguageModelV4StreamPart } from '@ai-sdk/provider'
-import { consumeModelStepStream } from '../boundary/ingressGuard'
+import { consumeModelStepStream, terminateModelStepBeforeStream } from '../boundary/ingressGuard'
 import type { SendCommand } from '../commands/types'
 import type { RuntimeDomainEvent } from '../domain/events'
 import type { RuntimeSnapshot } from '../domain/types'
@@ -20,6 +20,7 @@ export interface TextRunCoordinatorInput {
   readonly getSnapshot: () => RuntimeSnapshot
   readonly emit: (event: RuntimeDomainEvent) => void
   readonly createId: (kind: RuntimeIdKind) => string
+  readonly abortSignal: AbortSignal
   readonly inspectStreamPart?: (inspection: {
     readonly runId: string
     readonly stepId: string
@@ -142,11 +143,10 @@ export async function executeTextRun(input: TextRunCoordinatorInput): Promise<vo
     input.emit({ type: 'text-part-delta', runId, partId: userPartId, delta: command.content })
     input.emit({ type: 'text-part-ended', runId, partId: userPartId })
 
-    const abortController = new AbortController()
     const callOptions = buildModelCallOptions({
       snapshot: input.getSnapshot(),
       runId,
-      abortSignal: abortController.signal,
+      abortSignal: input.abortSignal,
     })
 
     input.emit({ type: 'step-started', runId, stepId, kind: 'model' })
@@ -158,7 +158,17 @@ export async function executeTextRun(input: TextRunCoordinatorInput): Promise<vo
       role: 'assistant',
     })
 
-    const stream = (await model.doStream(callOptions)).stream
+    let stream: ReadableStream<LanguageModelV4StreamPart>
+    try {
+      stream = (await model.doStream(callOptions)).stream
+    } catch {
+      terminateModelStepBeforeStream({
+        runId,
+        stepId,
+        abortSignal: input.abortSignal,
+        emit: input.emit,
+      })
+    }
     const inspectStreamPart = input.inspectStreamPart
     const inspectedStream =
       inspectStreamPart === undefined
@@ -177,7 +187,7 @@ export async function executeTextRun(input: TextRunCoordinatorInput): Promise<vo
       stepId,
       messageId: assistantMessageId,
       stream: inspectedStream,
-      abortSignal: abortController.signal,
+      abortSignal: input.abortSignal,
       createPartId: () => input.createId('part'),
       emit: input.emit,
     })

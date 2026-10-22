@@ -1,6 +1,6 @@
 # Command 与 Runtime API
 
-`TinyRobotRuntime` 是应用访问对话状态的公共根入口。应用可以创建 Conversation、读取当前状态、订阅变化并派发 Command，但不能直接改写对话数据。当前已实现的执行能力只有首个单 Step text/reasoning Run；停止生成、重试、恢复和工具流程尚未实现。
+`TinyRobotRuntime` 是应用访问对话状态的公共根入口。应用可以创建 Conversation、读取当前状态、订阅变化并派发 Command，但不能直接改写对话数据。当前已实现首个 text/reasoning Model Step 及其停止生成语义；重试、恢复和工具执行流程尚未实现。
 
 本文把“当前完整状态”称为 **Snapshot**，把“外部提出的请求”称为 **Command**。可以先通过 [快速开始](../guide/quick-start.md) 建立整体印象。
 
@@ -114,7 +114,9 @@ flowchart TB
 
 当前 `dispatch(send)` 和 `conversation.send()` 返回的 Promise 会在本次文本 Run 终止后 settle。即便 Promise resolve，调用方仍应从 Snapshot 读取最终 Run、Message 和 Part，而不是维护第二份回答状态。
 
-后续方法目前只稳定拒绝为 `runtime_operation_not_implemented`。本页不为 abort precedence、重试、恢复、工具执行或多 Step Run 承诺行为。
+`runtime.abort(conversationId)` 会把 AbortSignal 传播给该 Conversation 当前正在执行的 Model Step。调用方 abort 与 Provider error/exception 竞争时，caller abort 优先，Snapshot 只得到一个 `aborted` terminal；Conversation 不存在或没有 active execution 时，请求以稳定 Runtime code 拒绝。
+
+Retry、Regenerate 和工具审批方法目前仍稳定拒绝为 `runtime_operation_not_implemented`。`tool-calls` 可以让当前 Model Step completed 且 Run 保持 active，但当前能力不会继续执行工具或创建后续 Step。
 
 ## 命名来源
 

@@ -1,13 +1,14 @@
 import type { LanguageModelV4StreamPart } from '@ai-sdk/provider'
 import type { RuntimeDomainEvent } from '../domain/events'
 import {
-  ReasoningPartAssemblers,
   ContentAssemblyViolation,
+  ReasoningPartAssemblers,
   TextPartAssemblers,
   type ReasoningAssemblyViolationCode,
   type TextAssemblyViolationCode,
 } from './assemblers'
 import {
+  normalizeProviderError,
   normalizeResponseMetadata,
   normalizeUsage,
   ResponseMetadataConflict,
@@ -18,11 +19,13 @@ import {
 export type ModelStepIngressErrorCode =
   | TextAssemblyViolationCode
   | ReasoningAssemblyViolationCode
+  | 'model_step_aborted'
   | 'model_step_finish_duplicate'
   | 'model_step_finish_missing'
   | 'model_step_finish_reason_unsupported'
   | 'model_step_part_after_finish'
   | 'model_step_part_id_allocation_failed'
+  | 'model_step_provider_error'
   | 'model_step_response_metadata_conflict'
   | 'model_step_stream_read_failed'
   | 'model_step_stream_start_duplicate'
@@ -53,6 +56,25 @@ class ModelStepProtocolViolation extends Error {
   }
 }
 
+class ModelStepProviderFailure extends Error {
+  readonly value: unknown
+
+  constructor(value: unknown) {
+    super('model_step_provider_error')
+    this.name = 'ModelStepProviderFailure'
+    this.value = value
+    this.stack = undefined
+  }
+}
+
+class ModelStepCallerAbort extends Error {
+  constructor() {
+    super('model_step_aborted')
+    this.name = 'ModelStepCallerAbort'
+    this.stack = undefined
+  }
+}
+
 export interface ModelStepIngressInput {
   readonly runId: string
   readonly stepId: string
@@ -65,18 +87,24 @@ export interface ModelStepIngressInput {
 
 export interface ModelStepIngressResult {
   readonly terminal: Readonly<{
-    readonly runStatus: 'completed'
-    readonly stepStatus: 'completed'
-    readonly termination: 'stop'
+    readonly runStatus: 'active' | 'completed' | 'failed' | 'interrupted'
+    readonly stepStatus: 'completed' | 'failed' | 'interrupted'
+    readonly termination?: 'stop' | 'max_output_tokens' | 'content_filter' | 'tool_calls'
   }>
   readonly usage?: RuntimeTokenUsage
 }
+
+type ModelStepTerminalInput = Pick<ModelStepIngressInput, 'runId' | 'stepId' | 'abortSignal' | 'emit'>
 
 function protocolViolation(code: ModelStepIngressErrorCode): never {
   throw new ModelStepProtocolViolation(code)
 }
 
-function createInterruptedEvent(input: ModelStepIngressInput): RuntimeDomainEvent {
+function callerAbort(): never {
+  throw new ModelStepCallerAbort()
+}
+
+function createInterruptedEvent(input: ModelStepTerminalInput): RuntimeDomainEvent {
   return {
     type: 'run-terminated',
     runId: input.runId,
@@ -86,15 +114,53 @@ function createInterruptedEvent(input: ModelStepIngressInput): RuntimeDomainEven
   }
 }
 
-function createCompletedEvent(input: ModelStepIngressInput, usage: RuntimeTokenUsage | undefined): RuntimeDomainEvent {
+function createAbortedEvent(input: ModelStepTerminalInput): RuntimeDomainEvent {
   return {
     type: 'run-terminated',
     runId: input.runId,
     stepId: input.stepId,
-    runStatus: 'completed',
-    stepStatus: 'completed',
-    termination: 'stop',
-    ...(usage === undefined ? {} : { usage }),
+    runStatus: 'aborted',
+    stepStatus: 'aborted',
+    error: normalizeProviderError(undefined, 'caller-abort'),
+  }
+}
+
+function createFailedEvent(input: ModelStepTerminalInput, value: unknown): RuntimeDomainEvent {
+  return {
+    type: 'run-terminated',
+    runId: input.runId,
+    stepId: input.stepId,
+    runStatus: 'failed',
+    stepStatus: 'failed',
+    error: normalizeProviderError(value, 'provider-error'),
+  }
+}
+
+function createRunTerminalEvent(input: ModelStepTerminalInput, result: ModelStepIngressResult): RuntimeDomainEvent {
+  const termination = result.terminal.termination
+  return {
+    type: 'run-terminated',
+    runId: input.runId,
+    stepId: input.stepId,
+    runStatus: result.terminal.runStatus as 'completed' | 'failed' | 'interrupted',
+    stepStatus: result.terminal.stepStatus,
+    ...(termination === 'stop' || termination === 'max_output_tokens' || termination === 'content_filter'
+      ? { termination }
+      : {}),
+    ...(result.usage === undefined ? {} : { usage: result.usage }),
+  }
+}
+
+function createModelStepCompletedEvent(
+  input: ModelStepTerminalInput,
+  result: ModelStepIngressResult,
+): RuntimeDomainEvent {
+  return {
+    type: 'model-step-completed',
+    runId: input.runId,
+    stepId: input.stepId,
+    termination: 'tool_calls',
+    ...(result.usage === undefined ? {} : { usage: result.usage }),
   }
 }
 
@@ -106,15 +172,26 @@ function allocatePartId(input: ModelStepIngressInput): string {
   }
 }
 
+/** Emits the canonical terminal when model invocation fails before a readable stream is available. */
+export function terminateModelStepBeforeStream(input: ModelStepTerminalInput): never {
+  if (input.abortSignal.aborted) {
+    input.emit(createAbortedEvent(input))
+    throw new ModelStepIngressError('model_step_aborted')
+  }
+
+  input.emit(createInterruptedEvent(input))
+  throw new ModelStepIngressError('model_step_stream_unavailable')
+}
+
 /** Consumes one constructed V4 text/reasoning stream and emits only normalized Runtime facts. */
 export async function consumeModelStepStream(input: ModelStepIngressInput): Promise<ModelStepIngressResult> {
   let reader: ReadableStreamDefaultReader<LanguageModelV4StreamPart>
   try {
     reader = input.stream.getReader()
   } catch {
-    input.emit(createInterruptedEvent(input))
-    throw new ModelStepIngressError('model_step_stream_unavailable')
+    return terminateModelStepBeforeStream(input)
   }
+
   const runtimePartIds = new Set<string>()
   const textParts = new TextPartAssemblers(runtimePartIds)
   const reasoningParts = new ReasoningPartAssemblers(runtimePartIds)
@@ -122,26 +199,35 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
   let streamStarted = false
   let pendingResult: ModelStepIngressResult | undefined
   let terminalEmitted = false
+  const cancelForAbort = () => {
+    void reader.cancel().catch(() => undefined)
+  }
+  input.abortSignal.addEventListener('abort', cancelForAbort, { once: true })
 
   try {
     while (true) {
+      if (input.abortSignal.aborted) callerAbort()
+
       let readResult: ReadableStreamReadResult<LanguageModelV4StreamPart>
       try {
         readResult = await reader.read()
       } catch {
+        if (input.abortSignal.aborted) callerAbort()
         protocolViolation('model_step_stream_read_failed')
       }
 
+      if (input.abortSignal.aborted) callerAbort()
+
       if (readResult.done) {
-        if (!streamStarted) {
-          protocolViolation('model_step_stream_start_missing')
-        }
-        if (pendingResult === undefined) {
-          protocolViolation('model_step_finish_missing')
-        }
+        if (!streamStarted) protocolViolation('model_step_stream_start_missing')
+        if (pendingResult === undefined) protocolViolation('model_step_finish_missing')
 
         terminalEmitted = true
-        input.emit(createCompletedEvent(input, pendingResult.usage))
+        input.emit(
+          pendingResult.terminal.runStatus === 'active'
+            ? createModelStepCompletedEvent(input, pendingResult)
+            : createRunTerminalEvent(input, pendingResult),
+        )
         return pendingResult
       }
 
@@ -152,9 +238,7 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
 
       if (!streamStarted) {
         if (part.type !== 'stream-start') {
-          if (part.type === 'error') {
-            protocolViolation('model_step_stream_read_failed')
-          }
+          if (part.type === 'error') throw new ModelStepProviderFailure(part.error)
           if (
             part.type === 'response-metadata' ||
             part.type === 'text-start' ||
@@ -180,9 +264,7 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
           try {
             metadata = normalizeResponseMetadata(metadata, part)
           } catch (error) {
-            if (error instanceof ResponseMetadataConflict) {
-              protocolViolation('model_step_response_metadata_conflict')
-            }
+            if (error instanceof ResponseMetadataConflict) protocolViolation('model_step_response_metadata_conflict')
             throw error
           }
           break
@@ -197,25 +279,14 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
           break
         }
         case 'text-delta': {
-          if (typeof part.delta !== 'string') {
-            protocolViolation('model_step_text_delta_invalid')
-          }
+          if (typeof part.delta !== 'string') protocolViolation('model_step_text_delta_invalid')
           const runtimePartId = textParts.append(part.id)
-          input.emit({
-            type: 'text-part-delta',
-            runId: input.runId,
-            partId: runtimePartId,
-            delta: part.delta,
-          })
+          input.emit({ type: 'text-part-delta', runId: input.runId, partId: runtimePartId, delta: part.delta })
           break
         }
         case 'text-end': {
           const runtimePartId = textParts.end(part.id)
-          input.emit({
-            type: 'text-part-ended',
-            runId: input.runId,
-            partId: runtimePartId,
-          })
+          input.emit({ type: 'text-part-ended', runId: input.runId, partId: runtimePartId })
           break
         }
         case 'reasoning-start': {
@@ -229,57 +300,76 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
           break
         }
         case 'reasoning-delta': {
-          if (typeof part.delta !== 'string') {
-            protocolViolation('model_step_reasoning_delta_invalid')
-          }
+          if (typeof part.delta !== 'string') protocolViolation('model_step_reasoning_delta_invalid')
           const runtimePartId = reasoningParts.append(part.id)
-          input.emit({
-            type: 'reasoning-part-delta',
-            runId: input.runId,
-            partId: runtimePartId,
-            delta: part.delta,
-          })
+          input.emit({ type: 'reasoning-part-delta', runId: input.runId, partId: runtimePartId, delta: part.delta })
           break
         }
         case 'reasoning-end': {
           const runtimePartId = reasoningParts.end(part.id)
-          input.emit({
-            type: 'reasoning-part-ended',
-            runId: input.runId,
-            partId: runtimePartId,
-          })
+          input.emit({ type: 'reasoning-part-ended', runId: input.runId, partId: runtimePartId })
           break
         }
         case 'finish': {
           textParts.assertClosed()
           reasoningParts.assertClosed()
-          if (part.finishReason.unified !== 'stop') {
-            protocolViolation('model_step_finish_reason_unsupported')
-          }
           const usage = normalizeUsage(part.usage)
-          pendingResult = {
-            terminal: {
-              runStatus: 'completed',
-              stepStatus: 'completed',
-              termination: 'stop',
-            },
-            ...(usage === undefined ? {} : { usage }),
+          switch (part.finishReason.unified) {
+            case 'stop':
+              pendingResult = {
+                terminal: { runStatus: 'completed', stepStatus: 'completed', termination: 'stop' },
+                ...(usage === undefined ? {} : { usage }),
+              }
+              break
+            case 'length':
+              pendingResult = {
+                terminal: { runStatus: 'completed', stepStatus: 'completed', termination: 'max_output_tokens' },
+                ...(usage === undefined ? {} : { usage }),
+              }
+              break
+            case 'content-filter':
+              pendingResult = {
+                terminal: { runStatus: 'completed', stepStatus: 'completed', termination: 'content_filter' },
+                ...(usage === undefined ? {} : { usage }),
+              }
+              break
+            case 'tool-calls':
+              pendingResult = {
+                terminal: { runStatus: 'active', stepStatus: 'completed', termination: 'tool_calls' },
+                ...(usage === undefined ? {} : { usage }),
+              }
+              break
+            case 'error':
+              throw new ModelStepProviderFailure(undefined)
+            case 'other':
+              pendingResult = {
+                terminal: { runStatus: 'interrupted', stepStatus: 'interrupted' },
+                ...(usage === undefined ? {} : { usage }),
+              }
+              break
+            default:
+              protocolViolation('model_step_finish_reason_unsupported')
           }
           break
         }
         case 'raw':
           break
         case 'error':
-          protocolViolation('model_step_stream_read_failed')
+          throw new ModelStepProviderFailure(part.error)
         default:
           break
       }
     }
   } catch (error) {
-    const code =
-      error instanceof ModelStepProtocolViolation || error instanceof ContentAssemblyViolation
-        ? error.code
-        : 'model_step_stream_read_failed'
+    const aborted = input.abortSignal.aborted || error instanceof ModelStepCallerAbort
+    const providerFailure = error instanceof ModelStepProviderFailure
+    const code = aborted
+      ? 'model_step_aborted'
+      : providerFailure
+        ? 'model_step_provider_error'
+        : error instanceof ModelStepProtocolViolation || error instanceof ContentAssemblyViolation
+          ? error.code
+          : 'model_step_stream_read_failed'
 
     try {
       await reader.cancel()
@@ -288,10 +378,17 @@ export async function consumeModelStepStream(input: ModelStepIngressInput): Prom
     }
     if (!terminalEmitted) {
       terminalEmitted = true
-      input.emit(createInterruptedEvent(input))
+      input.emit(
+        aborted
+          ? createAbortedEvent(input)
+          : providerFailure
+            ? createFailedEvent(input, error.value)
+            : createInterruptedEvent(input),
+      )
     }
     throw new ModelStepIngressError(code)
   } finally {
+    input.abortSignal.removeEventListener('abort', cancelForAbort)
     reader.releaseLock()
   }
 }

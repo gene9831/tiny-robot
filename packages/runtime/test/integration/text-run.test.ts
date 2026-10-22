@@ -397,12 +397,20 @@ describe('first vertical text Run', () => {
     expect(runtime.getSnapshot().turnsById).toEqual({})
   })
 
-  it('rejects later-task methods without changing the Snapshot', async () => {
+  it('rejects an abort when the Conversation has no active execution', async () => {
+    const runtime = createRuntime({ resolveProvider: () => undefined })
+    const conversation = runtime.createConversation()
+    const snapshot = runtime.getSnapshot()
+
+    await expect(runtime.abort(conversation.id)).rejects.toMatchObject({ code: 'runtime_active_run_missing' })
+    expect(runtime.getSnapshot()).toBe(snapshot)
+  })
+
+  it('rejects remaining later-task methods without changing the Snapshot', async () => {
     const runtime = createRuntime({ resolveProvider: () => undefined })
     const conversation = runtime.createConversation()
     const snapshot = runtime.getSnapshot()
     const operations: ReadonlyArray<() => Promise<void>> = [
-      () => runtime.abort(conversation.id),
       () => runtime.retryLastRun({ conversationId: conversation.id }),
       () => runtime.regenerateLastResponse({ conversationId: conversation.id }),
       () => runtime.approveToolCall('tool-call-1'),

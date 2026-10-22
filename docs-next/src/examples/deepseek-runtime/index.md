@@ -37,7 +37,7 @@ conversation.send({ providerId, modelId, content })
 → Snapshot
 ```
 
-当前 Runtime 把标准 text 与 reasoning 生命周期投影为 Domain Event。Custom、source、file、工具内容和尚未认识的未来 part 会在 Guard 中被忽略，不进入 Snapshot；这不等于 Runtime 已支持这些内容。显式 `error`、内容生命周期错误、缺少或重复 terminal 等结构问题仍会安全中断。
+当前 Runtime 把标准 text 与 reasoning 生命周期投影为 Domain Event。Custom、source、file、工具内容和尚未认识的未来 part 会在 Guard 中被忽略，不进入 Snapshot；这不等于 Runtime 已支持这些内容。显式 Provider `error` 会形成安全的 `failed`，内容生命周期错误、缺少或重复 terminal 等结构问题形成 `interrupted`。
 
 示例不发送 reasoning 控制字段，三个 Provider 都采用模型与 endpoint 的默认行为。标准 V4 reasoning part 如果实际出现，会成为独立 `ReasoningPart`；Capability metadata 不会阻止它进入 Snapshot。除 Responses reasoning 事件的标准化映射外，示例不通过隐藏的 `forceReasoning` 或额外协议转换修改请求与响应。示例由应用层主动配置 stream tap，在 Console 直接打印进入 Runtime 的标准 chunk；这项调试输出不属于 Runtime 日志或领域状态。
 
@@ -47,7 +47,7 @@ conversation.send({ providerId, modelId, content })
 - Console 诊断是本 Demo 为展示 Provider 输出而显式启用的应用层行为，会打印完整 V4 part，包括模型生成内容和可能存在的 Provider metadata；不要用真实敏感内容测试本页。Runtime 本身不会保存或记录这些 part。
 - `LanguageModelV4StreamResult.request`、`.response`、headers 和 body 在 coordinator 边界丢弃。
 - 页面和 Console 都不会输出 Provider 原始异常；请求抛错时只显示固定的 `deepseek_live_request_failed`。
-- 当前 Task 5 尚未实现 Provider error normalization；网络、CORS 或非 2xx 失败可能不会为 Run 产生完整终态。该限制由后续 terminal/error hardening 补齐。
+- Provider error、调用异常和 caller abort 都会得到单一、已清洗的 Run 终态；动态 message、stack、cause、raw response 和 secret 不进入 Snapshot 或 Runtime error。
 
 ## 如何判断结果
 
@@ -57,4 +57,4 @@ conversation.send({ providerId, modelId, content })
 
 本页不预设 live 结果。每次 Provider 版本、registration 或 Guard 语义变化后，都必须重新完成两个模型 × 三种协议的浏览器验证，再记录当次结果；自动测试不能替代真实 endpoint、认证和流式响应证据。
 
-如果 Chrome Network 把 `chat/completions` 标记为“来自 Service Worker”，并且 EventStream 只有 `{}`，说明浏览器中的 Service Worker 或扩展拦截了请求，DeepSeek 的真实 SSE 没有到达 Provider。Provider 产生的显式 `error` part 仍会被 Guard 清洗为稳定的 interrupted 错误；忽略未知内容绝不包括吞掉显式错误。应先在不受该 Service Worker/扩展控制的浏览器上下文中复测，或在 DevTools 中临时启用网络绕过来确认。
+如果 Chrome Network 把 `chat/completions` 标记为“来自 Service Worker”，并且 EventStream 只有 `{}`，说明浏览器中的 Service Worker 或扩展拦截了请求，DeepSeek 的真实 SSE 没有到达 Provider。Provider 产生的显式 `error` part 仍会被 Guard 清洗为稳定的 `failed`；忽略未知内容绝不包括吞掉显式错误。应先在不受该 Service Worker/扩展控制的浏览器上下文中复测，或在 DevTools 中临时启用网络绕过来确认。

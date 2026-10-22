@@ -27,6 +27,7 @@ export function createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime {
   let snapshot = freezeSnapshot(createRuntimeSnapshot())
   let nextId = 0
   const listeners = new Set<(snapshot: RuntimeSnapshot) => void>()
+  const activeAbortControllers = new Map<string, AbortController>()
   const inspectStreamPart = options.inspect?.streamPart
 
   const createId = (kind: RuntimeIdKind): string => `${kind}-${++nextId}`
@@ -47,14 +48,35 @@ export function createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime {
 
   const dispatch = async (command: RuntimeCommand): Promise<void> => {
     if (command.type === 'send') {
-      await executeTextRun({
-        command,
-        resolveProvider: options.resolveProvider,
-        getSnapshot: () => snapshot,
-        emit,
-        createId,
-        inspectStreamPart,
-      })
+      const abortController = new AbortController()
+      activeAbortControllers.set(command.conversationId, abortController)
+      try {
+        await executeTextRun({
+          command,
+          resolveProvider: options.resolveProvider,
+          getSnapshot: () => snapshot,
+          emit,
+          createId,
+          abortSignal: abortController.signal,
+          inspectStreamPart,
+        })
+      } finally {
+        if (activeAbortControllers.get(command.conversationId) === abortController) {
+          activeAbortControllers.delete(command.conversationId)
+        }
+      }
+      return
+    }
+
+    if (command.type === 'abort') {
+      if (snapshot.conversationsById[command.conversationId] === undefined) {
+        throw new RuntimeExecutionError('runtime_conversation_missing')
+      }
+      const abortController = activeAbortControllers.get(command.conversationId)
+      if (abortController === undefined) {
+        throw new RuntimeExecutionError('runtime_active_run_missing')
+      }
+      abortController.abort()
       return
     }
 
@@ -88,7 +110,7 @@ export function createRuntime(options: CreateRuntimeOptions): TinyRobotRuntime {
       }
     },
     dispatch,
-    abort: unsupported,
+    abort: (conversationId) => dispatch({ type: 'abort', conversationId }),
     retryLastRun: unsupported,
     regenerateLastResponse: unsupported,
     approveToolCall: unsupported,

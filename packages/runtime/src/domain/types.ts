@@ -72,7 +72,7 @@ export interface RuntimeRun {
   readonly capabilities: RuntimeModelCapabilitiesV1
   /** Accepted model termination reason, omitted when no safe reason is available. */
   readonly termination?: 'stop' | 'max_output_tokens' | 'content_filter' | 'tool_calls'
-  /** Normalized safe error, present only when the run exposes a provider failure. */
+  /** Normalized safe error for a Provider failure or caller-requested abort. */
   readonly error?: RuntimeProviderErrorV1
   /** Available normalized token counts; omitted values remain unavailable rather than zero. */
   readonly usage?: Readonly<{
