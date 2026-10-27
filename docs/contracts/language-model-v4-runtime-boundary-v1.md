@@ -1,6 +1,8 @@
 # LanguageModelV4 Runtime Boundary Contract v1
 
-本文定义 Tiny Robot Provider 实现与 Runtime 之间的模型调用边界。它是可评审、可版本化的公共契约，不是 implementation plan，也不是 Runtime Domain Model。
+本文记录 Provider 接入、模型调用和 Runtime 安全边界的规范性约束，供实现与评审核对；它不承担从零教学或学习路径导航。
+
+本文定义 Tiny Robot Provider 实现与 Runtime 之间的模型调用边界。它是可评审、可版本化的目标契约，不是 implementation plan、当前功能支持矩阵或 Runtime Domain Model。尚未实现的工具、continuation 和完整 Provider conformance 条款继续约束后续实现，但不能据此宣称对应能力当前可用；现行公共签名和能力范围分别以 TypeScript/TypeDoc 与文档站“应用与模型之间的运行边界”为准。
 
 本文使用 **MUST**、**MUST NOT**、**SHOULD**、**MAY** 表示强制、禁止、推荐和可选约束。
 
@@ -122,11 +124,11 @@ interface RuntimeModelCapabilitiesV1 {
 }
 ```
 
-- Task 5 只校验 descriptor 的结构并把 capability 复制到 Run；它不以 capability gate resolver、factory、模型调用或入站 stream part。
+- 当前 Runtime 只校验 descriptor 的结构并把 capability 复制到 Run；它不把 capability metadata 作为 resolver、factory、模型调用或入站 stream part 的准入条件。
 - capability metadata 可供后续 UI 展示，但当前版本不承诺其默认开关、可控强度或 wire mapping 语义。
 - 当前公共 Send 输入不包含 reasoning 控制字段，Runtime 不发送 `LanguageModelV4CallOptions.reasoning`；省略表示完全采用 Provider 默认行为。
 - 标准 V4 reasoning part 是本次 Run 实际产生的事实，Guard 必须按其标准生命周期处理，不得因为 capability metadata 为 `false` 而丢弃。
-- Registration 不得仅为了迎合 Runtime Domain 而改写已经符合本契约的标准 V4 part。应用拥有的 Provider Adapter 可以在 registration 边界内包装 model 或 `doStream()`，把具体服务尚未标准化的 wire/raw event 映射为经评审的标准 V4 part；该映射必须保持 part 顺序、terminal、显式 `error`、取消和背压语义，不得把 Runtime Domain Event 或 Snapshot 职责带入 Provider Adapter。Task 5 的 docs-only adapter 以聚焦回归证明目标映射；完整 conformance fixture 与 declared loss 证据仍由对应 Provider conformance Task 负责。
+- Registration 不得仅为了迎合 Runtime Domain 而改写已经符合本契约的标准 V4 part。应用拥有的 Provider Adapter 可以在 registration 边界内包装 model 或 `doStream()`，把具体服务尚未标准化的 wire/raw event 映射为经评审的标准 V4 part；该映射必须保持 part 顺序、terminal、显式 `error`、取消和背压语义，不得把 Runtime Domain Event 或 Snapshot 职责带入 Provider Adapter。文档站当前的 Responses adapter 只用聚焦回归证明 reasoning delta 映射；它不构成完整 conformance fixture 或 declared loss 证据。
 - 当产品需要显式开启、关闭或选择 reasoning effort 时，必须重新设计可验证的控制 capability 与公共输入，不能从当前 boolean 推断。
 - Chat Completions compatible endpoint **MUST** 逐服务声明模型语义能力；格式兼容不能推导 reasoning、usage 或 tool 能力。
 - Provider Registration 维护者 **MUST** 在准入阶段验证浏览器直连，并以 conformance 测试、live verification 清单和支持文档记录证据。Provider mapping 的兼容转换与有损行为记录在 conformance evidence 中，不进入 Runtime capability 或 Snapshot。

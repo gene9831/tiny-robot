@@ -9,7 +9,7 @@ Provider 集成层复用 AI SDK creator，把 endpoint、headers 和 credential 
 
 Provider 集成默认由应用直接组合对应的 AI SDK creator 与 Runtime Registration，不要求 Tiny Robot 为每个厂商发布包装 package。独立 Provider package 只有在存在需要跨应用复用、具有稳定 conformance 证据且不能由 creator 配置表达的策略时才成立；单纯转发 `baseURL`、API key 和 `languageModel()` 会重复 AI SDK 的维护职责。应用侧为固定 Provider 版本封装的兼容默认值仍属于 Registration 信任边界，不得扩展 Runtime 的公共 call-options surface。
 
-连接配置和 credential 由应用拥有，AI SDK Provider 负责将 credential 映射为请求认证。Runtime 在创建新 Run 时通过同步 resolver 按 `providerId` 获取一次 registration，校验真实 `modelId` 与 descriptor 结构后冻结 `providerId`、`modelId` 与 capability metadata。Task 5 不用 capability metadata gate 调用或入站内容。应用随后增加、移除或替换配置及其 registration，不影响已经开始或已经完成的 Run；新的发送、重试和重新生成使用解析时可用的 registration。找不到 Provider 或模型时，Runtime 在调用工厂前以稳定安全错误拒绝请求。
+连接配置和 credential 由应用拥有，AI SDK Provider 负责将 credential 映射为请求认证。Runtime 在创建新 Run 时通过同步 resolver 按 `providerId` 获取一次 registration，校验真实 `modelId` 与 descriptor 结构后冻结 `providerId`、`modelId` 与 capability metadata。当前 Runtime 不把 capability metadata 作为模型调用或入站内容的准入条件。应用随后增加、移除或替换配置及其 registration，不影响已经开始或已经完成的 Run；新的发送、重试和重新生成使用解析时可用的 registration。找不到 Provider 或模型时，Runtime 在调用工厂前以稳定安全错误拒绝请求。
 
 Runtime v1 不提供可变 Provider registry 或 `registerProvider()` / `unregisterProvider()`。静态初始化数组会迫使网页应用在用户新增自定义 Provider 时重建 Runtime；由 Runtime 拥有可变 registry 则会提前引入配置持久化、订阅和热替换语义。外部 resolver 保留动态配置能力，同时让 Provider 管理继续属于应用层。
 

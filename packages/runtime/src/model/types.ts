@@ -7,9 +7,9 @@ export type RuntimeLanguageProviderV4 = Pick<ProviderV4, 'specificationVersion' 
  * Carries model capability metadata frozen into each run.
  *
  * @remarks
- * Task 5 validates and copies these flags but does not use them to gate model
- * creation, model calls, or standard stream parts. Future UI and explicit
- * control policies may refine their semantics with separate review.
+ * The Runtime validates and copies these flags but does not use them to gate
+ * model creation, model calls, or standard stream parts. Future UI and
+ * explicit control policies may refine their semantics with separate review.
  */
 export interface RuntimeModelCapabilitiesV1 {
   /** Whether the model can satisfy the Runtime's `doStream()` lifecycle. */
