@@ -1,6 +1,8 @@
 # 命名来源与项目定义
 
-本页记录名词从哪里来，以及 Tiny Robot 是否改变了它的含义。外部资料用于说明命名背景，不能覆盖仓库中的 `CONTEXT.md`、已批准 ADR 和契约。
+本页是供维护者和评审者核对命名依据的参考资料，不承担从零教学。第一次接触 Runtime 时，应先阅读[提交问题并读取回答](../guide/quick-start.md)和[应用与模型之间的运行边界](../concepts/runtime-overview.md)。
+
+这里记录名词从哪里来，以及 Tiny Robot 是否改变了它的含义。`CONTEXT.md` 是仓库的领域词汇表；ADR 是记录长期架构决策及理由的文档；契约使用规范性语言记录已批准约束。外部资料只说明命名背景，不能覆盖这些项目内来源。
 
 ## 怎样阅读“来源类型”
 
@@ -27,16 +29,16 @@
 
 ## 领域状态
 
-| 名词              | 来源类型               | 主要来源                                                                                                                                                           | Tiny Robot 中的采用方式                                                                 |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| Conversation      | 项目定义               | 多个模型平台使用同名概念，但范围并不统一                                                                                                                           | 一段可持久化、可连续追问的上下文，拥有有序 Turn                                         |
-| Turn              | 项目定义               | 不同 Agent/聊天系统对 Turn 的计数边界不同                                                                                                                          | 一次用户意图；Regenerate 不创建新 Turn                                                  |
-| Run               | 项目定义，参考相似用法 | [OpenAI Agents SDK running agents](https://openai.github.io/openai-agents-js/guides/running-agents/)                                                               | 针对一个 Turn 的一次完整回答尝试；不能直接套用外部 SDK 的 Run 生命周期                  |
-| Step / Model Step | 项目定义               | [OpenAI Agents SDK agent loop](https://openai.github.io/openai-agents-js/guides/running-agents/#the-agent-loop) 展示了多次模型与工具循环的相似结构                 | 一次模型调用或一次 Runtime 管理的工具执行；一个 Run 可以有多个 Step                     |
-| Message / Part    | 借鉴结构               | [AI SDK `ModelMessage`](https://ai-sdk.dev/docs/reference/ai-sdk-core/model-message)、[`UIMessage`](https://ai-sdk.dev/docs/reference/ai-sdk-core/ui-message)      | 保留“消息由内容单元组成”的结构，但使用 Runtime 自有、可持久化且 Provider-neutral 的类型 |
-| Domain Event      | 借鉴模式               | [Microsoft：Domain events](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) | 表示 Runtime 内部已经确认的事实；不等于 Provider stream event 或公共生命周期事件        |
-| reducer           | 借鉴模式               | [Redux：State, Actions, and Reducers](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers)                                                   | 纯函数式地从旧 Snapshot 和 Event 计算新 Snapshot，不执行副作用                          |
-| 按 ID 规范化状态  | 借鉴模式               | [Redux：Normalizing State Shape](https://redux.js.org/usage/structuring-reducers/normalizing-state-shape)                                                          | 每类实体使用独立 ID 表，有序关系保存 ID 数组，并保持未变化引用稳定                      |
+| 名词              | 来源类型               | 主要来源                                                                                                                                                                   | Tiny Robot 中的采用方式                                                                 |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Conversation      | 项目定义               | 多个模型平台使用同名概念，但范围并不统一                                                                                                                                   | 一段可持久化、可连续追问的上下文，拥有有序 Turn                                         |
+| Turn              | 项目定义               | 不同 Agent/聊天系统对 Turn 的计数边界不同                                                                                                                                  | 一次用户意图及其输入 Message；Regenerate 复用输入，不创建新 Turn                        |
+| Run               | 项目定义，参考相似用法 | [OpenAI Agents SDK running agents](https://openai.github.io/openai-agents-js/guides/running-agents/)、[Results](https://openai.github.io/openai-agents-js/guides/results/) | 针对一个 Turn 的一次执行尝试；分开记录输入引用和本次产生的输出                          |
+| Step / Model Step | 项目定义               | [OpenAI Agents SDK agent loop](https://openai.github.io/openai-agents-js/guides/running-agents/#the-agent-loop) 展示了多次模型与工具循环的相似结构                         | 一次模型调用或一次 Runtime 管理的工具执行；一个 Run 可以有多个 Step                     |
+| Message / Part    | 借鉴结构               | [AI SDK `ModelMessage`](https://ai-sdk.dev/docs/reference/ai-sdk-core/model-message)、[`UIMessage`](https://ai-sdk.dev/docs/reference/ai-sdk-core/ui-message)              | 保留“消息由内容单元组成”的结构，但使用 Runtime 自有、可持久化且 Provider-neutral 的类型 |
+| Domain Event      | 借鉴模式               | [Microsoft：Domain events](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)         | 表示 Runtime 内部已经确认的事实；不等于 Provider stream event 或公共生命周期事件        |
+| reducer           | 借鉴模式               | [Redux：State, Actions, and Reducers](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers)                                                           | 纯函数式地从旧 Snapshot 和 Event 计算新 Snapshot，不执行副作用                          |
+| 按 ID 规范化状态  | 借鉴模式               | [Redux：Normalizing State Shape](https://redux.js.org/usage/structuring-reducers/normalizing-state-shape)                                                                  | 每类实体使用独立 ID 表，有序关系保存 ID 数组，并保持未变化引用稳定                      |
 
 ## 模型调用准备
 
@@ -47,7 +49,7 @@
 
 ## 其他架构词
 
-Ingress Guard、Selector、Presenter、View Model、continuation capsule 等名词由对应概念页解释并补充来源。快速开始只保留理解基础链路所需的最小词汇。
+Ingress Guard 的项目含义见[校验模型返回的文本流](../concepts/model-step-ingress.md)，Presenter 与 View Model 见[从状态中读取一段完整对话](../concepts/domain-selectors.md)。尚未进入当前学习路径的内部设计名词不在这里提前列出。
 
 ## 项目内的权威顺序
 

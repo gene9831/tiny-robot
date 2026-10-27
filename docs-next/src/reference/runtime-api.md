@@ -1,43 +1,14 @@
 # Runtime API 与 TSDoc
 
-中文概念文档用于解释跨类型关系；TypeDoc 用于查询当前公共 TypeScript 声明的精确签名和英文 TSDoc。
+本页是面向 TypeScript 开发者的 Runtime 公共 API 查询入口，假设读者熟悉 TypeScript 类型、编辑器符号跳转和 HTML 文档站。需要学习业务流程时，应先从[提交问题并读取回答](../guide/quick-start.md)开始。
+
+**TSDoc** 是写在 TypeScript 公共声明旁的结构化代码注释；**TypeDoc** 是读取声明和 TSDoc、生成可浏览 API 页面的一套工具。本页生成的 TypeDoc 子站用于查询精确签名、字段、返回值、错误和英文注释，中文概念文档则负责解释跨类型关系。
 
 ## 在本文档站中查看
 
 <a href="/api/runtime/index.html" target="_blank">打开生成的 Runtime API</a>
 
-运行 `docs-next` 的 dev 或 build 命令前，会先执行 Runtime 的 `docs:build`，把生成结果直接写入文档站的 `/api/runtime/`。生成 HTML 是忽略的构建产物，不提交到仓库。
-
-## 本地启动
-
-```sh
-pnpm -F @opentiny/tiny-robot-next-docs dev
-```
-
-终端会输出本地地址。浏览概念页面时点击顶部“API”，即可进入同一次预览中的 TypeDoc 子站。
-
-构建并预览：
-
-```sh
-pnpm -F @opentiny/tiny-robot-next-docs build
-pnpm -F @opentiny/tiny-robot-next-docs preview
-```
-
-## 只检查或生成 TypeDoc
-
-严格检查英文公共文档，不写 HTML：
-
-```sh
-pnpm -F @opentiny/tiny-robot-runtime docs:check
-```
-
-生成 HTML：
-
-```sh
-pnpm -F @opentiny/tiny-robot-runtime docs:build
-```
-
-输出位于 `docs-next/src/public/api/runtime/`。它是被 `.gitignore` 排除的生成物，不是手写文档来源。
+生成页面来自 Runtime 源码中的公共声明和 TSDoc；HTML 是忽略的构建产物，不是手写事实来源。维护者需要生成、检查或预览 API 文档时，使用[生成和验证 Runtime API 文档](../contributing/runtime-api-docs-workflow.md)。
 
 ## 在编辑器中查看 TSDoc
 
@@ -59,4 +30,4 @@ pnpm -F @opentiny/tiny-robot-runtime docs:build
 | 什么是强制规范                     | `docs/contracts/`         |
 | 行为是否真的被保护                 | 永久回归测试              |
 
-概念页会区分当前能力与后续架构责任。查询现行公共签名时，应以 TypeDoc 和 TypeScript 声明为准；查询强制行为时，应以已批准契约和永久回归测试为准。
+概念页会区分当前能力与后续架构责任。查询现行公共签名时，应以 TypeDoc 和 TypeScript 声明为准；查询强制行为时，应以已批准契约和永久回归测试为准。TypeDoc 中出现一个方法不表示该能力已经实现：稳定拒绝的预留方法会在 TSDoc 中明确说明当前行为。

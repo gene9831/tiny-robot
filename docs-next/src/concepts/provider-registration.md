@@ -1,12 +1,30 @@
-# Provider 注册与安全边界
+# 注册可用的模型接入
 
-应用可能同时接入官方模型服务、兼容接口和自己的私有 LLM API。应用先保存 Provider 连接配置，再由应用侧 Provider 集成代码直接复用对应的 AI SDK creator，构造 Runtime 可以解析的 Provider Registration。单纯转发 creator 配置不需要 Tiny Robot 再发布一个 Provider package。
+本页面向已经理解[应用与模型之间的运行边界](./runtime-overview.md)、[请求 Runtime 执行业务动作](./commands-and-runtime.md)和[根据已确认事实更新状态](./events-and-reducer.md)的应用集成者。你应当知道：`providerId` 与 `modelId` 用于选择模型，模型服务原始响应不能直接进入 Snapshot。
 
-这里的 `providerId` 是应用定义的接入实例标识，例如 `company-gateway` 或 `personal-openai`；它不要求等于厂商名称。每个模型使用 Provider 接受的真实 `modelId`。读完本页后，你应该能区分连接配置、Runtime registration 和 AI SDK Provider，并说明 credential 停在哪一层。
+应用可能同时连接官方模型服务、兼容接口和私有大语言模型（LLM）API。这里要解决的问题是：怎样把一项由应用管理的连接安全地提供给 Runtime，同时让地址、请求头和凭据停留在接入层。
 
-## 从一个自定义 Provider 开始
+## 三种对象
 
-假设应用允许用户添加一个私有 LLM API。用户填写的是连接配置：
+模型接入涉及三种职责不同的对象：
+
+1. **连接配置**由应用保存，包含服务地址、服务类型、认证设置和允许使用的模型目录。
+2. **Provider Registration** 是应用交给 Runtime 的受信任注册项，包含稳定 `providerId`、模型目录和创建 Provider 的工厂；下文简称 Registration。
+3. **AI SDK Provider** 是实现具体服务协议的模型选择接口。Runtime 向它传入真实 `modelId`，获得统一的 `LanguageModelV4` 模型对象。
+
+`LanguageModelV4` 已在运行边界页中定义为 Runtime 采用的统一语言模型接口。凭据（credential）是 API key、访问令牌等认证材料，只属于应用和 Provider 集成，不属于 Registration 的公共标识或 Runtime 领域状态。
+
+| 对象                  | 负责内容                                       | 是否进入 Snapshot |
+| --------------------- | ---------------------------------------------- | ----------------- |
+| 连接配置              | 服务地址、认证设置、模型目录                   | 否                |
+| Provider Registration | 可信模型目录和已经绑定连接行为的 Provider 工厂 | 否                |
+| AI SDK Provider       | 根据真实 `modelId` 创建模型并执行具体服务协议  | 否                |
+
+## 从私有模型服务创建 Registration
+
+假设应用允许用户添加一项私有 LLM API。连接配置先由应用保存：
+
+每个模型条目包含一份 **capability metadata**，也就是接入维护者声明的模型能力信息。`streaming` 表示该映射能够完成 Runtime 所需的流式调用；`reasoning` 记录模型是否声明推理能力。当前这些布尔值只随 Run 保存，不能证明某个请求开关已经启用，也不阻止实际到达的标准 reasoning Part。
 
 ```ts
 const config = {
@@ -24,7 +42,7 @@ const config = {
 }
 ```
 
-应用侧 Provider 集成代码把这份配置和应用拥有的 credential 交给具体 AI SDK creator，并返回 Runtime registration：
+应用侧 Provider 集成把连接配置和应用拥有的凭据交给具体 AI SDK 创建函数，再返回 Registration：
 
 ```ts
 const registration = createOpenAICompatibleRegistration({
@@ -33,104 +51,51 @@ const registration = createOpenAICompatibleRegistration({
 })
 ```
 
-`createOpenAICompatibleRegistration()` 内部复用 `createOpenAICompatible()`。Runtime 不需要理解 `baseURL`、headers、API key 或不同 Provider 的认证规则；registration 只暴露 `providerId`、模型目录和无参 `createProvider()`。
+示例创建函数内部可以复用 AI SDK 的 `createOpenAICompatible()`。Runtime 不需要理解 `baseURL`、请求头、API key 或服务商认证规则；Registration 只暴露 `providerId`、模型目录和无参 `createProvider()`。
 
-## 三层对象各自负责什么
+## 每个 Run 在开始时解析接入
 
-| 对象                              | 负责什么                                            | 是否进入 Runtime 领域状态 |
-| --------------------------------- | --------------------------------------------------- | ------------------------- |
-| Provider Connection Configuration | endpoint、Provider 类型、设置和模型目录             | 否                        |
-| Provider Registration             | 可信模型目录和已经绑定连接/认证行为的 Provider 工厂 | 否                        |
-| AI SDK `ProviderV4`               | 按真实 `modelId` 创建模型并执行具体 Provider 协议   | 否                        |
-
-应用负责 credential 的录入、保存、更新和删除；Provider 集成层与 AI SDK Provider 负责把 credential 转换为认证请求。Runtime 不接收、解释或转发 credential。
-
-## 新 Run 怎样选择模型
-
-应用拥有 Provider 配置，并向 Runtime 提供同步 resolver。每次开始新的回答尝试（Run）时，Runtime 使用 `providerId` 获取当时可用的注册，再用真实 `modelId` 选择模型。
+应用在创建 Runtime 时提供 `resolveProvider(providerId)`。这个同步查询函数称为 **resolver**：每当一个新 Run 开始，它根据 `providerId` 返回当时有效的 Registration；找不到时返回 `undefined`，Runtime 会在创建模型前拒绝请求。
 
 ```mermaid
 sequenceDiagram
   participant App as 应用配置
   participant Runtime
-  participant Registration as Provider Registration
-  participant Provider as ProviderV4
+  participant Registration
+  participant Provider as AI SDK Provider
   participant Model as LanguageModelV4
 
-  App->>Runtime: send(providerId, modelId)
   Runtime->>App: resolveProvider(providerId)
-  App-->>Runtime: registration
+  App-->>Runtime: Registration
   Runtime->>Registration: createProvider()
-  Registration-->>Runtime: ProviderV4
+  Registration-->>Runtime: Provider
   Runtime->>Provider: languageModel(modelId)
   Provider-->>Runtime: LanguageModelV4
 ```
 
-应用可以在 Runtime 创建后增加、更新或移除自己的 Provider 配置。resolver 在新的 Run 开始时读取当前配置，因此后续 Run 可以使用新加入的 Provider；已经创建的 Run 继续使用创建时冻结的 `providerId`、`modelId` 和 capability metadata。
+resolver 每次在新 Run 开始时读取当前配置，所以应用可以在两个 Run 之间增加、更新或移除接入。已经开始的 Run 继续使用开始时解析出的 Provider，并把当时选择的 `providerId`、`modelId` 和模型能力信息冻结在自己的状态中。
 
-当前执行协调层已经把 resolver、Run-local Provider/model 创建和首个单 Step text/reasoning Run 串联起来。`conversation.send()` 或等价的 `dispatch(send)` 会通过这里描述的 registration 实际调用一次 `LanguageModelV4.doStream()`；工具循环、重试、恢复和多 Step 仍属于后续能力。
+Registration 的模型目录是接入维护者已经评审的允许列表。请求的 `modelId` 必须同时存在于该目录，并且能够由 Provider 的 `languageModel(modelId)` 创建；Runtime 不猜测服务商还支持哪些模型。
 
-## ProviderV4 是复用的模型选择接口
+## 凭据和原始数据停在接入层
 
-注册的无参 `createProvider()` 返回 Tiny Robot 使用的 AI SDK `ProviderV4` 子集。Runtime 随后调用 `languageModel(modelId)` 得到 `LanguageModelV4`。因此连接和认证由 Provider 集成层完成，模型查找和模型对象创建沿用 AI SDK 的 Provider 抽象；Tiny Robot 只增加应用接入实例、模型能力与安全生命周期所需的边界。
+Runtime 的 Command、Conversation 便利方法和 Snapshot 都不接收凭据。Provider 集成可以把凭据绑定在 `createProvider()` 的闭包中，也可以在创建新 Provider 时从应用配置读取当前值；无论采用哪种方式，凭据都不能进入 Domain Event、Snapshot、日志、测试样例、错误上报或 URL。
 
-```mermaid
-flowchart LR
-  Registration["Provider Registration<br/>providerId · models"]
-  Provider["ProviderV4<br/>languageModel(modelId)"]
-  Model["LanguageModelV4"]
+Runtime 只在当前 Run 执行期间持有 Provider 和模型引用。模型返回的流还必须经过后续响应检查，才能转换成 Runtime Part；服务商原始 payload、私有 metadata 和动态错误文本不会因为 Provider 已受信任就自动进入领域状态。
 
-  Registration -->|createProvider| Provider -->|选择真实 modelId| Model
-```
+## 浏览器直连需要实际验证
 
-`models` 是注册维护者评审过的目录，不是对 Provider 的模型列表做运行时猜测。请求的 `modelId` 必须同时存在于该目录并能由 `languageModel()` 解析。
+当前 Runtime 在浏览器中直接请求模型服务。接入维护者必须验证：目标地址允许当前网页跨域访问，认证方式适用于浏览器，流式响应能够被所选 AI SDK Provider 正确解析，模型目录中的每个 ID 都能创建预期模型。
 
-## credential 属于应用与 Provider
+自动一致性测试可以检查 Registration 的固定形状和映射；真实浏览器验证负责证明实际地址、认证和流式协议在当前版本组合下可用。一次成功请求不能自动成为所有版本和环境的长期支持声明。
 
-credential 不属于 Runtime 的一次 Send 或 Run 输入。应用可以在用户更新连接配置时替换 registration，也可以让 Provider 集成层的工厂读取应用当前拥有的 credential；两种方式都由应用和 Provider 集成层决定。
-
-Runtime 的 Command、便利方法、resolver 和 `createProvider()` 都不接收 credential。Runtime 只持有当前 Run 所需的 Provider 与模型引用，并在 Run 终止后释放这些执行引用。credential 不进入 Domain Event、Snapshot、日志、fixture、错误上报或 Runtime UI API。
-
-## 浏览器直连的责任
-
-Runtime v1 在浏览器中直接请求 Provider API。注册维护者负责验证目标 endpoint 的 CORS、认证、流式响应和模型映射，并用 conformance test、live verification 清单和支持文档记录证据。
+进入 Snapshot 的 Message 和 Part 仍使用 Runtime 自有类型。显式转换可以阻止 AI SDK 后续新增的流部件自动扩大 Runtime 公共契约：
 
 ```mermaid
 flowchart LR
-  Verify["接入维护者<br/>验证 endpoint 与协议"]
-  Register["Provider Registration<br/>模型目录与工厂"]
-  Runtime["浏览器 Runtime"]
-  API["Provider API"]
-
-  Verify --> Register --> Runtime --> API
+  SDK["AI SDK 流部件"] --> Guard["响应检查关口"]
+  Guard --> Event["Domain Event"]
+  Event --> Part["Runtime Part"]
 ```
 
-自定义或 OpenAI-compatible endpoint 承担同样的验证责任。Runtime 只消费应用解析出的受信任注册。Task 5 已能安全处理中途出现的标准 V4 `error` part 和协议错误，但 `doStream()` 直接抛出的 Provider/transport error 尚未归一化为完整 Run 终态；该能力属于 Task 6。
-
-## capability 当前作为模型 metadata
-
-`RuntimeModelCapabilitiesV1` 属于模型描述符，而不是整个 Provider。当前 `streaming` 和 `reasoning` 仍随 descriptor 复制到 Run，但 Task 5 不用它们拒绝 factory、模型调用或合法的标准 V4 stream part。
-
-这些字段暂时只为后续 UI 与能力设计保留，不表达 reasoning 默认开启或关闭，也不证明某个控制值能映射到 wire request。当前 Send 不提供 reasoning 控制；当 Runtime 需要显式控制时，再基于 conformance evidence 演进 descriptor。
-
-## 为什么 Runtime Part 保持自有类型
-
-Provider 与模型选择接口可以直接复用 `ProviderV4` 和 `LanguageModelV4`，但进入 Snapshot 的 Message/Part 有另一套职责：它们必须表达 Runtime 已接受、可持久化的领域事实。
-
-```mermaid
-flowchart LR
-  SDK["AI SDK stream part"] --> Guard["响应检查关口<br/>校验 · 清洗 · 映射"]
-  Guard --> Event["RuntimeDomainEvent"]
-  Event --> Part["Runtime 自有 Part"]
-```
-
-显式转换阻止上游联合类型的新增成员自动进入 Runtime 公共契约。Provider/Ingress conformance 测试负责发现上游差异，Runtime 公共类型和 reducer 测试负责保护稳定的领域语义。
-
-## 检查你的理解
-
-1. Provider Connection Configuration 与 Provider Registration 分别由谁拥有？
-2. 为什么 Runtime 不接收 `baseURL`、headers 或 credential？
-3. 新增 Provider 配置为什么只影响后续 Run？
-4. Provider 接口可以复用 AI SDK，Runtime Part 为什么仍保持自有类型？
-
-下一步阅读[准备一次模型调用](./model-call-projection.md)，理解 Runtime 怎样使用 Run 历史构造调用对象，以及为什么当前 capability 只作为冻结 metadata。设计依据见 [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)和 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md)。
+下一步阅读[准备一次模型调用](./model-call-projection.md)，理解 Runtime 怎样从 Snapshot 生成统一模型接口允许的调用对象。设计依据见 [ADR-0005：Provider 注册与运行时解析](../design/adr-0005-provider-registration-and-runtime-resolution.md)和 [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md)。

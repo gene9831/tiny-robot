@@ -1,6 +1,8 @@
-# 场景：一次完成的文本回答
+# 串联一次完整文本回答
 
-本页把已经学过的 Command、coordinator、Ingress Guard、Domain Event 和 reducer 串成当前唯一支持的首个单 Step text/reasoning Run。开始前应先理解 [Snapshot 与领域模型](../concepts/snapshot-and-domain-model.md)和 [Domain Event 与 reducer](../concepts/events-and-reducer.md)。
+开始前应依次完成 [Runtime 保存的对话状态](../concepts/snapshot-and-domain-model.md)、[根据已确认事实更新状态](../concepts/events-and-reducer.md)、[注册可用的模型接入](../concepts/provider-registration.md)、[准备一次模型调用](../concepts/model-call-projection.md)和[校验模型返回的文本流](../concepts/model-step-ingress.md)。这些页面已经介绍 Command、Provider Registration、调用投影、Ingress Guard、Domain Event 和 reducer。
+
+本页把这些机制串成当前支持的一个 Run：它只包含一个 Model Step，并接收 text 以及模型可能提供的 reasoning 内容。
 
 场景目标很简单：用户发送“你好”，Runtime 记录一次回答尝试，逐步接收“你好！有什么可以帮你？”，最终让 UI 从完成的 Snapshot 中读到回答。
 
@@ -8,7 +10,7 @@
 
 应用先调用 `runtime.createConversation()`，由 Runtime 生成 Conversation ID 并通过 `conversation-created` 写入空 Snapshot。随后 `conversation.send()` 委托根 Runtime 的 `dispatch(send)`；用户输入和模型返回不会直接写入嵌套消息对象，而是依次形成内部 Event，再由 reducer 更新规范化实体表。
 
-Coordinator 使用唯一的 allowlisted call options 直接调用 `LanguageModelV4.doStream()`，不使用 `streamText()`。返回结果只有 `.stream` 进入[模型流校验](../concepts/model-step-ingress.md)；该边界负责 text/reasoning 顺序、Provider ID 到 Runtime ID 的转换和数据清洗。
+执行协调器只使用经过允许列表筛选的调用选项，直接调用 `LanguageModelV4.doStream()`，不使用 `streamText()`。返回结果只有 `.stream` 进入[模型流校验](../concepts/model-step-ingress.md)；该边界负责 text/reasoning 顺序、Provider ID 到 Runtime ID 的转换和数据清洗。
 
 ```mermaid
 flowchart LR
@@ -24,9 +26,9 @@ flowchart LR
 
 对应的 Event 顺序是：
 
-1. `conversation-created` → `turn-created` → `run-created`；
-2. user `message-created` → `text-part-started` → `text-part-delta` → `text-part-ended`；
-3. model `step-started` → assistant `message-created`；
+1. `conversation-created` → `turn-created` → `turn-input-message-created`，由 Turn 一次性记录 user Message 和已完成的 Text Part；
+2. `run-created` 冻结对 user Message 的只读输入引用；
+3. model `step-started` → `run-output-message-created`，由 Run 记录 assistant Message；
 4. Guard 按实际 stream 发出 assistant text/reasoning Part Event 和唯一的 `run-terminated`，同时把当前 Step 和 Run 写成终态。
 
 Reasoning 是可选的独立 Part：Provider 未产生标准 reasoning part 时，本例只有文本；实际产生时，它按 stream 观察顺序出现在 assistant Message 的 `partIds` 中，不会与最终文本拼成同一 Part。
@@ -38,14 +40,15 @@ Reasoning 是可选的独立 Part：Provider 未产生标准 reasoning part 时�
 ```mermaid
 flowchart LR
   C["Conversation c1"] --> T["Turn t1"]
+  T --> U["输入 Message m-user"]
   T --> R["Run r1<br/>completed + selected"]
+  R -.->|"inputMessageIds 引用"| U
   R --> S["Step s1<br/>kind = model · completed"]
-  R --> U["输入 Message m-user"]
   R --> A["输出 Message m-assistant"]
   A --> P["Text Part p1<br/>你好！有什么可以帮你？"]
 ```
 
-这里从 Run 画向 Step 和 Message 的线是两条独立关系，不表示 Step 包含 Message。`stepIds` 与 `messageIds` 不按位置配对，长度也不要求相同；本例正好是一个 Step、两个 Message。
+实线表示所有权，虚线表示只读输入引用。Turn 拥有 user Message，Run 只消费它，不能通过 Part Event 改写它；Run 拥有 Step 和自己产生的 assistant Message。`stepIds` 与 `outputMessageIds` 不按位置配对，长度也不要求相同。
 
 ## 最终 Snapshot
 
@@ -61,6 +64,7 @@ const snapshot: RuntimeSnapshot = {
     t1: {
       id: 't1',
       conversationId: 'c1',
+      inputMessageIds: ['m-user'],
       runIds: ['r1'],
       selectedRunId: 'r1',
     },
@@ -71,7 +75,8 @@ const snapshot: RuntimeSnapshot = {
       turnId: 't1',
       status: 'completed',
       stepIds: ['s1'],
-      messageIds: ['m-user', 'm-assistant'],
+      inputMessageIds: ['m-user'],
+      outputMessageIds: ['m-assistant'],
       providerId: 'example-provider',
       modelId: 'example-model',
       capabilities: { streaming: true, reasoning: false },
@@ -91,7 +96,6 @@ const snapshot: RuntimeSnapshot = {
     'm-user': {
       id: 'm-user',
       turnId: 't1',
-      runId: 'r1',
       role: 'user',
       partIds: ['p-user'],
     },
@@ -125,13 +129,11 @@ const snapshot: RuntimeSnapshot = {
 
 ## UI 最终读取什么
 
-UI 可以从 `selectedRunId` 找到 `r1`，再按 `messageIds` 和各 Message 的 `partIds` 读取当前回答。它不需要理解 Provider stream，也不需要维护第二份回答状态机。
+UI 可以从 Turn 的 `inputMessageIds` 读取用户问题，从 `selectedRunId` 找到 `r1`，再按 `outputMessageIds` 和各 Message 的 `partIds` 读取当前回答。它不需要理解 Provider stream，也不需要维护第二份回答状态机。
 
-这也是规范化状态的价值：Conversation、Turn、Run、Step、Message 和 Part 各自只有一份记录，关系通过 ID 明确连接。`Run.stepIds` 是 Step 顺序的唯一来源；`stepIds` 与 `messageIds` 是 Run 下的平行关系，不按数组下标关联，也没有持久化的 Step → Message 关系。
+这也是规范化状态的价值：Conversation、Turn、Run、Step、Message 和 Part 各自只有一份记录，所有权和执行引用通过不同 ID 数组明确表达。`Run.stepIds` 是 Step 顺序的唯一来源；`stepIds` 与 `outputMessageIds` 不按数组下标关联，也没有持久化的 Step → Message 关系。
 
-当前示例不代表工具、重试、恢复或 continuation 已经可用，也不承诺多 Step Run 行为。
-
-如果你已经理解这条链路，可以继续使用[DeepSeek 三种 API 格式实际验证](./deepseek-runtime/)，观察三个 AI SDK Provider 和多个真实模型 ID 怎样进入同一个 Runtime。
+当前示例不代表工具、重试、恢复或后续阶段延续已经可用，也不承诺多 Step Run 行为。
 
 ## 验证关键边界
 
@@ -145,12 +147,6 @@ UI 可以从 `selectedRunId` 找到 `r1`，再按 `messageIds` 和各 Message �
 - `test/reducer/content-parts.test.ts` 保护文本精确追加、结束和终态后的迟到数据；
 - `test/reducer/structural-sharing.test.ts` 保护不可变更新和引用稳定；
 - `test/integration/text-run.test.ts` 保护从 Conversation Command 到最终 Snapshot 的首个 text/reasoning 垂直切片；
-- `RuntimeSnapshot` 的 TSDoc 示例保护同一公共结构的 API 文档展示。
+- `RuntimeSnapshot` 的代码级 API 注释示例保护同一公共结构的文档展示。
 
-## 检查你的理解
-
-1. 为什么文本 delta 先形成 Event，而不是直接修改 Message？
-2. UI 怎样从 `selectedRunId` 找到最终文本？
-3. 如果未来一个 Run 包含多个 Step，当前哪个合并事实必须被拆开？
-
-下一步阅读 [Provider 注册与安全边界](../concepts/provider-registration.md)，理解应用怎样向 Runtime 提供受信任的接入实例和模型目录。
+下一步进入[观察一次回答如何结束](./runtime-terminal-semantics/)，通过本地可重复场景比较正常完成、Provider 失败、调用方中止和协议中断。之后再使用[验证 DeepSeek 三种 API 格式](./deepseek-runtime/)，观察多个真实 Provider 接入怎样进入同一个 Runtime。
