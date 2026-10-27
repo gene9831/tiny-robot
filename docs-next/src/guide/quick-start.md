@@ -1,135 +1,106 @@
-# 快速开始
+# 提交问题并读取回答
 
-本页沿用同一个天气问答场景，用三个连续步骤介绍 Runtime：先理解应用怎样提出请求，再理解问答状态怎样保存，最后理解这些状态怎样变成模型调用参数。
+<script setup>
+import QuickStartDemo from './QuickStartDemo.vue'
+</script>
 
-读完后，你应该能回答三个问题：应用怎样访问 Runtime、一次问答由哪些对象组成、模型返回内容后状态怎样变化。
+Tiny Robot Runtime（下文简称 Runtime）是应用中的 AI 对话运行对象。应用把用户问题交给它；它调用已经配置的模型服务、检查返回结果，并保存页面可以查询的当前状态。这份只读状态称为 **Snapshot**。
 
-## 第一步：理解公共边界
+本页假设应用已经创建并配置好一个 `TinyRobotRuntime`。你将提交一个问题，再从 Snapshot 读取回答；不需要预先了解状态内部怎样更新或不同模型服务使用什么协议。
 
-假设用户在聊天窗口里问：“北京今天天气怎么样？”应用不会直接修改对话数据，而是通过 Runtime 提出请求并读取结果。
+## 问答过程中的四个基本对象
 
-| 文档中的词                           | 先这样理解                                                   | 在示例中是什么                     |
-| ------------------------------------ | ------------------------------------------------------------ | ---------------------------------- |
-| **Runtime**                          | 应用里的对话管理对象。它接收请求、推进回答流程并管理对话状态 | 管理聊天窗口背后数据的对象         |
-| **Command**                          | 应用向 Runtime 提出的请求，不保证一定成功                    | “发送这个问题”“停止生成”           |
-| **RuntimeSnapshot**（简称 Snapshot） | 一个 Runtime 此刻保存在内存中的全部对话状态                  | 页面读取问题、回答和运行状态的总账 |
+在运行 Demo 和代码前，先认识当前场景需要的四个对象：
 
-应用和 Runtime 的公共关系可以先记成：
+| 对象             | 当前场景中的含义                                       |
+| ---------------- | ------------------------------------------------------ |
+| **Conversation** | 一段可以继续追问的对话。Runtime 为它分配 ID。          |
+| **Turn**         | 用户在 Conversation 中表达的一次意图，并拥有这次输入。 |
+| **Run**          | Runtime 为完成某个 Turn 而发起的一次回答尝试。         |
+| **Snapshot**     | Runtime 已接受的全部对话状态。页面只从这里读取结果。   |
+
+Turn 和 Run 的区别在于：Turn 保存“用户想完成什么”以及表达该意图的用户 Message；Run 记录“Runtime 为这个意图进行了哪一次执行”。Run 会引用它实际使用的输入，并产生自己的 assistant 输出。用户提出新的问题会创建新的 Turn；如果以后为同一个意图重试或重新生成回答，则会在原 Turn 中复用用户输入并创建新的 Run。本页的一次 `send()` 只创建一个 Turn 和一个 Run。
+
+Run 会经历运行中和已结束等状态。Demo 中的 `completed` 表示这次回答已经正常结束，页面可以读取最终文本。
+
+## 体验一次本地问答
+
+下面的 Demo 使用浏览器内的固定回答，不访问远端模型服务，也不需要 API key。提交问题后，可以观察回答文本和 Run 从运行中变为 `completed`。Demo 用于快速建立直觉，可以跳过。
+
+<ClientOnly>
+  <QuickStartDemo />
+</ClientOnly>
+
+## 创建对话并发送问题
+
+代码使用两个公共方法：
+
+- `runtime.createConversation()` 不接收参数，创建一段空 Conversation，并返回绑定该 Conversation ID 的便利对象；它本身不保存回答内容。
+- `conversation.send()` 接收用户文本和模型选择，请求 Runtime 在这段 Conversation 中生成回答。返回的 Promise 会在本次 Run 结束或请求被拒绝后完成，回答仍保存在 Snapshot 中。
+
+`send()` 输入中的 `providerId` 选择应用已经配置的模型接入，`modelId` 选择该接入公开的真实模型。连接地址、请求头和 API key 由应用配置，不进入本次调用。
+
+```ts
+const conversation = runtime.createConversation()
+
+await conversation.send({
+  providerId: 'deepseek-compatible',
+  modelId: 'deepseek-chat',
+  content: '请用一句话介绍北京的气候特点。',
+})
+```
+
+调用完成后，`conversation.id` 仍然只是定位这段对话的 ID。下一步需要从 Runtime 当前的 Snapshot 查询实际回答。
+
+## 查询这段对话的结果
+
+`runtime.getSnapshot()` 返回 Runtime 当前的只读状态。Snapshot 为了稳定更新，把不同对象按 ID 分开保存；页面通常不直接查这些表，而是使用查询函数把相关记录组合起来。
+
+`selectConversation(snapshot, conversationId)` 就是这样的查询函数。它接收一个 Snapshot 和 Conversation ID；如果对话存在，就返回按照业务顺序组织的整段对话，否则返回 `undefined`。
+
+`selectConversation()` 返回的 `turns` 按用户意图的发生顺序排列。每个 Turn 保存针对该意图产生的全部 Run；`selectedRun` 是当前被采用、准备展示给用户的那次回答尝试。
+
+```ts
+import { selectConversation } from '@opentiny/tiny-robot-runtime/selectors'
+
+const result = selectConversation(runtime.getSnapshot(), conversation.id)
+const latestTurn = result?.turns.at(-1)
+const answer = latestTurn?.selectedRun
+```
+
+**Message** 是由用户、助手或其他角色产生的一条消息；**Part** 是 Message 中的一段有类型内容。把 Message 划分为 Part，能够在不改变消息顺序的前提下区分普通文本和其他模型输出。
+
+正常完成后，`answer` 提供以下业务结果：
+
+- `status` 为 `completed`，表示回答正常结束；
+- `termination` 记录模型停止生成的原因，例如 `stop`；
+- Turn 的 `inputMessages` 保存用户问题，`answer.outputMessages` 保存本次 Run 产生的助手回答；
+- 每条 Message 的 `parts` 保存有序内容，其中 `kind: 'text'` 的 Part 是展示给用户的回答文本；
+- `providerId` 和 `modelId` 记录这次回答选择的接入与模型。
+
+## 文本与推理内容
+
+模型调用可以产生两类与当前问答有关的内容：
+
+- **text** 是面向用户的最终回答内容；
+- **reasoning** 是部分模型能够提供的中间推理内容，与最终回答分开保存。它是否可用取决于模型和接入能力，应用不应把它假定为每次回答都会出现。
+
+一次 Run 可以由一个或多个执行阶段组成，文档把每个阶段称为 **Step**。调用模型并接收 text 或 reasoning 的阶段称为 **Model Step**。当前 `send()` 创建一个 Run，并在其中执行一个 Model Step；更复杂的多 Step 流程不属于本页范围。
+
+现在可以把本页对象连成一条关系：Conversation 包含 Turn；Turn 拥有用户输入并关联一个或多个 Run；Run 引用执行输入，拥有 Step 和本次产生的输出 Message；Message 再包含 Part。后续页面会解释这些对象为什么按 ID 保存在 Snapshot 中。
+
+## 应用与 Runtime 的责任边界
 
 ```mermaid
 flowchart LR
-  App["应用"] -->|"提出请求 · Command"| Runtime
-  Runtime -->|"发布当前状态 · Snapshot"| App
+  App["应用"] -->|"创建 Conversation 并发送问题"| Runtime["Runtime"]
+  Runtime -->|"调用并检查结果"| Model["已配置的模型服务"]
+  Model -->|"流式返回内容"| Runtime
+  Runtime -->|"发布新的 Snapshot"| App
 ```
 
-Runtime 还需要知道怎样调用模型，但不能长期保存 API key 或某个模型实例。
+应用负责发起问题和读取状态，Runtime 负责调用模型、检查结果并更新 Snapshot。页面不能一边消费模型原始响应，一边自己拼装第二份回答状态；否则页面状态可能与 Runtime 已接受的结果不一致。
 
-| 文档中的词                                 | 先这样理解                                                          |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| **Provider 连接配置**                      | 应用保存的 endpoint、Provider 类型、模型目录等连接资料              |
-| **Provider 注册（Provider Registration）** | Provider 集成层构造、供 Runtime 解析的可信接入对象                  |
-| **Provider**                               | 把统一的模型选择和调用方式适配到具体模型服务                        |
-| **providerId / modelId**                   | 应用定义的接入实例标识，以及 Provider 接受的真实模型标识            |
-| **LanguageModelV4**                        | Runtime 固定使用的 AI SDK 模型调用接口                              |
-| **credential**                             | API key 一类的认证资料；由应用和 Provider 管理，不进入 Runtime 输入 |
-| **capability**                             | 随模型 descriptor 复制到 Run 的 metadata；当前不参与调用 gate       |
+调用方可以选择已配置的 `providerId` 和 `modelId`，但不能通过 `send()` 注入任意请求头、模型服务专用选项或原始模型 SDK 对象。详细边界会在[注册可用的模型接入](../concepts/provider-registration.md)中说明。
 
-这些名称的来源并不相同：`LanguageModelV4` 和 Provider ABI 直接来自 AI SDK；Command 借用 CQRS 中表达业务意图的概念；`RuntimeSnapshot` 的具体数据范围由 Tiny Robot 自己定义。出处和差异见[命名来源与项目定义](../reference/terminology-sources.md)。
-
-::: tip 继续理解公共交互
-先阅读 [Runtime 总览](../concepts/runtime-overview.md)，再进入 [Command 与 Runtime API](../concepts/commands-and-runtime.md)。需要核对模型选择、安全和凭据责任时，查看 [Provider 注册与安全边界](../concepts/provider-registration.md)。
-
-按需核对：[下一代架构总览](../design/architecture-overview.md) · [ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md) · [Runtime 契约](../design/runtime-contract.md)
-:::
-
-## 第二步：理解一段问答的数据
-
-Snapshot 使用规范化的领域状态。仍以天气问题为例：
-
-| 文档中的词       | Tiny Robot 中的定义                    | 在示例中是什么                                       |
-| ---------------- | -------------------------------------- | ---------------------------------------------------- |
-| **Conversation** | 一段可以连续追问的对话                 | 用户与助手关于天气的整段聊天                         |
-| **Turn**         | 用户提出的一次问题或意图               | “北京今天天气怎么样？”                               |
-| **Run**          | Runtime 为一个 Turn 生成答案的一次尝试 | 当前发送产生第一次回答；后续重新生成会创建另一次 Run |
-| **Step**         | Run 中一次模型调用或一次工具执行       | 调用模型生成天气回答                                 |
-| **Message**      | 由用户、助手或工具产生的一组内容       | 用户的问题，或助手的完整回答                         |
-| **Part**         | Message 中最小的内容单元               | 一段文字、一次工具请求或一个错误                     |
-
-它们之间最常见的关系是：
-
-```mermaid
-flowchart LR
-  C["一段对话<br/>Conversation"] --> T["一个问题<br/>Turn"]
-  T --> R1["第一次回答尝试<br/>Run 1"]
-  T -.-> R2["后续重新生成能力<br/>Run 2"]
-  R1 --> S["一次执行<br/>Step"]
-  R1 --> M["一条消息<br/>Message"]
-  M --> P["一段内容<br/>Part"]
-```
-
-领域模型允许同一个 Turn 包含多个 Run，也允许一次 Run 包含多个 Step。当前已实现的 Send 只创建一个单 Step text/reasoning Run；重新生成、工具循环和 multi-Step 执行仍是后续能力。
-
-Conversation、Turn、Run 和 Step 在不同产品中没有统一层级；上表是 Tiny Robot 的项目定义。Message 和 Part 借鉴 AI SDK 的内容结构，但 Runtime 类型不会直接复用 AI SDK 类型。
-
-## 状态怎样变化
-
-| 文档中的词                     | 直白定义                                             | 例子                                    |
-| ------------------------------ | ---------------------------------------------------- | --------------------------------------- |
-| **Domain Event**（简称 Event） | Runtime 内部已经确认发生的事实                       | “Run 已创建”“文字已追加”                |
-| **reducer**                    | 根据“旧 Snapshot + 一个 Event”计算新 Snapshot 的函数 | 收到“文字已追加”后，把文字加入对应 Part |
-
-```mermaid
-flowchart LR
-  A["已经确认的事实<br/>Event"] --> B["更新状态的函数<br/>reducer"]
-  B --> C["新的状态总账<br/>Snapshot"]
-```
-
-文档把“reducer 根据 Event 产生新 Snapshot”简称为**归约**。这个词只描述状态计算，不表示压缩或删除数据。
-
-Domain Event 借用领域驱动设计中“已经发生的领域事实”这一含义；reducer 和按 ID 组织状态的方式借鉴 Redux 的状态管理模式。Tiny Robot 仍为事件内容、实体所有权和生命周期定义自己的约束。
-
-::: tip 继续理解状态
-依次阅读 [Snapshot 与领域模型](../concepts/snapshot-and-domain-model.md)、[多个 Conversation](../examples/multiple-conversations.md)、[Domain Event 与 reducer](../concepts/events-and-reducer.md)和[一次完成的文本回答](../examples/completed-text-run.md)。这组页面先解释状态形状，再验证作用域，最后走通一次状态演进。
-
-按需核对：[ADR-0004：Snapshot、Command 与 Domain Event 分工](../design/adr-0004-snapshot-command-event-runtime.md) · [Runtime 契约](../design/runtime-contract.md)
-:::
-
-## 第三步：准备模型调用
-
-Runtime 把 Snapshot 中允许的历史投影为固定 V4 prompt，再构造完整的 allowlisted `LanguageModelV4CallOptions`。这个对象是模型调用边界的输入。
-
-| 步骤                          | 负责什么                           | 产生什么                      |
-| ----------------------------- | ---------------------------------- | ----------------------------- |
-| prompt projection             | 按 Message/Part 顺序转换允许历史   | V4 prompt                     |
-| model call options projection | 只组合批准的 output limit 和 abort | 完整 allowlisted call options |
-
-```mermaid
-flowchart LR
-  Frozen["冻结的 Run 与历史"] --> Prompt["Prompt 投影"]
-  Prompt --> Options["调用选项投影"]
-  Options --> Result["V4 调用对象"]
-```
-
-遇到 unknown、未完成或无法完整表达的历史 Part 时，投影会稳定拒绝，而不是删除它再继续。这样可以保证模型看到的历史与 Runtime 已接受的历史一致。
-
-::: tip 继续理解模型调用准备
-先阅读 [Provider 注册与安全边界](../concepts/provider-registration.md)，再阅读[准备一次模型调用](../concepts/model-call-projection.md)。前者解释应用怎样提供接入实例和模型，后者解释 Runtime 怎样构造一次调用。
-
-按需核对：[ADR-0002：Provider 边界](../design/adr-0002-language-model-v4-provider-boundary.md) · [LanguageModelV4 Boundary Contract v1](../design/language-model-v4-runtime-boundary-v1.md#4-capability-descriptor)
-:::
-
-## 检查你的理解
-
-读完本页后，先不用查看源码，尝试回答：
-
-1. 应用为什么通过 Command 请求变化，而不是直接修改 Snapshot？
-2. Turn、Run、Step、Message 和 Part 在一次天气问答中分别表示什么？
-3. 为什么 capability metadata 不参与当前调用 gate，而 Prompt 和调用选项仍必须经过 allowlist 投影？
-
-如果其中一个问题还不能用自己的话回答，按照上方对应的“继续理解”路径进入详细页面。
-
-## 参考资料
-
-- 想核对名词依据：阅读 [命名来源与项目定义](../reference/terminology-sources.md)。
-- 想查看已经实现的公共类型：阅读 [Runtime API 与 TSDoc](../reference/runtime-api.md)。
-- 想参与文档评审：阅读[学习文档评审指南](../contributing/learning-document-review.md)。
+下一步阅读[应用与模型之间的运行边界](../concepts/runtime-overview.md)，理解这条链路为什么需要分层。需要直接查询精确签名时，进入 [Runtime API 与 TSDoc](../reference/runtime-api.md)。

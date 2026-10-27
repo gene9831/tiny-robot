@@ -1,47 +1,41 @@
-# Command 与 Runtime API
+# 请求 Runtime 执行业务动作
 
-`TinyRobotRuntime` 是应用访问对话状态的公共根入口。应用可以创建 Conversation、读取当前状态、订阅变化并派发 Command，但不能直接改写对话数据。当前已实现首个 text/reasoning Model Step 及其停止生成语义；重试、恢复和工具执行流程尚未实现。
+本页面向已经完成[提交问题并读取回答](../guide/quick-start.md)和[应用与模型之间的运行边界](./runtime-overview.md)的读者。你应当已经知道 Snapshot 是 Runtime 当前状态，Command 是应用提交的业务请求。
 
-本文把“当前完整状态”称为 **Snapshot**，把“外部提出的请求”称为 **Command**。可以先通过 [快速开始](../guide/quick-start.md) 建立整体印象。
+`TinyRobotRuntime` 是应用访问对话能力的公共根入口。应用通过它读取状态、订阅变化或提出请求，但不能直接改写对话数据。本页说明这三种交互如何分工，以及 Conversation 便利对象怎样复用同一套 Command 语义。
 
-本页解决的问题是：应用怎样请求一次状态变化，同时仍让 Runtime 对校验、执行和最终状态负责。读完后，你应该能区分读取状态、订阅状态和提出请求这三种交互。
+## 读取、订阅与请求
 
-## 三种交互
+Runtime 提供三类方向不同的交互：
+
+- `getSnapshot()` 立即返回当前完整 Snapshot，供调用者只读查询；
+- `subscribe(listener)` 注册监听器，在 Runtime 发布后续 Snapshot 时收到通知，并返回取消订阅函数；
+- `dispatch(command)` 接收一个 Command，校验并执行其中表达的业务请求。
 
 ```mermaid
 flowchart LR
-  App["应用"] -->|getSnapshot| Read["读取当前 Snapshot"]
-  App -->|subscribe| Observe["订阅后续 Snapshot"]
-  App -->|dispatch / conversation.send| Intent["请求执行意图"]
+  App["应用"] -->|"getSnapshot()"| Read["读取当前状态"]
+  Runtime["Runtime"] -->|"subscribe(listener)"| Observe["通知后续状态"]
+  App -->|"dispatch(command)"| Runtime
 ```
 
-### `getSnapshot()`
+订阅通知仍然只提供 Snapshot，不暴露模型服务返回的原始数据。应用收到通知后，可以重新运行 Selector，读取自己关心的 Conversation。
 
-返回当前 Runtime 实例已知的完整 Snapshot。调用者可以读取，但不能原地修改。
+## Command 表达意图而不是结果
 
-### `subscribe(listener)`
+Command 使用普通数据描述“调用方希望发生什么”。例如 `SendCommand` 请求 Runtime：在指定 Conversation 中记录用户输入，选择已配置的模型，并创建新的 Turn 和 Run。
 
-监听以后发布的新 Snapshot。它不是 Provider stream 订阅，也不会把 raw chunk 暴露给 UI。
+Command 可能因输入无效、目标不存在或当前状态不允许而被拒绝，因此它不能充当成功结果。只有 Runtime 确认某件事已经发生后，才会形成 Domain Event；reducer 再根据这些事实计算下一份 Snapshot。
 
-### `dispatch(command)`
+| 数据         | 表达的内容                     | 调用方怎样使用         |
+| ------------ | ------------------------------ | ---------------------- |
+| Command      | 希望 Runtime 执行的业务动作    | 通过 `dispatch()` 提交 |
+| Domain Event | Runtime 内部已确认发生的事实   | 不由应用直接派发       |
+| Snapshot     | Runtime 当前已经接受的业务状态 | 通过读取或订阅获得     |
 
-接受 Runtime 的标准请求消息。Command 说明调用方希望 Runtime 对哪个领域对象执行什么动作，并携带完成该动作所需的领域输入。Runtime 根据 Command 的 `type` 校验请求，再把它路由到对应的执行流程。
+## Conversation 便利对象
 
-例如 `SendCommand` 的职责是请求 Runtime：在指定 Conversation 中记录一次用户输入，并使用指定的 Provider 接入实例和模型创建新的 Turn 与 Run。
-
-## Command、Domain Event 与 Snapshot
-
-| 概念         | 例子                               | 含义                             |
-| ------------ | ---------------------------------- | -------------------------------- |
-| Command      | `send`、`abort`                    | 调用者的意图，可能被拒绝         |
-| Domain Event | `run-created`、`text-part-delta`   | Runtime 内部已经确认发生的事实   |
-| Snapshot     | 当前 Conversation、Run、Message 等 | reducer 归约后的唯一领域事实来源 |
-
-UI 不应该自己根据 Provider stream 重放状态，也不应该把 Command 当作已经成功的结果。
-
-## 先创建 Conversation
-
-Conversation ID 由 Runtime 创建。返回的 `TinyRobotConversation` 只保存 ID 和 dispatcher 引用，不保存 Message、Run 或回答状态：
+`runtime.createConversation()` 创建空 Conversation，并返回一个 `TinyRobotConversation`。这个返回对象只绑定 Conversation ID 和 Runtime 请求入口，不保存 Message、Run 或回答状态。
 
 ```ts
 const conversation = runtime.createConversation()
@@ -53,11 +47,7 @@ await conversation.send({
 })
 ```
 
-最终结果仍从 `runtime.getSnapshot()` 读取；facade 不是第二份状态源。
-
-## `conversation.send()` 与 `dispatch(send)`
-
-基础设施代码也可以直接派发完整 Command：
+`conversation.send(input)` 会补上它已经绑定的 `conversationId`，再提交与下面等价的标准 Command：
 
 ```ts
 await runtime.dispatch({
@@ -69,63 +59,37 @@ await runtime.dispatch({
 })
 ```
 
-两种写法走同一条执行路径：
+两种写法共用相同的校验、模型选择和执行过程。`conversation.send()` 不建立第二份状态；Promise 结束后，调用方仍从 Snapshot 查询最终 Run、Message 和 Part。
 
-```text
-conversation.send(input)
-→ dispatch({ type: 'send', conversationId, ...input })
-→ run coordinator
-→ LanguageModelV4.doStream()
-→ Ingress Guard
-→ Domain Events
-→ reducer
-→ Snapshot / subscribers
-```
+`ConversationSendInput` 是便利方法接收的输入，因此省略已经绑定的 `conversationId`；`SendCommand` 是 `dispatch()` 接收的完整请求，因此显式携带目标 Conversation。两者都只携带模型选择和用户文本，不携带模型实例、连接配置或认证凭据。
 
-Runtime 直接调用 `LanguageModelV4.doStream()`，不使用 AI SDK Core `streamText()`，也不增加它的包装层。
+## 选择模型接入
 
-| 输入                    | 职责                                                             | 消费者                         |
-| ----------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| `SendCommand`           | 包含目标 Conversation、用户输入、`providerId` 和真实 `modelId`   | `dispatch()` 与 coordinator    |
-| `ConversationSendInput` | 省略 facade 已绑定的 Conversation，携带 Provider、模型和用户文本 | `TinyRobotConversation.send()` |
+发送请求中的 `providerId` 指向应用信任的一项模型接入配置，`modelId` 指向该接入公开的真实模型。Runtime 在 Run 开始时解析这项配置，并把当时选择的标识记录在 Run 中。
 
-当前 Send 输入不提供 reasoning 控制字段，Runtime 也不会在 call options 中注入默认值。模型采用具体 Provider 的默认行为；如果 Provider 返回标准 V4 reasoning part，Guard 会把它保存成独立的 `ReasoningPart`，而不是混入最终文本。
+模型连接地址、请求头和凭据由应用及 Provider 集成管理，不能进入 Command 或 Snapshot。完整注册方式和安全边界在[注册可用的模型接入](./provider-registration.md)中解释。
 
-`conversation.send()` 只组装 `SendCommand` 后委托 `dispatch()`，没有第二套验证、模型选择或执行语义。
+当前 `send()` 不提供 reasoning 开关。模型是否产生 reasoning 由所选模型和接入能力决定；如果模型返回符合统一接口的 reasoning 内容，Runtime 会将它保存为独立 Part，而不是混入最终 text。
 
-`RuntimeCommand` 使用普通数据表示，是为了让 `dispatch()` 接收的标准请求不依赖函数、模型实例或 Provider SDK 对象。这是 Command 边界的表示约束，不是 `SendCommand` 的业务职责。
+## 中止与其他请求
 
-应用通过 resolver 按 `providerId` 提供当前 registration，再由 Runtime 使用真实 `modelId` 选择模型。连接配置和 credential 由应用与 Provider 集成层管理，不进入 Command 或便利输入。Provider 配置可以在两次 Run 之间变化；已创建 Run 的标识和 capability metadata 保持冻结，但当前 Runtime 不用该 metadata gate 调用或入站内容。详细边界见 [Provider 注册与安全边界](./provider-registration.md)。
+`runtime.abort(conversationId)` 请求停止指定 Conversation 当前正在执行的 Run。Promise 表示中止请求是否被 Runtime 接受；最终结果仍以 Snapshot 中 Run 的 `aborted` 状态和安全错误信息为准。
 
-## 并发边界
+如果 Conversation 不存在或没有正在执行的 Run，中止请求会以稳定的 Runtime 错误码拒绝。用户主动中止与模型错误同时发生时，用户中止优先，Snapshot 只记录一个结束结果。
+
+Runtime 接口还预留重试、重新生成和工具审批方法。当前阶段这些方法不会启动完整业务流程；调用方不能因为方法已经出现在类型中，就把对应能力视为可用。
+
+## Conversation 之间的执行边界
+
+一个 Conversation 同一时刻最多拥有一个正在执行的 Run；不同 Conversation 的 Run 可以各自推进。这项约束避免同一段对话中的两个回答同时争用相同上下文。
 
 ```mermaid
 flowchart TB
-  Runtime["一个 TinyRobotRuntime"]
-  Runtime --> C1["Conversation A<br/>最多一个 active Run"]
-  Runtime --> C2["Conversation B<br/>最多一个 active Run"]
-  C1 --> R1["Run A1"]
-  C2 --> R2["Run B1"]
+  Runtime["一个 Runtime"]
+  Runtime --> C1["Conversation A<br/>最多一个执行中 Run"]
+  Runtime --> C2["Conversation B<br/>最多一个执行中 Run"]
 ```
 
-“同一 Conversation 最多一个 active Run、不同 Conversation 可以并行”是 Runtime 契约边界。当前首个 text/reasoning 垂直切片尚未实现并发协调，调用方不能把这项后续能力当作现行行为。
+当前阶段尚未把所有并发拒绝、排队和恢复策略暴露为完整公共能力，因此应用不应自行推断未声明的协调结果。后续[同时管理多段对话](../examples/multiple-conversations.md)会从状态所有权角度验证不同 Conversation 的隔离。
 
-## 失败意味着什么
-
-当前 `dispatch(send)` 和 `conversation.send()` 返回的 Promise 会在本次文本 Run 终止后 settle。即便 Promise resolve，调用方仍应从 Snapshot 读取最终 Run、Message 和 Part，而不是维护第二份回答状态。
-
-`runtime.abort(conversationId)` 会把 AbortSignal 传播给该 Conversation 当前正在执行的 Model Step。调用方 abort 与 Provider error/exception 竞争时，caller abort 优先，Snapshot 只得到一个 `aborted` terminal；Conversation 不存在或没有 active execution 时，请求以稳定 Runtime code 拒绝。
-
-Retry、Regenerate 和工具审批方法目前仍稳定拒绝为 `runtime_operation_not_implemented`。`tool-calls` 可以让当前 Model Step completed 且 Run 保持 active，但当前能力不会继续执行工具或创建后续 Step。
-
-## 命名来源
-
-Command 借鉴 CQRS 中“表达业务意图而不是直接设置字段”的含义，但 Tiny Robot 并未因此采用完整 CQRS 架构。参见 [Microsoft CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs) 和[命名来源与项目定义](../reference/terminology-sources.md)。
-
-## 检查你的理解
-
-1. 为什么 `TinyRobotConversation` 不保存 Message 或回答状态？
-2. 为什么 `SendCommand` 和 `ConversationSendInput` 都不包含 credential？
-3. `conversation.send()` 怎样保证与 `dispatch(send)` 只有一条执行路径？
-
-下一步阅读 [Snapshot 与领域模型](./snapshot-and-domain-model.md)，理解应用最终读取的状态怎样组织。
+下一步阅读 [Runtime 保存的对话状态](./snapshot-and-domain-model.md)，理解这些业务对象怎样组织成唯一、可查询的 Snapshot。
