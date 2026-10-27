@@ -108,6 +108,7 @@ describe('minimal text and reasoning Ingress Guard', () => {
         conversationId: 'runtime-conversation-1',
         turnId: 'runtime-turn-1',
         runId: 'runtime-run-1',
+        inputMessageIds: [],
         providerId: 'runtime-provider-1',
         modelId: 'runtime-model-1',
         capabilities: { streaming: true, reasoning: false },
@@ -119,7 +120,7 @@ describe('minimal text and reasoning Ingress Guard', () => {
         kind: 'model',
       },
       {
-        type: 'message-created',
+        type: 'run-output-message-created',
         runId: 'runtime-run-1',
         turnId: 'runtime-turn-1',
         messageId: 'runtime-message-1',

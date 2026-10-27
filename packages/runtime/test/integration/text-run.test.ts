@@ -52,7 +52,8 @@ function completedRunShape(snapshot: RuntimeSnapshot, conversationId: string) {
   const turn = snapshot.turnsById[conversation.turnIds[0]!]!
   const run = snapshot.runsById[turn.runIds[0]!]!
   const step = snapshot.stepsById[run.stepIds[0]!]!
-  const messages = run.messageIds.map((messageId) => snapshot.messagesById[messageId]!)
+  const inputMessages = run.inputMessageIds.map((messageId) => snapshot.messagesById[messageId]!)
+  const outputMessages = run.outputMessageIds.map((messageId) => snapshot.messagesById[messageId]!)
 
   return {
     run: {
@@ -63,11 +64,19 @@ function completedRunShape(snapshot: RuntimeSnapshot, conversationId: string) {
       termination: run.termination,
       usage: run.usage,
       stepCount: run.stepIds.length,
-      messageCount: run.messageIds.length,
+      inputMessageCount: run.inputMessageIds.length,
+      outputMessageCount: run.outputMessageIds.length,
     },
     step: { kind: step.kind, status: step.status },
-    messages: messages.map((message) => ({
+    inputMessages: inputMessages.map((message) => ({
       role: message.role,
+      hasProducingRun: message.runId !== undefined,
+      contents: message.partIds.map((partId) => snapshot.partsById[partId]?.content),
+      statuses: message.partIds.map((partId) => snapshot.partsById[partId]?.status),
+    })),
+    outputMessages: outputMessages.map((message) => ({
+      role: message.role,
+      hasProducingRun: message.runId !== undefined,
       contents: message.partIds.map((partId) => snapshot.partsById[partId]?.content),
       statuses: message.partIds.map((partId) => snapshot.partsById[partId]?.status),
     })),
@@ -120,13 +129,15 @@ describe('first vertical text Run', () => {
           cacheWriteTokens: 1,
         },
         stepCount: 1,
-        messageCount: 2,
+        inputMessageCount: 1,
+        outputMessageCount: 1,
       },
       step: { kind: 'model', status: 'completed' },
-      messages: [
-        { role: 'user', contents: ['Hello Runtime'], statuses: ['completed'] },
+      inputMessages: [{ role: 'user', hasProducingRun: false, contents: ['Hello Runtime'], statuses: ['completed'] }],
+      outputMessages: [
         {
           role: 'assistant',
+          hasProducingRun: true,
           contents: [' first \nlast', 'second\nline'],
           statuses: ['completed', 'completed'],
         },
@@ -217,7 +228,7 @@ describe('first vertical text Run', () => {
     const observedAssistantParts: Array<ReadonlyArray<{ kind: string; content?: string; status?: string }>> = []
     runtime.subscribe((snapshot) => {
       const run = Object.values(snapshot.runsById)[0]
-      const assistant = run?.messageIds
+      const assistant = run?.outputMessageIds
         .map((messageId) => snapshot.messagesById[messageId])
         .find((message) => message?.role === 'assistant')
       if (assistant !== undefined) {
@@ -234,7 +245,7 @@ describe('first vertical text Run', () => {
 
     const snapshot = runtime.getSnapshot()
     const run = Object.values(snapshot.runsById)[0]!
-    const assistant = run.messageIds
+    const assistant = run.outputMessageIds
       .map((messageId) => snapshot.messagesById[messageId]!)
       .find((message) => message.role === 'assistant')!
     const assistantParts = assistant.partIds.map((partId) => snapshot.partsById[partId]!)
@@ -281,7 +292,7 @@ describe('first vertical text Run', () => {
 
     const snapshot = runtime.getSnapshot()
     const partIdsByRun = Object.values(snapshot.runsById).map((run) => {
-      const assistant = run.messageIds
+      const assistant = run.outputMessageIds
         .map((messageId) => snapshot.messagesById[messageId]!)
         .find((message) => message.role === 'assistant')!
       return assistant.partIds

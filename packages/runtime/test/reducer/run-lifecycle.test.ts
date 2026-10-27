@@ -16,6 +16,7 @@ function createActiveRun(stepKind: 'model' | 'tool' = 'model'): RuntimeSnapshot 
       conversationId: 'conversation-1',
       turnId: 'turn-1',
       runId: 'run-1',
+      inputMessageIds: [],
       providerId: 'provider-1',
       modelId: 'model-1',
       capabilities,
@@ -35,13 +36,14 @@ function createTwoActiveRuns(): RuntimeSnapshot {
       conversationId: 'conversation-2',
       turnId: 'turn-2',
       runId: 'run-2',
+      inputMessageIds: [],
       providerId: 'provider-2',
       modelId: 'model-2',
       capabilities,
     },
     { type: 'step-started', runId: 'run-2', stepId: 'step-2', kind: 'model' },
     {
-      type: 'message-created',
+      type: 'run-output-message-created',
       runId: 'run-2',
       turnId: 'turn-2',
       messageId: 'message-2',
@@ -64,6 +66,7 @@ describe('Runtime reducer run lifecycle', () => {
     expect(snapshot.turnsById['turn-1']).toEqual({
       id: 'turn-1',
       conversationId: 'conversation-1',
+      inputMessageIds: [],
       runIds: ['run-1'],
     })
     expect(snapshot.runsById['run-1']).toEqual({
@@ -71,7 +74,8 @@ describe('Runtime reducer run lifecycle', () => {
       turnId: 'turn-1',
       status: 'active',
       stepIds: ['step-1'],
-      messageIds: [],
+      inputMessageIds: [],
+      outputMessageIds: [],
       providerId: 'provider-1',
       modelId: 'model-1',
       capabilities,
@@ -200,11 +204,93 @@ describe('Runtime reducer run lifecycle', () => {
         conversationId: 'conversation-2',
         turnId: 'turn-1',
         runId: 'run-1',
+        inputMessageIds: [],
         providerId: 'provider-1',
         modelId: 'model-1',
         capabilities,
       }),
     ).toThrow()
+  })
+
+  it('rejects a Run input Message owned by another Conversation', () => {
+    let snapshot = createRuntimeSnapshot()
+    snapshot = reduceRuntimeEvent(snapshot, { type: 'conversation-created', conversationId: 'conversation-1' })
+    snapshot = reduceRuntimeEvent(snapshot, { type: 'conversation-created', conversationId: 'conversation-2' })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-input-message-created',
+      turnId: 'turn-1',
+      messageId: 'message-1',
+      partId: 'part-1',
+      role: 'user',
+      content: 'Question',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-2',
+      turnId: 'turn-2',
+    })
+
+    expect(() =>
+      reduceRuntimeEvent(snapshot, {
+        type: 'run-created',
+        conversationId: 'conversation-2',
+        turnId: 'turn-2',
+        runId: 'run-2',
+        inputMessageIds: ['message-1'],
+        providerId: 'provider-1',
+        modelId: 'model-1',
+        capabilities,
+      }),
+    ).toThrow()
+  })
+
+  it('accepts ordered input Message references from earlier Turns in the same Conversation', () => {
+    let snapshot = createRuntimeSnapshot()
+    snapshot = reduceRuntimeEvent(snapshot, { type: 'conversation-created', conversationId: 'conversation-1' })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-input-message-created',
+      turnId: 'turn-1',
+      messageId: 'message-1',
+      partId: 'part-1',
+      role: 'user',
+      content: 'First question',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-2',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-input-message-created',
+      turnId: 'turn-2',
+      messageId: 'message-2',
+      partId: 'part-2',
+      role: 'user',
+      content: 'Follow-up question',
+    })
+
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'run-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-2',
+      runId: 'run-2',
+      inputMessageIds: ['message-1', 'message-2'],
+      providerId: 'provider-1',
+      modelId: 'model-1',
+      capabilities,
+    })
+
+    expect(snapshot.runsById['run-2']?.inputMessageIds).toEqual(['message-1', 'message-2'])
   })
 
   it('appends Steps to the Run in start-event order', () => {
@@ -224,12 +310,109 @@ describe('Runtime reducer run lifecycle', () => {
     })
   })
 
+  it('keeps Turn input ownership separate from Run output ownership', () => {
+    let snapshot = createRuntimeSnapshot()
+    snapshot = reduceRuntimeEvent(snapshot, { type: 'conversation-created', conversationId: 'conversation-1' })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-input-message-created',
+      turnId: 'turn-1',
+      messageId: 'message-user',
+      partId: 'part-user',
+      role: 'user',
+      content: 'Question',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'run-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+      runId: 'run-1',
+      inputMessageIds: ['message-user'],
+      providerId: 'provider-1',
+      modelId: 'model-1',
+      capabilities,
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'run-output-message-created',
+      runId: 'run-1',
+      turnId: 'turn-1',
+      messageId: 'message-assistant',
+      role: 'assistant',
+    })
+
+    expect(snapshot.turnsById['turn-1']?.inputMessageIds).toEqual(['message-user'])
+    expect(snapshot.runsById['run-1']?.inputMessageIds).toEqual(['message-user'])
+    expect(snapshot.runsById['run-1']?.outputMessageIds).toEqual(['message-assistant'])
+    expect(snapshot.messagesById['message-user']).toEqual({
+      id: 'message-user',
+      turnId: 'turn-1',
+      role: 'user',
+      partIds: ['part-user'],
+    })
+    expect(snapshot.partsById['part-user']).toEqual({
+      id: 'part-user',
+      messageId: 'message-user',
+      kind: 'text',
+      content: 'Question',
+      status: 'completed',
+    })
+    expect(snapshot.messagesById['message-assistant']).toEqual({
+      id: 'message-assistant',
+      turnId: 'turn-1',
+      runId: 'run-1',
+      role: 'assistant',
+      partIds: [],
+    })
+  })
+
+  it('does not let a Run mutate a referenced input Message', () => {
+    let snapshot = createRuntimeSnapshot()
+    snapshot = reduceRuntimeEvent(snapshot, { type: 'conversation-created', conversationId: 'conversation-1' })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'turn-input-message-created',
+      turnId: 'turn-1',
+      messageId: 'message-user',
+      partId: 'part-user',
+      role: 'user',
+      content: 'Original question',
+    })
+    snapshot = reduceRuntimeEvent(snapshot, {
+      type: 'run-created',
+      conversationId: 'conversation-1',
+      turnId: 'turn-1',
+      runId: 'run-1',
+      inputMessageIds: ['message-user'],
+      providerId: 'provider-1',
+      modelId: 'model-1',
+      capabilities,
+    })
+
+    expect(() =>
+      reduceRuntimeEvent(snapshot, {
+        type: 'text-part-delta',
+        runId: 'run-1',
+        partId: 'part-user',
+        delta: ' rewritten',
+      }),
+    ).toThrow()
+    expect(snapshot.partsById['part-user']?.content).toBe('Original question')
+  })
+
   it('rejects a Message whose Turn does not own the Run', () => {
     const snapshot = createTwoActiveRuns()
 
     expect(() =>
       reduceRuntimeEvent(snapshot, {
-        type: 'message-created',
+        type: 'run-output-message-created',
         runId: 'run-1',
         turnId: 'turn-2',
         messageId: 'message-cross-owner',

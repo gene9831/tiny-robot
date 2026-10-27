@@ -94,5 +94,7 @@ function projectMessage(snapshot: RuntimeSnapshot, message: RuntimeMessage): Lan
 /** Projects supported frozen Run history into the pinned V4 prompt subset. */
 export function projectPrompt(snapshot: RuntimeSnapshot, runId: string): LanguageModelV4Prompt {
   const run = requireRun(snapshot, runId)
-  return run.messageIds.map((messageId) => projectMessage(snapshot, requireMessage(snapshot, messageId)))
+  return [...run.inputMessageIds, ...run.outputMessageIds].map((messageId) =>
+    projectMessage(snapshot, requireMessage(snapshot, messageId)),
+  )
 }

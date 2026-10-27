@@ -130,19 +130,23 @@ export async function executeTextRun(input: TextRunCoordinatorInput): Promise<vo
       turnId,
     })
     input.emit({
+      type: 'turn-input-message-created',
+      turnId,
+      messageId: userMessageId,
+      partId: userPartId,
+      role: 'user',
+      content: command.content,
+    })
+    input.emit({
       type: 'run-created',
       conversationId: command.conversationId,
       turnId,
       runId,
+      inputMessageIds: [userMessageId],
       providerId: command.providerId,
       modelId: command.modelId,
       capabilities,
     })
-    input.emit({ type: 'message-created', runId, turnId, messageId: userMessageId, role: 'user' })
-    input.emit({ type: 'text-part-started', runId, messageId: userMessageId, partId: userPartId })
-    input.emit({ type: 'text-part-delta', runId, partId: userPartId, delta: command.content })
-    input.emit({ type: 'text-part-ended', runId, partId: userPartId })
-
     const callOptions = buildModelCallOptions({
       snapshot: input.getSnapshot(),
       runId,
@@ -151,7 +155,7 @@ export async function executeTextRun(input: TextRunCoordinatorInput): Promise<vo
 
     input.emit({ type: 'step-started', runId, stepId, kind: 'model' })
     input.emit({
-      type: 'message-created',
+      type: 'run-output-message-created',
       runId,
       turnId,
       messageId: assistantMessageId,

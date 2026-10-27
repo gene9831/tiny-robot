@@ -49,7 +49,7 @@ function projectSnapshot(snapshot: RuntimeSnapshot, conversationId: string): voi
     errorCode: run.error?.code,
   })
 
-  const assistant = run.messages.find(({ role }) => role === 'assistant')
+  const assistant = run.outputMessages.find(({ role }) => role === 'assistant')
   snapshotsByStage.set(
     executionStage.key,
     JSON.stringify(
@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section>
-        <h3>最终 Snapshot 摘要</h3>
+        <h3>当前阶段 Snapshot 摘要</h3>
         <pre><code>{{ snapshotExcerpt }}</code></pre>
       </section>
     </div>

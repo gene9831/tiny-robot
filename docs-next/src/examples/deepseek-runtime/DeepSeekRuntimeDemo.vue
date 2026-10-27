@@ -29,7 +29,7 @@ function projectRun(snapshot: RuntimeSnapshot, conversationId: string): void {
     return
   }
 
-  const assistant = run.messages.find((message) => message.role === 'assistant')
+  const assistant = run.outputMessages.find((message) => message.role === 'assistant')
   assistantParts.value =
     assistant?.parts
       .filter((part) => part.kind === 'text' || part.kind === 'reasoning')

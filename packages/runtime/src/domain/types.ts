@@ -46,6 +46,8 @@ export interface RuntimeTurn {
   readonly id: string
   /** Conversation that owns this turn. */
   readonly conversationId: string
+  /** Message identifiers that express this turn's user intent in accepted input order. */
+  readonly inputMessageIds: ReadonlyArray<string>
   /** Run identifiers in attempt order. */
   readonly runIds: ReadonlyArray<string>
   /** Run whose result is currently selected, omitted until a result is selected. */
@@ -62,8 +64,10 @@ export interface RuntimeRun {
   readonly status: RuntimeRunStatus
   /** Model and tool step identifiers in accepted execution order; the sole source of step ordering. */
   readonly stepIds: ReadonlyArray<string>
-  /** Message identifiers produced or consumed as part of this run; not positionally paired with stepIds. */
-  readonly messageIds: ReadonlyArray<string>
+  /** Ordered, read-only Message references used as the initial context for this execution attempt. */
+  readonly inputMessageIds: ReadonlyArray<string>
+  /** Ordered Message identifiers produced by this execution attempt. */
+  readonly outputMessageIds: ReadonlyArray<string>
   /** Application-defined provider registration identifier frozen for this run. */
   readonly providerId: string
   /** Sanitized, non-sensitive model identifier frozen for this run. */
@@ -153,8 +157,9 @@ export interface RuntimeToolCall {
  * or opaque continuation data.
  *
  * IDs connect the normalized records without nesting mutable entity copies:
- * `Conversation.turnIds` points to Turns, `Turn.runIds` points to Runs, and a
- * Run points to its ordered Steps and Messages. Messages then point to their
+ * `Conversation.turnIds` points to Turns, a Turn owns its input Messages and
+ * points to its Runs, and a Run references its initial input Messages while
+ * owning its ordered Steps and output Messages. Messages then point to their
  * ordered Parts.
  *
  * @example A completed single-step text response
@@ -171,6 +176,7 @@ export interface RuntimeToolCall {
  *     'turn-1': {
  *       id: 'turn-1',
  *       conversationId: 'conversation-1',
+ *       inputMessageIds: ['message-user'],
  *       runIds: ['run-1'],
  *       selectedRunId: 'run-1',
  *     },
@@ -181,7 +187,8 @@ export interface RuntimeToolCall {
  *       turnId: 'turn-1',
  *       status: 'completed',
  *       stepIds: ['step-1'],
- *       messageIds: ['message-user', 'message-assistant'],
+ *       inputMessageIds: ['message-user'],
+ *       outputMessageIds: ['message-assistant'],
  *       providerId: 'example-provider',
  *       modelId: 'example-model',
  *       capabilities: {
@@ -204,7 +211,6 @@ export interface RuntimeToolCall {
  *     'message-user': {
  *       id: 'message-user',
  *       turnId: 'turn-1',
- *       runId: 'run-1',
  *       role: 'user',
  *       partIds: ['part-user-text'],
  *     },

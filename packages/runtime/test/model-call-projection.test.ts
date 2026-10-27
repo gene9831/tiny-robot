@@ -16,7 +16,12 @@ function snapshot(capabilityOverrides: Partial<RuntimeModelCapabilitiesV1> = {})
       'conversation-1': { id: 'conversation-1', turnIds: ['turn-1'], activeRunId: 'run-1' },
     },
     turnsById: {
-      'turn-1': { id: 'turn-1', conversationId: 'conversation-1', runIds: ['run-1'] },
+      'turn-1': {
+        id: 'turn-1',
+        conversationId: 'conversation-1',
+        inputMessageIds: ['message-user'],
+        runIds: ['run-1'],
+      },
     },
     runsById: {
       'run-1': {
@@ -24,7 +29,8 @@ function snapshot(capabilityOverrides: Partial<RuntimeModelCapabilitiesV1> = {})
         turnId: 'turn-1',
         status: 'active',
         stepIds: [],
-        messageIds: ['message-user'],
+        inputMessageIds: ['message-user'],
+        outputMessageIds: [],
         providerId: 'provider-1',
         modelId: 'model-1',
         capabilities: {
@@ -39,7 +45,6 @@ function snapshot(capabilityOverrides: Partial<RuntimeModelCapabilitiesV1> = {})
       'message-user': {
         id: 'message-user',
         turnId: 'turn-1',
-        runId: 'run-1',
         role: 'user',
         partIds: ['part-user'],
       },

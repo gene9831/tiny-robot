@@ -61,7 +61,7 @@ describe('DeepSeek docs-next Provider registrations', () => {
 
     const snapshot = runtime.getSnapshot()
     const run = Object.values(snapshot.runsById)[0]!
-    const assistant = run.messageIds
+    const assistant = run.outputMessageIds
       .map((messageId) => snapshot.messagesById[messageId]!)
       .find((message) => message.role === 'assistant')!
 
@@ -204,7 +204,7 @@ describe('DeepSeek docs-next Provider registrations', () => {
     const run = Object.values(runtime.getSnapshot().runsById)[0]
     expect(run).toMatchObject({ status: 'completed', termination: 'stop' })
     expect(observedParts).toContainEqual(expect.objectContaining({ type: 'custom', kind: 'anthropic.message_start' }))
-    const assistant = run?.messageIds
+    const assistant = run?.outputMessageIds
       .map((messageId) => runtime.getSnapshot().messagesById[messageId])
       .find((message) => message?.role === 'assistant')
     expect(assistant?.partIds.map((partId) => runtime.getSnapshot().partsById[partId]?.content)).toEqual(['OK'])
@@ -248,7 +248,7 @@ describe('DeepSeek docs-next Provider registrations', () => {
 
     const snapshot = runtime.getSnapshot()
     const run = Object.values(snapshot.runsById)[0]!
-    const assistant = run.messageIds
+    const assistant = run.outputMessageIds
       .map((messageId) => snapshot.messagesById[messageId]!)
       .find((message) => message.role === 'assistant')!
 

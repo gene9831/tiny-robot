@@ -22,16 +22,18 @@ const snapshot: RuntimeSnapshot = {
     'turn-1': {
       id: 'turn-1',
       conversationId: 'conversation',
+      inputMessageIds: [],
       runIds: ['run-1'],
       selectedRunId: 'run-1',
     },
     'turn-2': {
       id: 'turn-2',
       conversationId: 'conversation',
+      inputMessageIds: ['message-2'],
       runIds: ['run-2', 'run-3'],
       selectedRunId: 'run-3',
     },
-    empty: { id: 'empty', conversationId: 'empty', runIds: [] },
+    empty: { id: 'empty', conversationId: 'empty', inputMessageIds: [], runIds: [] },
   },
   runsById: {
     'run-1': {
@@ -39,7 +41,8 @@ const snapshot: RuntimeSnapshot = {
       turnId: 'turn-1',
       status: 'completed',
       stepIds: [],
-      messageIds: [],
+      inputMessageIds: [],
+      outputMessageIds: [],
       providerId: 'provider',
       modelId: 'model',
       capabilities: { streaming: true, reasoning: false },
@@ -49,7 +52,8 @@ const snapshot: RuntimeSnapshot = {
       turnId: 'turn-2',
       status: 'active',
       stepIds: ['step-2', 'step-1'],
-      messageIds: ['message-2', 'message-1'],
+      inputMessageIds: ['message-2'],
+      outputMessageIds: ['message-1'],
       providerId: 'provider',
       modelId: 'model',
       capabilities: { streaming: true, reasoning: true },
@@ -59,7 +63,8 @@ const snapshot: RuntimeSnapshot = {
       turnId: 'turn-2',
       status: 'completed',
       stepIds: [],
-      messageIds: [],
+      inputMessageIds: ['message-2'],
+      outputMessageIds: [],
       providerId: 'provider',
       modelId: 'model',
       capabilities: { streaming: true, reasoning: false },
@@ -69,7 +74,8 @@ const snapshot: RuntimeSnapshot = {
       turnId: 'empty',
       status: 'completed',
       stepIds: [],
-      messageIds: [],
+      inputMessageIds: [],
+      outputMessageIds: [],
       providerId: 'provider',
       modelId: 'model',
       capabilities: { streaming: true, reasoning: false },
@@ -90,7 +96,6 @@ const snapshot: RuntimeSnapshot = {
     'message-2': {
       id: 'message-2',
       turnId: 'turn-2',
-      runId: 'run-2',
       role: 'user',
       partIds: [],
     },
@@ -108,10 +113,12 @@ describe('Runtime domain selectors', () => {
     const conversation = selectConversation(snapshot, 'conversation')
 
     expect(conversation?.turns.map(({ id }) => id)).toEqual(['turn-1', 'turn-2'])
+    expect(conversation?.turns[1]?.inputMessages.map(({ id }) => id)).toEqual(['message-2'])
     expect(conversation?.turns[1]?.runs.map(({ id }) => id)).toEqual(['run-2', 'run-3'])
     expect(conversation?.turns[1]?.runs[0]?.steps.map(({ id }) => id)).toEqual(['step-2', 'step-1'])
-    expect(conversation?.turns[1]?.runs[0]?.messages.map(({ id }) => id)).toEqual(['message-2', 'message-1'])
-    expect(conversation?.turns[1]?.runs[0]?.messages[1]?.parts.map(({ id }) => id)).toEqual(['part-2', 'part-1'])
+    expect(conversation?.turns[1]?.runs[0]?.inputMessages.map(({ id }) => id)).toEqual(['message-2'])
+    expect(conversation?.turns[1]?.runs[0]?.outputMessages.map(({ id }) => id)).toEqual(['message-1'])
+    expect(conversation?.turns[1]?.runs[0]?.outputMessages[0]?.parts.map(({ id }) => id)).toEqual(['part-2', 'part-1'])
   })
 
   it('exposes the active run and the run selected as each turn answer by shared reference', () => {
@@ -124,7 +131,8 @@ describe('Runtime domain selectors', () => {
 
   it('offers the same nested shape when selecting a turn, run, or message directly', () => {
     expect(selectTurn(snapshot, 'turn-2')?.runs.map(({ id }) => id)).toEqual(['run-2', 'run-3'])
-    expect(selectRun(snapshot, 'run-2')?.messages[1]?.parts.map(({ id }) => id)).toEqual(['part-2', 'part-1'])
+    expect(selectRun(snapshot, 'run-2')?.inputMessages.map(({ id }) => id)).toEqual(['message-2'])
+    expect(selectRun(snapshot, 'run-2')?.outputMessages[0]?.parts.map(({ id }) => id)).toEqual(['part-2', 'part-1'])
     expect(selectMessage(snapshot, 'message-1')?.parts.map(({ id }) => id)).toEqual(['part-2', 'part-1'])
   })
 
@@ -142,9 +150,13 @@ describe('Runtime domain selectors', () => {
     expect(after).not.toBe(before)
     expect(after?.turns[0]).toBe(before?.turns[0])
     expect(after?.turns[1]?.runs[1]).toBe(before?.turns[1]?.runs[1])
-    expect(after?.turns[1]?.runs[0]?.messages[0]).toBe(before?.turns[1]?.runs[0]?.messages[0])
-    expect(after?.turns[1]?.runs[0]?.messages[1]?.parts[0]).toBe(before?.turns[1]?.runs[0]?.messages[1]?.parts[0])
-    expect(after?.turns[1]?.runs[0]?.messages[1]?.parts[1]).not.toBe(before?.turns[1]?.runs[0]?.messages[1]?.parts[1])
+    expect(after?.turns[1]?.runs[0]?.inputMessages[0]).toBe(before?.turns[1]?.runs[0]?.inputMessages[0])
+    expect(after?.turns[1]?.runs[0]?.outputMessages[0]?.parts[0]).toBe(
+      before?.turns[1]?.runs[0]?.outputMessages[0]?.parts[0],
+    )
+    expect(after?.turns[1]?.runs[0]?.outputMessages[0]?.parts[1]).not.toBe(
+      before?.turns[1]?.runs[0]?.outputMessages[0]?.parts[1],
+    )
     expect(selectConversation(nextSnapshot, 'conversation')).toBe(after)
   })
 
@@ -158,7 +170,8 @@ describe('Runtime domain selectors', () => {
     expect(selectTurn(snapshot, 'empty')?.selectedRun).toBeUndefined()
 
     expect(selectRun(snapshot, 'missing')).toBeUndefined()
-    expect(selectRun(snapshot, 'empty')?.messages).toEqual([])
+    expect(selectRun(snapshot, 'empty')?.inputMessages).toEqual([])
+    expect(selectRun(snapshot, 'empty')?.outputMessages).toEqual([])
     expect(selectRun(snapshot, 'empty')?.steps).toEqual([])
 
     expect(selectMessage(snapshot, 'missing')).toBeUndefined()

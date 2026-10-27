@@ -42,9 +42,13 @@ function requireOwnership(actualOwnerId: string | undefined, expectedOwnerId: st
   }
 }
 
+function requireRunOwnsMessage(runId: string, message: RuntimeMessage): void {
+  requireOwnership(message.runId, runId, 'message')
+}
+
 function requireRunOwnsPart(snapshot: RuntimeSnapshot, runId: string, part: RuntimePart): void {
   const message = requireEntity(snapshot.messagesById[part.messageId], 'message', part.messageId)
-  requireOwnership(message.runId, runId, 'part')
+  requireRunOwnsMessage(runId, message)
 }
 
 function eventTargetsTerminalRun(snapshot: RuntimeSnapshot, event: RuntimeDomainEvent): boolean {
@@ -95,6 +99,7 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       const turn: RuntimeTurn = {
         id: event.turnId,
         conversationId: event.conversationId,
+        inputMessageIds: [],
         runIds: [],
       }
 
@@ -114,6 +119,46 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
     }
 
+    case 'turn-input-message-created': {
+      if (snapshot.messagesById[event.messageId] !== undefined) {
+        return snapshot
+      }
+      if (snapshot.partsById[event.partId] !== undefined) {
+        throw new Error(`Part already exists: ${event.partId}`)
+      }
+
+      const turn = requireEntity(snapshot.turnsById[event.turnId], 'turn', event.turnId)
+      const message: RuntimeMessage = {
+        id: event.messageId,
+        turnId: event.turnId,
+        role: event.role,
+        partIds: [event.partId],
+      }
+      const part: RuntimePart = {
+        id: event.partId,
+        messageId: event.messageId,
+        kind: 'text',
+        content: event.content,
+        status: 'completed',
+      }
+
+      return {
+        ...snapshot,
+        turnsById: {
+          ...snapshot.turnsById,
+          [turn.id]: { ...turn, inputMessageIds: [...turn.inputMessageIds, message.id] },
+        },
+        messagesById: {
+          ...snapshot.messagesById,
+          [message.id]: message,
+        },
+        partsById: {
+          ...snapshot.partsById,
+          [part.id]: part,
+        },
+      }
+    }
+
     case 'run-created': {
       if (snapshot.runsById[event.runId] !== undefined) {
         return snapshot
@@ -126,12 +171,18 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       )
       const turn = requireEntity(snapshot.turnsById[event.turnId], 'turn', event.turnId)
       requireOwnership(turn.conversationId, conversation.id, 'turn')
+      for (const messageId of event.inputMessageIds) {
+        const message = requireEntity(snapshot.messagesById[messageId], 'message', messageId)
+        const messageTurn = requireEntity(snapshot.turnsById[message.turnId], 'turn', message.turnId)
+        requireOwnership(messageTurn.conversationId, conversation.id, 'input message')
+      }
       const run: RuntimeRun = {
         id: event.runId,
         turnId: event.turnId,
         status: 'pending',
         stepIds: [],
-        messageIds: [],
+        inputMessageIds: [...event.inputMessageIds],
+        outputMessageIds: [],
         providerId: event.providerId,
         modelId: event.modelId,
         capabilities: { ...event.capabilities },
@@ -180,7 +231,7 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
     }
 
-    case 'message-created': {
+    case 'run-output-message-created': {
       if (snapshot.messagesById[event.messageId] !== undefined) {
         return snapshot
       }
@@ -199,7 +250,7 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
         ...snapshot,
         runsById: {
           ...snapshot.runsById,
-          [run.id]: { ...run, messageIds: [...run.messageIds, message.id] },
+          [run.id]: { ...run, outputMessageIds: [...run.outputMessageIds, message.id] },
         },
         messagesById: {
           ...snapshot.messagesById,
@@ -214,7 +265,7 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
 
       const message = requireEntity(snapshot.messagesById[event.messageId], 'message', event.messageId)
-      requireOwnership(message.runId, event.runId, 'message')
+      requireRunOwnsMessage(event.runId, message)
       const part: RuntimePart = {
         id: event.partId,
         messageId: event.messageId,
@@ -274,7 +325,7 @@ export function reduceRuntimeEvent(snapshot: RuntimeSnapshot, event: RuntimeDoma
       }
 
       const message = requireEntity(snapshot.messagesById[event.messageId], 'message', event.messageId)
-      requireOwnership(message.runId, event.runId, 'message')
+      requireRunOwnsMessage(event.runId, message)
       const part: RuntimePart = {
         id: event.partId,
         messageId: event.messageId,

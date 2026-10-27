@@ -21,6 +21,7 @@ interface RunCreatedEvent {
   readonly conversationId: string
   readonly turnId: string
   readonly runId: string
+  readonly inputMessageIds: ReadonlyArray<string>
   readonly providerId: string
   readonly modelId: string
   readonly capabilities: RuntimeModelCapabilitiesV1
@@ -33,12 +34,21 @@ interface StepStartedEvent {
   readonly kind: 'model' | 'tool'
 }
 
-interface MessageCreatedEvent {
-  readonly type: 'message-created'
+interface TurnInputMessageCreatedEvent {
+  readonly type: 'turn-input-message-created'
+  readonly turnId: string
+  readonly messageId: string
+  readonly partId: string
+  readonly role: 'user'
+  readonly content: string
+}
+
+interface RunOutputMessageCreatedEvent {
+  readonly type: 'run-output-message-created'
   readonly runId: string
   readonly turnId: string
   readonly messageId: string
-  readonly role: 'system' | 'user' | 'assistant' | 'tool'
+  readonly role: 'assistant' | 'tool'
 }
 
 interface TextPartStartedEvent {
@@ -106,7 +116,8 @@ export type RuntimeDomainEvent =
   | TurnCreatedEvent
   | RunCreatedEvent
   | StepStartedEvent
-  | MessageCreatedEvent
+  | TurnInputMessageCreatedEvent
+  | RunOutputMessageCreatedEvent
   | TextPartStartedEvent
   | TextPartDeltaEvent
   | TextPartEndedEvent

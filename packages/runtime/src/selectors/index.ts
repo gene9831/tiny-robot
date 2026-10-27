@@ -14,16 +14,20 @@ export interface MessageSelection extends Omit<RuntimeMessage, 'partIds'> {
   readonly parts: ReadonlyArray<RuntimePart>
 }
 
-/** A run selected with its ordered execution steps and messages. */
-export interface RunSelection extends Omit<RuntimeRun, 'messageIds' | 'stepIds'> {
+/** A run selected with its ordered execution steps, input references, and produced output. */
+export interface RunSelection extends Omit<RuntimeRun, 'inputMessageIds' | 'outputMessageIds' | 'stepIds'> {
   /** Model and tool steps in accepted execution order. */
   readonly steps: ReadonlyArray<RuntimeStep>
-  /** Messages produced or consumed by this run in domain order. */
-  readonly messages: ReadonlyArray<MessageSelection>
+  /** Messages referenced as the initial context for this execution attempt. */
+  readonly inputMessages: ReadonlyArray<MessageSelection>
+  /** Messages produced by this execution attempt. */
+  readonly outputMessages: ReadonlyArray<MessageSelection>
 }
 
 /** A turn selected with every execution attempt made for the same user intent. */
-export interface TurnSelection extends Omit<RuntimeTurn, 'runIds' | 'selectedRunId'> {
+export interface TurnSelection extends Omit<RuntimeTurn, 'inputMessageIds' | 'runIds' | 'selectedRunId'> {
+  /** Messages owned by this turn that express its user intent. */
+  readonly inputMessages: ReadonlyArray<MessageSelection>
   /** Execution attempts in attempt order. */
   readonly runs: ReadonlyArray<RunSelection>
   /**
@@ -84,11 +88,13 @@ interface MessageSelectionCache {
 
 interface RunSelectionCache {
   readonly steps: ReadonlyArray<RuntimeStep>
-  readonly messages: ReadonlyArray<MessageSelection>
+  readonly inputMessages: ReadonlyArray<MessageSelection>
+  readonly outputMessages: ReadonlyArray<MessageSelection>
   readonly value: RunSelection
 }
 
 interface TurnSelectionCache {
+  readonly inputMessages: ReadonlyArray<MessageSelection>
   readonly runs: ReadonlyArray<RunSelection>
   readonly selectedRun: RunSelection | undefined
   readonly value: TurnSelection
@@ -156,14 +162,25 @@ function selectRunRequired(snapshot: RuntimeSnapshot, run: RuntimeRun): RunSelec
     run.stepIds.map((stepId) => requireRelated(snapshot.stepsById, stepId, run.id, 'stepIds')),
     previous?.steps,
   )
-  const messages = reuseItems(
-    run.messageIds.map((messageId) =>
-      selectMessageRequired(snapshot, requireRelated(snapshot.messagesById, messageId, run.id, 'messageIds')),
+  const inputMessages = reuseItems(
+    run.inputMessageIds.map((messageId) =>
+      selectMessageRequired(snapshot, requireRelated(snapshot.messagesById, messageId, run.id, 'inputMessageIds')),
     ),
-    previous?.messages,
+    previous?.inputMessages,
+  )
+  const outputMessages = reuseItems(
+    run.outputMessageIds.map((messageId) =>
+      selectMessageRequired(snapshot, requireRelated(snapshot.messagesById, messageId, run.id, 'outputMessageIds')),
+    ),
+    previous?.outputMessages,
   )
 
-  if (previous !== undefined && steps === previous.steps && messages === previous.messages) {
+  if (
+    previous !== undefined &&
+    steps === previous.steps &&
+    inputMessages === previous.inputMessages &&
+    outputMessages === previous.outputMessages
+  ) {
     return previous.value
   }
 
@@ -178,14 +195,21 @@ function selectRunRequired(snapshot: RuntimeSnapshot, run: RuntimeRun): RunSelec
     error: run.error,
     usage: run.usage,
     steps,
-    messages,
+    inputMessages,
+    outputMessages,
   }
-  runSelectionCache.set(run, { steps, messages, value })
+  runSelectionCache.set(run, { steps, inputMessages, outputMessages, value })
   return value
 }
 
 function selectTurnRequired(snapshot: RuntimeSnapshot, turn: RuntimeTurn): TurnSelection {
   const previous = turnSelectionCache.get(turn)
+  const inputMessages = reuseItems(
+    turn.inputMessageIds.map((messageId) =>
+      selectMessageRequired(snapshot, requireRelated(snapshot.messagesById, messageId, turn.id, 'inputMessageIds')),
+    ),
+    previous?.inputMessages,
+  )
   const runs = reuseItems(
     turn.runIds.map((runId) =>
       selectRunRequired(snapshot, requireRelated(snapshot.runsById, runId, turn.id, 'runIds')),
@@ -198,17 +222,23 @@ function selectTurnRequired(snapshot: RuntimeSnapshot, turn: RuntimeTurn): TurnS
       : (runs.find(({ id }) => id === turn.selectedRunId) ??
         selectRunRequired(snapshot, requireRelated(snapshot.runsById, turn.selectedRunId, turn.id, 'selectedRunId')))
 
-  if (previous !== undefined && runs === previous.runs && selectedRun === previous.selectedRun) {
+  if (
+    previous !== undefined &&
+    inputMessages === previous.inputMessages &&
+    runs === previous.runs &&
+    selectedRun === previous.selectedRun
+  ) {
     return previous.value
   }
 
   const value: TurnSelection = {
     id: turn.id,
     conversationId: turn.conversationId,
+    inputMessages,
     runs,
     selectedRun,
   }
-  turnSelectionCache.set(turn, { runs, selectedRun, value })
+  turnSelectionCache.set(turn, { inputMessages, runs, selectedRun, value })
   return value
 }
 
@@ -268,7 +298,7 @@ export function selectTurn(snapshot: RuntimeSnapshot, turnId: string): TurnSelec
 }
 
 /**
- * Selects a run and its ordered steps and messages, or `undefined` when absent.
+ * Selects a run and its ordered steps, input references, and output messages, or `undefined` when absent.
  *
  * @param snapshot - Runtime snapshot to query.
  * @param runId - Run identifier to select.

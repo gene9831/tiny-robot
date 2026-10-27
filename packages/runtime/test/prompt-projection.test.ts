@@ -21,6 +21,7 @@ function textAndReasoningSnapshot(runCapabilities: RuntimeModelCapabilitiesV1 = 
       'turn-1': {
         id: 'turn-1',
         conversationId: 'conversation-1',
+        inputMessageIds: ['message-user'],
         runIds: ['run-1'],
       },
     },
@@ -30,7 +31,8 @@ function textAndReasoningSnapshot(runCapabilities: RuntimeModelCapabilitiesV1 = 
         turnId: 'turn-1',
         status: 'active',
         stepIds: ['step-1'],
-        messageIds: ['message-system', 'message-user', 'message-assistant'],
+        inputMessageIds: ['message-system', 'message-user'],
+        outputMessageIds: ['message-assistant'],
         providerId: 'provider-1',
         modelId: 'model-1',
         capabilities: runCapabilities,
@@ -48,14 +50,12 @@ function textAndReasoningSnapshot(runCapabilities: RuntimeModelCapabilitiesV1 = 
       'message-system': {
         id: 'message-system',
         turnId: 'turn-1',
-        runId: 'run-1',
         role: 'system',
         partIds: ['part-system-1', 'part-system-2'],
       },
       'message-user': {
         id: 'message-user',
         turnId: 'turn-1',
-        runId: 'run-1',
         role: 'user',
         partIds: ['part-user-1', 'part-user-2'],
       },

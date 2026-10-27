@@ -8,11 +8,11 @@
 
 ## Turn
 
-用户发起的一轮意图及其一个或多个执行尝试。Regenerate 会在同一 Turn 上创建新的 Run，而不是修改旧 Run。
+用户在 Conversation 中提交的一次意图。Turn 接受并拥有表达该意图的输入 Message，并关联为满足该意图创建的一个或多个 Run。Regenerate 会在同一 Turn 上创建新的 Run，而不是复制用户输入或修改旧 Run。
 
 ## Run
 
-针对一个 Turn 的一次完整执行尝试。`Run` 是名词，即使它处于 `pending`、`completed`、`failed`、`aborted`、`interrupted` 或 `superseded` 状态仍称为 Run。
+Runtime 为满足某个 Turn，在一组确定的输入上下文和执行配置上发起的一次执行尝试。Run 只读引用它消费的输入 Message，拥有本次尝试的 Step 和它产生的输出 Message，并记录独立的状态与结果。输入引用可以来自同一 Conversation 中先前的 Turn，但不会把 Message 转移给当前 Run，也不授权 Run 修改它。`Run` 是名词，即使它处于 `pending`、`completed`、`failed`、`aborted`、`interrupted` 或 `superseded` 状态仍称为 Run。
 
 ## Step
 
@@ -20,7 +20,7 @@ Run 内可识别、可排序的执行阶段。`kind = 'model'` 表示一次模�
 
 ## Message
 
-Conversation 中由某个角色产生、可持久化的语义内容容器。Message 由有序 Part 组成，不承载 Provider 原始响应对象。
+Conversation 中由某个角色产生、与一个 Turn 关联的可持久化语义内容容器。用户输入由 Turn 接受并拥有；Run 产生的 assistant 或 tool Message 记录 producing Run。Message 由有序 Part 组成，不承载 Provider 原始响应对象。
 
 ## Part
 
