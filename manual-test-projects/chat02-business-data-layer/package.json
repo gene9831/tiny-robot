@@ -11,6 +11,8 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@opentiny/tiny-robot": "1.0.0-rc.5",
+    "@opentiny/tiny-robot-chat": "1.0.0-rc.5",
     "vue": "3.5.44"
   },
   "devDependencies": {

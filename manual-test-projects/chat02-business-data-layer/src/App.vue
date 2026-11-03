@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import BusinessWorkspace from './components/BusinessWorkspace.vue'
+import BusinessChatUI from './components/BusinessChatUI.vue'
 </script>
 
 <template>
-  <BusinessWorkspace />
+  <BusinessChatUI />
 </template>

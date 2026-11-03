@@ -1,46 +1,32 @@
-# CHAT-02 既有业务数据层基线项目
+# CHAT-02 TrChatUI 接入既有业务数据层
 
-这是一个尚未接入 TinyRobot 的 Vue 3 业务项目。项目已有自己的会话、消息、请求状态、数据仓库和普通业务界面，用于验证将 `TrChatUI` 增量接入现有系统的过程。
+基线提交 `643418e39` 是未接入 TinyRobot 的业务项目。当前工作区在不改变 `src/business/` 领域模型和仓库职责的前提下，使用 `@opentiny/tiny-robot-chat@1.0.0-rc.5` 接入了受控 `TrChatUI`。
 
-## 启动基线项目
+查看完整接入差异：
+
+```bash
+git diff 643418e39 -- manual-test-projects/chat02-business-data-layer
+```
+
+## 接入结构
+
+- `src/business/`：既有会话、消息、请求状态、仓库和模拟业务服务。
+- `src/composables/useBusinessWorkspace.ts`：既有业务操作，不依赖 TinyRobot。
+- `src/composables/useTrChatUIAdapter.ts`：`ChatUIData` 映射和 `TrChatUI` 事件适配。
+- `src/components/BusinessChatUI.vue`：唯一的 `TrChatUI` 挂载点及宿主确认界面。
+
+请求、加载状态、成功/失败结果、取消、重命名和删除均由业务层处理；未使用 Runtime 或 Kit 应用 API。
+
+## 启动
 
 ```bash
 npm install
 npm run dev
 ```
 
-启动后先确认以下现有业务能力正常：
+关闭“宿主处理事件”后切换会话，组件只记录事件，业务数据不变；重新开启后，切换、提交、取消、重命名和删除由宿主业务操作生效。
 
-- “订单咨询”和“退款跟进”两个会话可以切换，消息互不串线。
-- 可以提交业务请求，并模拟成功、失败和取消。
-- 可以重命名、删除会话及恢复初始测试数据。
-- 页面显示的数据快照保持只读。
-
-## CHAT-02 接入任务
-
-安装本轮固定版本：
-
-```bash
-npm install @opentiny/tiny-robot@1.0.0-rc.5 @opentiny/tiny-robot-chat@1.0.0-rc.5
-```
-
-在不改变 `src/business/` 中业务类型和仓库职责的前提下，将 `TrChatUI` 接入现有业务数据层：
-
-1. 将业务会话、当前会话、消息和请求状态映射为 `TrChatUI` 的受控 `data`。
-2. 将会话切换、消息提交、取消、重命名和删除事件交给现有业务操作处理。
-3. 消息请求继续使用现有模拟业务服务，成功、失败和取消状态由业务层写入。
-4. 重命名和删除仍须经过宿主业务确认后生效。
-5. 不使用 Runtime、Kit 或组件内部请求替代现有业务数据层。
-
-## 验收重点
-
-- 只传入 `data` 而不处理事件时，`TrChatUI` 不得修改业务对象。
-- 宿主更新当前会话后，标题、选中项、消息和请求状态同步且不串会话。
-- 提交只产生一次完整事件；加载、完成、失败和取消完全由宿主数据控制。
-- 重命名和删除事件各触发一次，取消确认时业务数据不变。
-- 接入前冻结的业务快照没有被 `TrChatUI` 原地修改。
-
-## 基线验证
+## 验证
 
 ```bash
 npm test -- --run
