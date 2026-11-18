@@ -1,0 +1,1 @@
+import{q as e}from"./theme.Be9ymn18.js";import{d as t,o,h as r,x as n,a as s}from"./framework.2_LYnoNM.js";const u=t({__name:"empty",setup(c){const a=s([]);return(p,m)=>(o(),r(n(e),{data:a},null,8,["data"]))}});export{u as default};
