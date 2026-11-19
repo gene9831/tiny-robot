@@ -13,10 +13,10 @@
     "preview": "vite preview --host 127.0.0.1 --port 4449"
   },
   "dependencies": {
-    "@opentiny/tiny-robot": "1.0.1-alpha.1",
-    "@opentiny/tiny-robot-chat": "1.0.1-alpha.1",
-    "@opentiny/tiny-robot-kit": "1.0.1-alpha.1",
-    "@opentiny/tiny-robot-svgs": "1.0.1-alpha.1",
+    "@opentiny/tiny-robot": "1.0.1-alpha.3",
+    "@opentiny/tiny-robot-chat": "1.0.1-alpha.3",
+    "@opentiny/tiny-robot-kit": "1.0.1-alpha.3",
+    "@opentiny/tiny-robot-svgs": "1.0.1-alpha.3",
     "dompurify": "3.4.18",
     "markdown-it": "14.3.3",
     "react": "19.3.1",

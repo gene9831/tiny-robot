@@ -61,7 +61,7 @@ const owned = createChatRuntime({
 直接导入存储策略时，安装相同版本的 Kit 包：
 
 ```sh
-pnpm add -E @opentiny/tiny-robot-kit@1.0.1-alpha.1
+pnpm add -E @opentiny/tiny-robot-kit@1.0.1-alpha.3
 ```
 
 MCP 服务按需安装和启用；模型服务和 MCP 地址应由浏览器可访问。存储中的会话可以从聊天界面的历史列表恢复。

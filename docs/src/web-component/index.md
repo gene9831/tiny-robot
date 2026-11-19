@@ -16,7 +16,7 @@ outline: [1, 3]
 1. 在已有应用中安装 Chat 包：
 
    ```sh
-   pnpm add -E @opentiny/tiny-robot-chat@1.0.1-alpha.1
+   pnpm add -E @opentiny/tiny-robot-chat@1.0.1-alpha.3
    ```
 
 2. 在浏览器入口注册元素并引入样式：

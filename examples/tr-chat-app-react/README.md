@@ -4,7 +4,7 @@
 
 ## 1 准备依赖
 
-项目使用固定版本 `1.0.1-alpha.1` 的 TinyRobot 包。使用 Node 22（至少 22.12）和 pnpm 10.34.5，在本项目目录运行：
+项目使用固定版本 `1.0.1-alpha.3` 的 TinyRobot 包。使用 Node 22（至少 22.12）和 pnpm 10.34.5，在本项目目录运行：
 
 ```sh
 pnpm install
