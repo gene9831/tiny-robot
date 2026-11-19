@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1180" viewBox="0 0 760 1180" role="img" aria-labelledby="title description">
+  <title id="title">TinyRobot 整体架构</title>
+  <desc id="description">CLI 创建示例项目或生成 Chat 模块。Chat 组合 Components 并默认复用 Kit。Components 提供模板、提及、提示词、附件交互，以及文本、图片和 Markdown 消息展示；Kit 管理会话、流式请求、工具调用，支持 LocalStorage、IndexedDB 或自定义存储策略。Components 和 Kit 也可按需使用，应用配置连接模型服务与业务工具。</desc>
+  <rect width="760" height="1180" fill="#f3f7fd"/>
+  <g font-family="PingFang SC, Helvetica Neue, Arial, sans-serif">
+    <text x="40" y="57" font-size="34" font-weight="600" fill="#18304f">TinyRobot 整体架构</text>
+
+    <rect x="150" y="100" width="460" height="110" rx="22" fill="#eeeafa" stroke="#d1c7ef" stroke-width="2"/>
+    <text x="380" y="145" text-anchor="middle" font-size="32" font-weight="600" fill="#5e4d90">CLI 工程工具</text>
+    <text x="380" y="184" text-anchor="middle" font-size="25" fill="#5e4d90">创建示例项目 · 生成 Chat 模块</text>
+    <path d="M 380 210 L 380 267" stroke="#7865aa" stroke-width="3" stroke-dasharray="7 6" fill="none"/>
+    <polygon points="373,260 387,260 380,274" fill="#7865aa"/>
+    <text x="404" y="249" font-size="24" fill="#7865aa">生成代码</text>
+
+    <rect x="28" y="278" width="704" height="694" rx="26" fill="#ffffff" stroke="#c8d8ed" stroke-width="2"/>
+    <text x="64" y="323" font-size="30" font-weight="600" fill="#18304f">你的 Vue 应用</text>
+
+    <rect x="176" y="350" width="408" height="110" rx="22" fill="#e2ebff" stroke="#b7caf0" stroke-width="2"/>
+    <text x="380" y="395" text-anchor="middle" font-size="32" font-weight="600" fill="#2b55aa">Chat 聊天套件</text>
+    <text x="380" y="434" text-anchor="middle" font-size="27" fill="#3f5d8e">完整聊天页</text>
+
+    <path d="M 270 460 C 270 504 209 504 209 542" stroke="#4266b4" stroke-width="3" fill="none"/>
+    <polygon points="202,536 216,536 209,549" fill="#4266b4"/>
+    <text x="78" y="511" font-size="25" fill="#4266b4">组合界面</text>
+    <path d="M 490 460 C 490 504 551 504 551 542" stroke="#16877a" stroke-width="3" fill="none"/>
+    <polygon points="544,536 558,536 551,549" fill="#16877a"/>
+    <text x="560" y="511" font-size="24" fill="#16877a">默认会话逻辑</text>
+
+    <rect x="54" y="550" width="310" height="300" rx="22" fill="#edf3ff" stroke="#c0d1ef" stroke-width="2"/>
+    <text x="209" y="592" text-anchor="middle" font-size="31" font-weight="600" fill="#2b55aa">Components</text>
+    <text x="209" y="628" text-anchor="middle" font-size="27" fill="#3f5d8e">界面组件</text>
+    <line x1="74" y1="650" x2="344" y2="650" stroke="#c0d1ef" stroke-width="2"/>
+    <text x="209" y="684" text-anchor="middle" font-size="25" font-weight="600" fill="#2b55aa">输入交互</text>
+    <text x="209" y="716" text-anchor="middle" font-size="23" fill="#3f5d8e">模板 · @提及 · 提示词</text>
+    <text x="209" y="748" text-anchor="middle" font-size="24" fill="#3f5d8e">附件交互</text>
+    <text x="209" y="792" text-anchor="middle" font-size="25" font-weight="600" fill="#2b55aa">消息展示</text>
+    <text x="209" y="824" text-anchor="middle" font-size="23" fill="#3f5d8e">文本 · 图片 · Markdown</text>
+
+    <rect x="396" y="550" width="310" height="300" rx="22" fill="#e4f4ef" stroke="#acd9cf" stroke-width="2"/>
+    <text x="551" y="592" text-anchor="middle" font-size="32" font-weight="600" fill="#087b6e">Kit</text>
+    <text x="551" y="628" text-anchor="middle" font-size="27" fill="#2c766b">对话工具包</text>
+    <line x1="416" y1="650" x2="686" y2="650" stroke="#acd9cf" stroke-width="2"/>
+    <text x="551" y="684" text-anchor="middle" font-size="25" font-weight="600" fill="#087b6e">会话与请求</text>
+    <text x="551" y="716" text-anchor="middle" font-size="23" fill="#2c766b">流式请求 · 工具调用</text>
+    <text x="551" y="764" text-anchor="middle" font-size="25" font-weight="600" fill="#087b6e">会话存储</text>
+    <text x="551" y="796" text-anchor="middle" font-size="23" fill="#2c766b">LocalStorage · IndexedDB</text>
+    <text x="551" y="828" text-anchor="middle" font-size="24" fill="#2c766b">或自定义存储策略</text>
+
+    <line x1="64" y1="880" x2="696" y2="880" stroke="#e1e9f4" stroke-width="2"/>
+    <text x="380" y="917" text-anchor="middle" font-size="25" fill="#3f5674">Components 和 Kit 也可按需使用</text>
+    <text x="380" y="952" text-anchor="middle" font-size="25" fill="#3f5674">接入已有页面或自定义界面</text>
+
+    <path d="M 380 972 L 380 1050" stroke="#4266b4" stroke-width="3" fill="none"/>
+    <polygon points="373,1043 387,1043 380,1057" fill="#4266b4"/>
+    <text x="404" y="1021" font-size="25" fill="#4266b4">按需连接</text>
+    <rect x="64" y="1058" width="632" height="100" rx="22" fill="#e8eef8" stroke="#c7d5e8" stroke-width="2"/>
+    <text x="380" y="1099" text-anchor="middle" font-size="29" font-weight="600" fill="#29496f">模型服务 · 业务工具</text>
+    <text x="380" y="1137" text-anchor="middle" font-size="25" fill="#4b6382">由应用配置连接与访问权限</text>
+  </g>
+</svg>

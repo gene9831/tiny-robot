@@ -1,0 +1,28 @@
+{
+  "name": "tiny-robot-release-showcase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4175 --strictPort",
+    "build": "vue-tsc --noEmit && vite build",
+    "record:extensions": "node scripts/record-extensions.mjs",
+    "test": "playwright test",
+    "cli:preview": "node scripts/cli-demo.mjs preview",
+    "cli:create": "node scripts/cli-demo.mjs create"
+  },
+  "dependencies": {
+    "@opentiny/tiny-robot": "1.0.0-rc.8",
+    "@opentiny/tiny-robot-chat": "1.0.0-rc.8",
+    "@opentiny/tiny-robot-kit": "1.0.0-rc.8",
+    "@opentiny/tiny-robot-svgs": "1.0.0-rc.8",
+    "vue": "3.5.41"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0",
+    "@types/node": "^22.13.17",
+    "@vitejs/plugin-vue": "^4.5.2",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8",
+    "vue-tsc": "^2.2.8"
+  }
+}
